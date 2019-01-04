@@ -25,12 +25,20 @@ type
   #  nonce*: int          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
   EthCall* = object
-    source*: array[20, byte]  # (optional) The address the transaction is send from.
+    source*: Option[array[20, byte]]  # (optional) The address the transaction is send from.
     to*: array[20, byte]      # The address the transaction is directed to.
-    gas*: int                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
-    gasPrice*: int            # (optional) Integer of the gasPrice used for each paid gas.
-    value*: int               # (optional) Integer of the value sent with this transaction.
-    data*: int                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
+    gas*: Option[int]                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
+    gasPrice*: Option[int]            # (optional) Integer of the gasPrice used for each paid gas.
+    value*: Option[int]               # (optional) Integer of the value sent with this transaction.
+    data*: Option[string]                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
+
+  #EthCall* = object
+  #  source*: array[20, byte]  # (optional) The address the transaction is send from.
+  #  to*: array[20, byte]      # The address the transaction is directed to.
+  #  gas*: int                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
+  #  gasPrice*: int            # (optional) Integer of the gasPrice used for each paid gas.
+  #  value*: int               # (optional) Integer of the value sent with this transaction.
+  #  data*: int                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
@@ -71,14 +79,14 @@ type
   ReceiptObject* = object
     # A transaction receipt object, or null when no receipt was found:
     transactionHash*: UInt256         # hash of the transaction.
-    transactionIndex*: int            # integer of the transactions index position in the block.
+    transactionIndex*: string#int            # integer of the transactions index position in the block.
     blockHash*: UInt256               # hash of the block where this transaction was in.
-    blockNumber*: int                 # block number where this transaction was in.
-    cumulativeGasUsed*: int           # the total amount of gas used when this transaction was executed in the block.
-    gasUsed*: int                     # the amount of gas used by this specific transaction alone.
-    contractAddress*: array[20, byte] # the contract address created, if the transaction was a contract creation, otherwise null.
-    logs*: seq[string]                # TODO: See Wiki for details. list of log objects, which this transaction generated.
-    logsBloom*: array[256, byte]      # bloom filter for light clients to quickly retrieve related logs.
+    blockNumber*: string#int                 # block number where this transaction was in.
+    cumulativeGasUsed*: string#int           # the total amount of gas used when this transaction was executed in the block.
+    gasUsed*: string#int                     # the amount of gas used by this specific transaction alone.
+    contractAddress*: Option[array[20, byte]] # the contract address created, if the transaction was a contract creation, otherwise null.
+    logs*: seq[LogObject]                # TODO: See Wiki for details. list of log objects, which this transaction generated.
+    logsBloom*: Option[array[256, byte]]      # bloom filter for light clients to quickly retrieve related logs.
     # TODO: 
     #case kind*: ReceiptKind
     #of rkRoot: root*: UInt256         # post-transaction stateroot (pre Byzantium).
@@ -100,15 +108,15 @@ type
     topics*: seq[FilterData]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
 
   LogObject* = object
-    removed*: bool              # true when the log was removed, due to a chain reorganization. false if its a valid log.
-    logIndex*: int              # integer of the log index position in the block. null when its pending log.
-    transactionIndex*: ref int  # integer of the transactions index position log was created from. null when its pending log.
+    #removed*: bool              # true when the log was removed, due to a chain reorganization. false if its a valid log.
+    logIndex*: string#int              # integer of the log index position in the block. null when its pending log.
+    transactionIndex*: string#ref int  # integer of the transactions index position log was created from. null when its pending log.
     transactionHash*: UInt256   # hash of the transactions this log was created from. null when its pending log.
-    blockHash*: ref UInt256     # hash of the block where this log was in. null when its pending. null when its pending log.
-    blockNumber*: ref int64     # the block number where this log was in. null when its pending. null when its pending log.
-    address*: array[20, byte]   # address from which this log originated.
-    data*: seq[UInt256]         # contains one or more 32 Bytes non-indexed arguments of the log.
-    topics*: array[4, UInt256]  # array of 0 to 4 32 Bytes DATA of indexed log arguments.
+    blockHash*: UInt256     # hash of the block where this log was in. null when its pending. null when its pending log.
+    blockNumber*: string#int64     # the block number where this log was in. null when its pending. null when its pending log.
+    address*: string#array[20, byte]   # address from which this log originated.
+    data*: string#seq[UInt256]         # contains one or more 32 Bytes non-indexed arguments of the log.
+    topics*: seq[string]#array[4, UInt256]  # array of 0 to 4 32 Bytes DATA of indexed log arguments.
                                 # (In solidity: The first topic is the hash of the signature of the event.
                                 # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
@@ -168,4 +176,16 @@ proc `%`*(x: EthSend): JsonNode =
   if x.nonce.isSome:
     result["nonce"] = %x.nonce.unsafeGet
 
-
+proc `%`*(x: EthCall): JsonNode =
+  result = newJobject()
+  result["to"] = %x.to.toStr
+  if x.source.isSome:
+    result["source"] = %x.source.unsafeGet.toStr
+  if x.gas.isSome:
+    result["gas"] = %x.gas.unsafeGet
+  if x.gasPrice.isSome:
+    result["gasPrice"] = %x.gasPrice.unsafeGet
+  if x.value.isSome:
+    result["value"] = %x.value.unsafeGet
+  if x.data.isSome:
+    result["data"] = %x.data.unsafeGet
