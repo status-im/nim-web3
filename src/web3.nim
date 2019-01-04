@@ -10,17 +10,24 @@ template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 createRpcSigs(RpcHttpClient, sourceDir & DirSep & "ethcallsigs.nim")
 
 type
-  Web3 = object
-    eth*: RpcHttpClient
+  Sender[T] = ref object
+    contract: T
+    address: array[20, byte]
+    ip: string
+    port: int
 
-proc initWeb3*(address: string, port: int): Web3 =
-  ## Just creates a simple dummy wrapper object for now. Functionality should
-  ## increase as the web3 interface is fleshed out.
-  var client = newRpcHttpClient()
-  client.httpMethod(MethodPost)
+  Contract = ref object
+    address: array[20, byte]
 
-  waitFor client.connect(address, Port(port))
-  result.eth = client
+#proc initWeb3*(address: string, port: int): Web3 =
+#  ## Just creates a simple dummy wrapper object for now. Functionality should
+#  ## increase as the web3 interface is fleshed out.
+#  var client = newRpcHttpClient()
+#  client.httpMethod(MethodPost)
+#
+#  waitFor client.connect(address, Port(port))
+#  result = new Web3
+#  result.eth = client
 
 func encode[bits: static[int]](x: Stuint[bits]): string =
   ## Encodes a `Stuint` to a textual representation for use in the JsonRPC
@@ -279,11 +286,25 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
 macro contract(cname: untyped, body: untyped): untyped =
   var objects = parseContract(body)
   result = newStmtList()
+  result.add quote do:
+    type
+      `cname` = distinct Contract
   for obj in objects:
     if obj.kind == function:
+      echo obj.functionObject.outputs
       let
         signature = getMethodSignature(obj.functionObject)
         procName = ident obj.functionObject.name
+        senderName = ident "sender"
+        client = ident "client"
+        output =
+          if obj.functionObject.stateMutability in {payable, nonpayable}:
+            ident "Address"
+          else:
+            if obj.functionObject.outputs.len != 1:
+              newEmptyNode()
+            else:
+              ident $obj.functionObject.outputs[0].kind
       var encodedParams = newLit("")
       for input in obj.functionObject.inputs:
         encodedParams = nnkInfix.newTree(
@@ -291,26 +312,44 @@ macro contract(cname: untyped, body: untyped): untyped =
           encodedParams,
           nnkCall.newTree(ident "encode", ident input.name)
         )
-      # This is not the final output, but the signature printed out here can
-      # be used in sendTransaction to execute the method of the contract.
       var procDef = quote do:
-        proc `procName`() =
-          echo "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
+        proc `procName`(`senderName`: Sender[`cname`]): `output` =
+          var `client` = newRpcHttpClient()
+          `client`.httpMethod(MethodPost)
+          waitFor `client`.connect(`senderName`.ip, Port(`senderName`.port))
       for input in obj.functionObject.inputs:
         procDef[3].add nnkIdentDefs.newTree(
           ident input.name,
           ident $input.kind,
           newEmptyNode()
         )
+      case obj.functionObject.stateMutability:
+      of view:
+        procDef[6].add quote do:
+          var cc: EthCall
+          cc.source = some(`senderName`.address)
+          cc.to = `senderName`.contract.Contract.address
+          cc.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
+          let response = waitFor `client`.eth_call(cc, "latest")
+          return response
+      else:
+        procDef[6].add quote do:
+          var cc: EthSend
+          cc.source = `senderName`.address
+          cc.to = some(`senderName`.contract.Contract.address)
+          cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
+          let response = waitFor `client`.eth_sendTransaction(cc)
+          return response
       result.add procDef
-  let test = "InterfaceObject(kind: InterfaceObjectKind.constructor, constructorObqect: " & $objects[0] & ")"
   echo result.repr
 
-contract(Test):
+contract(TestContract):
   proc sendCoin(receiver: Address, amount: Uint): Bool
+  proc getBalance(address: Address): Uint {.view.}
+  proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
 
 # This call will generate the `cc.data` part to call that contract method in the code below
-sendCoin(fromHex(Stuint[256], "e375b6fb6d0bf0d86707884f3952fee3977251fe"), 600.to(Stuint[256]))
+#sendCoin(fromHex(Stuint[256], "e375b6fb6d0bf0d86707884f3952fee3977251fe"), 600.to(Stuint[256]))
 
 # Set up a JsonRPC call to send a transaction
 # The idea here is to let the Web3 object contain the RPC calls, then allow the
@@ -326,11 +365,46 @@ sendCoin(fromHex(Stuint[256], "e375b6fb6d0bf0d86707884f3952fee3977251fe"), 600.t
 #   )
 # If the address of the contract on the chain should be part of the DSL or
 # dynamically registered is still not decided.
-var cc: EthSend
-cc.source = [0x78.byte, 0x0b, 0xc7, 0xb4, 0x05, 0x59, 0x41, 0xc2, 0xcb, 0x0e, 0xe1, 0x05, 0x10, 0xe3, 0xfc, 0x83, 0x7e, 0xb0, 0x93, 0xc1]
-cc.to = some([0x0a.byte, 0x78, 0xc0, 0x8F, 0x31, 0x4E, 0xB2, 0x5A, 0x35, 0x1B, 0xfB, 0xA9, 0x03,0x21, 0xa6, 0x96, 0x04, 0x74, 0xbD, 0x79])
-cc.data = "0x90b98a11000000000000000000000000e375b6fb6d0bf0d86707884f3952fee3977251FE0000000000000000000000000000000000000000000000000000000000000258"
+#var cc: EthSend
+#cc.source = [0x78.byte, 0x0b, 0xc7, 0xb4, 0x05, 0x59, 0x41, 0xc2, 0xcb, 0x0e, 0xe1, 0x05, 0x10, 0xe3, 0xfc, 0x83, 0x7e, 0xb0, 0x93, 0xc1]
+#cc.to = some([0x0a.byte, 0x78, 0xc0, 0x8F, 0x31, 0x4E, 0xB2, 0x5A, 0x35, 0x1B, 0xfB, 0xA9, 0x03,0x21, 0xa6, 0x96, 0x04, 0x74, 0xbD, 0x79])
+#cc.data = "0x90b98a11000000000000000000000000e375b6fb6d0bf0d86707884f3952fee3977251FE0000000000000000000000000000000000000000000000000000000000000258"
 
-var w3 = initWeb3("127.0.0.1", 8545)
-let response = waitFor w3.eth.eth_sendTransaction(cc)
-echo response
+#var w3 = initWeb3("127.0.0.1", 8545)
+#let response = waitFor w3.eth.eth_sendTransaction(cc)
+#echo response
+
+proc sender[T](contract: T, ip: string, port: int, address: array[20, byte]): Sender[T] =
+  Sender[T](contract: contract, address: address, ip: ip, port: port)
+
+#proc sendCoin(sender: Sender[MyContract], receiver: Address, amount: Uint): Bool =
+#  echo "Hello world"
+#  return 1.to(Stint[256]).Bool
+#
+proc `$`(b: Bool): string =
+  $(Stint[256](b))
+
+macro toAddress(input: string): untyped =
+  let a = $input
+  result = nnkBracket.newTree()
+  for c in countup(0, a.high, 2):
+    result.add nnkDotExpr.newTree(
+      newLit(parseHexInt(a[c..c+1])),
+      ident "byte"
+    )
+
+var x = Contract(address: "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress).TestContract
+
+echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).getBalance(
+  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
+)
+
+echo toHex(x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).sendCoin(
+  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0"),
+  100000.to(Stuint[256])
+))
+
+echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).getBalance(
+  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
+)
+#echo "0x" & $keccak_256.digest("Transfer(address,address,uint256)")
