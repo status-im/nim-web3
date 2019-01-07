@@ -1,5 +1,5 @@
 import macros, strutils, options, math, json
-from os import getCurrentDir, DirSep
+from os import getCurrentDir, DirSep, sleep
 import
   nimcrypto, stint, httputils, chronicles, asyncdispatch2, json_rpc/rpcclient
 import ethtypes, ethprocs, stintjson, ethhexstrings
@@ -286,9 +286,16 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
 macro contract(cname: untyped, body: untyped): untyped =
   var objects = parseContract(body)
   result = newStmtList()
+  let address = ident "address"
   result.add quote do:
     type
-      `cname` = distinct Contract
+      #`cname` = distinct Contract
+      `cname` = ref object
+        `address`: array[20, byte]
+        #callbacks: tuple[
+        #  Transfer: seq[proc (fromAddr: Address, toAddr: Address, value: Uint256)]
+        #]
+
   for obj in objects:
     if obj.kind == function:
       echo obj.functionObject.outputs
@@ -328,7 +335,8 @@ macro contract(cname: untyped, body: untyped): untyped =
         procDef[6].add quote do:
           var cc: EthCall
           cc.source = some(`senderName`.address)
-          cc.to = `senderName`.contract.Contract.address
+          #cc.to = `senderName`.contract.Contract.address
+          cc.to = `senderName`.contract.address
           cc.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
           let response = waitFor `client`.eth_call(cc, "latest")
           return response
@@ -336,7 +344,8 @@ macro contract(cname: untyped, body: untyped): untyped =
         procDef[6].add quote do:
           var cc: EthSend
           cc.source = `senderName`.address
-          cc.to = some(`senderName`.contract.Contract.address)
+          #cc.to = some(`senderName`.contract.Contract.address)
+          cc.to = some(`senderName`.contract.address)
           cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
           let response = waitFor `client`.eth_sendTransaction(cc)
           return response
@@ -393,7 +402,26 @@ macro toAddress(input: string): untyped =
       ident "byte"
     )
 
-var x = Contract(address: "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress).TestContract
+proc eventListen(callback: proc(receipt: LogObject)) =
+  var client = newRpcHttpClient()
+  client.httpMethod(MethodPost)
+  waitFor client.connect("127.0.0.1", Port(8545))
+  var lastBlock = "0x" & (parseHexInt((waitFor client.eth_blockNumber())[2..^1]) + 1).toHex[^2..^1]
+  while true:
+    waitFor client.connect("127.0.0.1", Port(8545))
+    let response = waitFor client.eth_getLogs(FilterOptions(fromBlock: some(lastBlock), toBlock: none(string), address: some("0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toLower), topics: none(seq[string])))
+    if response.len > 0:
+      lastBlock = "0x" & (parseHexInt(response[^1].blockNumber[2..^1]) + 1).toHex[^2..^1]
+    for receipt in response:
+      callback(receipt)
+    sleep(1000)
+
+var thr: Thread[proc(receipt: LogObject)]
+createThread(thr, eventListen, proc(receipt: LogObject) =
+  echo receipt
+)
+
+var x = TestContract(address: "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress)#.TestContract
 
 echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).getBalance(
   fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
@@ -401,10 +429,11 @@ echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAd
 
 echo toHex(x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).sendCoin(
   fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0"),
-  100000.to(Stuint[256])
+  256.to(Stuint[256])
 ))
 
 echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).getBalance(
   fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
 )
 #echo "0x" & $keccak_256.digest("Transfer(address,address,uint256)")
+joinThreads([thr])

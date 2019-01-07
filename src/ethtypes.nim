@@ -102,10 +102,10 @@ type
     # TODO: I don't think this will work as input, need only one value that is either UInt256 or seq[UInt256]
 
   FilterOptions* = object
-    fromBlock*: string              # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
-    toBlock*: string                # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
-    address*: seq[array[20, byte]]  # (optional) contract address or a list of addresses from which logs should originate.
-    topics*: seq[FilterData]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
+    fromBlock*: Option[string]              # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
+    toBlock*: Option[string]                # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
+    address*: Option[string]  # (optional) contract address or a list of addresses from which logs should originate.
+    topics*: Option[seq[string]]#Option[seq[FilterData]]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
 
   LogObject* = object
     #removed*: bool              # true when the log was removed, due to a chain reorganization. false if its a valid log.
@@ -189,3 +189,17 @@ proc `%`*(x: EthCall): JsonNode =
     result["value"] = %x.value.unsafeGet
   if x.data.isSome:
     result["data"] = %x.data.unsafeGet
+
+proc `%`*(x: byte): JsonNode =
+  %x.int
+
+proc `%`*(x: FilterOptions): JsonNode =
+  result = newJobject()
+  if x.fromBlock.isSome:
+    result["fromBlock"] = %x.fromBlock.unsafeGet
+  if x.toBlock.isSome:
+    result["toBlock"] = %x.toBlock.unsafeGet
+  if x.address.isSome:
+    result["address"] = %x.address.unsafeGet
+  if x.topics.isSome:
+    result["topics"] = %x.topics.unsafeGet

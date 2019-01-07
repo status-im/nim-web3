@@ -15,7 +15,7 @@ proc eth_mining(): bool
 proc eth_hashrate(): int
 proc eth_gasPrice(): int64
 proc eth_accounts(): seq[array[20, byte]]
-proc eth_blockNumber(): int
+proc eth_blockNumber(): string
 proc eth_getBalance(data: array[20, byte], quantityTag: string): int
 proc eth_getStorageAt(data: array[20, byte], quantity: int, quantityTag: string): seq[byte]
 proc eth_getTransactionCount(data: array[20, byte], quantityTag: string)
