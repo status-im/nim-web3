@@ -190,6 +190,20 @@ proc getMethodSignature(function: FunctionObject): string =
   signature.add ")"
   return signature
 
+proc getEventSignature(event: EventObject): string =
+  var signature = event.name & "("
+  for i, input in event.inputs:
+    signature.add(
+      case input.kind:
+      of FieldKind.Uint: "uint256"
+      of FieldKind.Int: "int256"
+      else: ($input.kind).toLower
+    )
+    if i != event.inputs.high:
+      signature.add ","
+  signature.add ")"
+  return signature
+
 proc parseContract(body: NimNode): seq[InterfaceObject] =
   proc parseOutputs(outputNode: NimNode): seq[FunctionInputOutput] =
     if outputNode.kind == nnkIdent:
@@ -286,7 +300,10 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
 macro contract(cname: untyped, body: untyped): untyped =
   var objects = parseContract(body)
   result = newStmtList()
-  let address = ident "address"
+  let
+    address = ident "address"
+    receipt = genSym(nskForVar)
+    contract = ident "contract"
   result.add quote do:
     type
       #`cname` = distinct Contract
@@ -295,9 +312,13 @@ macro contract(cname: untyped, body: untyped): untyped =
         #callbacks: tuple[
         #  Transfer: seq[proc (fromAddr: Address, toAddr: Address, value: Uint256)]
         #]
+  var
+    callbacks = nnkTupleTy.newTree()
+    argParse = nnkIfExpr.newTree()
 
   for obj in objects:
-    if obj.kind == function:
+    case obj.kind:
+    of function:
       echo obj.functionObject.outputs
       let
         signature = getMethodSignature(obj.functionObject)
@@ -350,6 +371,79 @@ macro contract(cname: untyped, body: untyped): untyped =
           let response = waitFor `client`.eth_sendTransaction(cc)
           return response
       result.add procDef
+    of event:
+      if not obj.eventObject.anonymous:
+        let callback = genSym(nskForVar)
+        var
+          params = nnkFormalParams.newTree(newEmptyNode())
+          argParseBody = newStmtList()
+          arguments: seq[NimNode]
+          i = 1
+          call = nnkCall.newTree(callback)
+        for input in obj.eventObject.inputs:
+          params.add nnkIdentDefs.newTree(
+            ident input.name,
+            ident $input.kind,
+            newEmptyNode()
+          )
+          let
+            argument = genSym(nskLet)
+            kind = ident $input.kind
+            inputData = if input.indexed:
+              quote do:
+                `receipt`.topics[`i`]
+            else:
+              quote do:
+                `receipt`.data
+          if input.indexed:
+            i += 1
+          arguments.add argument
+          argParseBody.add quote do:
+            let `argument` = fromHex(`kind`, `inputData`)
+          call.add argument
+        let cbident = ident obj.eventObject.name
+        callbacks.add nnkIdentDefs.newTree(
+          cbident,
+          nnkBracketExpr.newTree(
+            ident "seq",
+            nnkProcTy.newTree(
+              params,
+              newEmptyNode()
+            )
+          ),
+          newEmptyNode()
+        )
+        let signature = getEventSignature(obj.eventObject)
+        argParse.add nnkElifExpr.newTree(quote do:
+          `receipt`.topics[0] == "0x" & ($keccak_256.digest(`signature`)).toLower
+        , quote do:
+          `argParseBody`
+          for `callback` in `contract`.callbacks.`cbident`:
+            `call`
+        )
+    else:
+      discard
+  if callbacks.len != 0:
+    result[0][0][2][0][2].add nnkIdentDefs.newTree(
+      ident "callbacks",
+      callbacks,
+      newEmptyNode()
+    )
+    result.add quote do:
+      proc eventListen(`contract`: `cname`) =
+        var client = newRpcHttpClient()
+        client.httpMethod(MethodPost)
+        waitFor client.connect("127.0.0.1", Port(8545))
+        var lastBlock = "0x" & (parseHexInt((waitFor client.eth_blockNumber())[2..^1]) + 1).toHex[^2..^1]
+        while true:
+          waitFor client.connect("127.0.0.1", Port(8545))
+          let response = waitFor client.eth_getLogs(FilterOptions(fromBlock: some(lastBlock), toBlock: none(string), address: some(`contract`.address.toStr), topics: none(seq[string])))
+          if response.len > 0:
+            lastBlock = "0x" & (parseHexInt(response[^1].blockNumber[2..^1]) + 1).toHex[^2..^1]
+          for `receipt` in response:
+            `argParse`
+          sleep(1000)
+  echo argParse.repr
   echo result.repr
 
 contract(TestContract):
@@ -402,24 +496,30 @@ macro toAddress(input: string): untyped =
       ident "byte"
     )
 
-proc eventListen(callback: proc(receipt: LogObject)) =
-  var client = newRpcHttpClient()
-  client.httpMethod(MethodPost)
-  waitFor client.connect("127.0.0.1", Port(8545))
-  var lastBlock = "0x" & (parseHexInt((waitFor client.eth_blockNumber())[2..^1]) + 1).toHex[^2..^1]
-  while true:
-    waitFor client.connect("127.0.0.1", Port(8545))
-    let response = waitFor client.eth_getLogs(FilterOptions(fromBlock: some(lastBlock), toBlock: none(string), address: some("0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toLower), topics: none(seq[string])))
-    if response.len > 0:
-      lastBlock = "0x" & (parseHexInt(response[^1].blockNumber[2..^1]) + 1).toHex[^2..^1]
-    for receipt in response:
-      callback(receipt)
-    sleep(1000)
+#proc eventListen(input: tuple[contractAddr: string, callback: proc(receipt: LogObject)]) =
+#  var client = newRpcHttpClient()
+#  client.httpMethod(MethodPost)
+#  waitFor client.connect("127.0.0.1", Port(8545))
+#  var lastBlock = "0x" & (parseHexInt((waitFor client.eth_blockNumber())[2..^1]) + 1).toHex[^2..^1]
+#  while true:
+#    waitFor client.connect("127.0.0.1", Port(8545))
+#    let response = waitFor client.eth_getLogs(FilterOptions(fromBlock: some(lastBlock), toBlock: none(string), address: some(input.contractAddr), topics: none(seq[string])))
+#    if response.len > 0:
+#      lastBlock = "0x" & (parseHexInt(response[^1].blockNumber[2..^1]) + 1).toHex[^2..^1]
+#    for receipt in response:
+#      input.callback(receipt)
+#      case receipt.topics[0]:
+#      of "0x100":
+#        discard
+#      else:
+#        discard
+#    sleep(1000)
 
-var thr: Thread[proc(receipt: LogObject)]
-createThread(thr, eventListen, proc(receipt: LogObject) =
-  echo receipt
-)
+#var thr: Thread[tuple[contractAddr: string, callback: proc(receipt: LogObject)]]
+#createThread[tuple[contractAddr: string, callback: proc(receipt: LogObject)]](thr, eventListen, (contractAddr: "0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toLower, callback: (proc(receipt: LogObject) =
+#  echo receipt
+#))
+#)
 
 var x = TestContract(address: "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress)#.TestContract
 
@@ -436,4 +536,4 @@ echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAd
   fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
 )
 #echo "0x" & $keccak_256.digest("Transfer(address,address,uint256)")
-joinThreads([thr])
+#joinThreads([thr])
