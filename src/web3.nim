@@ -16,8 +16,14 @@ type
     ip: string
     port: int
 
-  Contract = ref object
-    address: array[20, byte]
+  Receiver[T] = ref object
+    contract: T
+    ip: string
+    port: int
+
+  EventListener[T] = ref object
+    receiver: Receiver[T]
+    lastBlock: string
 
 #proc initWeb3*(address: string, port: int): Web3 =
 #  ## Just creates a simple dummy wrapper object for now. Functionality should
@@ -302,13 +308,16 @@ macro contract(cname: untyped, body: untyped): untyped =
   result = newStmtList()
   let
     address = ident "address"
+    client = ident "client"
     receipt = genSym(nskForVar)
-    contract = ident "contract"
+    receiver = ident "receiver"
+    eventListener = ident "eventListener"
   result.add quote do:
     type
       #`cname` = distinct Contract
       `cname` = ref object
         `address`: array[20, byte]
+        `client`: RpcHttpClient
         #callbacks: tuple[
         #  Transfer: seq[proc (fromAddr: Address, toAddr: Address, value: Uint256)]
         #]
@@ -324,7 +333,6 @@ macro contract(cname: untyped, body: untyped): untyped =
         signature = getMethodSignature(obj.functionObject)
         procName = ident obj.functionObject.name
         senderName = ident "sender"
-        client = ident "client"
         output =
           if obj.functionObject.stateMutability in {payable, nonpayable}:
             ident "Address"
@@ -341,10 +349,9 @@ macro contract(cname: untyped, body: untyped): untyped =
           nnkCall.newTree(ident "encode", ident input.name)
         )
       var procDef = quote do:
-        proc `procName`(`senderName`: Sender[`cname`]): `output` =
-          var `client` = newRpcHttpClient()
-          `client`.httpMethod(MethodPost)
-          waitFor `client`.connect(`senderName`.ip, Port(`senderName`.port))
+        proc `procName`(`senderName`: Sender[`cname`]): Future[`output`] {.async.} =
+          `senderName`.contract.`client`.httpMethod(MethodPost)
+          await `senderName`.contract.`client`.connect(`senderName`.ip, Port(`senderName`.port))
       for input in obj.functionObject.inputs:
         procDef[3].add nnkIdentDefs.newTree(
           ident input.name,
@@ -359,7 +366,7 @@ macro contract(cname: untyped, body: untyped): untyped =
           #cc.to = `senderName`.contract.Contract.address
           cc.to = `senderName`.contract.address
           cc.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
-          let response = waitFor `client`.eth_call(cc, "latest")
+          let response = await `senderName`.contract.`client`.eth_call(cc, "latest")
           return response
       else:
         procDef[6].add quote do:
@@ -368,7 +375,7 @@ macro contract(cname: untyped, body: untyped): untyped =
           #cc.to = some(`senderName`.contract.Contract.address)
           cc.to = some(`senderName`.contract.address)
           cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
-          let response = waitFor `client`.eth_sendTransaction(cc)
+          let response = await `senderName`.contract.`client`.eth_sendTransaction(cc)
           return response
       result.add procDef
     of event:
@@ -418,7 +425,7 @@ macro contract(cname: untyped, body: untyped): untyped =
           `receipt`.topics[0] == "0x" & ($keccak_256.digest(`signature`)).toLower
         , quote do:
           `argParseBody`
-          for `callback` in `contract`.callbacks.`cbident`:
+          for `callback` in `eventListener`.receiver.contract.callbacks.`cbident`:
             `call`
         )
     else:
@@ -430,26 +437,22 @@ macro contract(cname: untyped, body: untyped): untyped =
       newEmptyNode()
     )
     result.add quote do:
-      proc eventListen(`contract`: `cname`) =
-        var client = newRpcHttpClient()
-        client.httpMethod(MethodPost)
-        waitFor client.connect("127.0.0.1", Port(8545))
-        var lastBlock = "0x" & (parseHexInt((waitFor client.eth_blockNumber())[2..^1]) + 1).toHex[^2..^1]
-        while true:
-          waitFor client.connect("127.0.0.1", Port(8545))
-          let response = waitFor client.eth_getLogs(FilterOptions(fromBlock: some(lastBlock), toBlock: none(string), address: some(`contract`.address.toStr), topics: none(seq[string])))
-          if response.len > 0:
-            lastBlock = "0x" & (parseHexInt(response[^1].blockNumber[2..^1]) + 1).toHex[^2..^1]
-          for `receipt` in response:
-            `argParse`
-          sleep(1000)
+      proc initEventListener(`receiver`: Receiver[`cname`]): EventListener[`cname`] =
+        `receiver`.contract.client.httpMethod(MethodPost)
+        waitFor `receiver`.contract.client.connect(`receiver`.ip, Port(`receiver`.port))
+        var lastBlock = "0x" & (parseHexInt((waitFor `receiver`.contract.client.eth_blockNumber())[2..^1]) + 1).toHex[^2..^1]
+        EventListener[`cname`](receiver: `receiver`, lastBlock: lastBlock)
+
+      proc listen(`eventListener`: EventListener[`cname`]) {.async.} =
+        await `eventListener`.receiver.contract.client.connect(`eventListener`.receiver.ip, Port(`eventListener`.receiver.port))
+        let response = await `eventListener`.receiver.contract.client.eth_getLogs(FilterOptions(fromBlock: some(`eventListener`.lastBlock), toBlock: none(string), address: some(`eventListener`.receiver.contract.address.toStr), topics: none(seq[string])))
+        if response.len > 0:
+          `eventListener`.lastBlock = "0x" & (parseHexInt(response[^1].blockNumber[2..^1]) + 1).toHex[^2..^1]
+        for `receipt` in response:
+          `argParse`
+
   echo argParse.repr
   echo result.repr
-
-contract(TestContract):
-  proc sendCoin(receiver: Address, amount: Uint): Bool
-  proc getBalance(address: Address): Uint {.view.}
-  proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
 
 # This call will generate the `cc.data` part to call that contract method in the code below
 #sendCoin(fromHex(Stuint[256], "e375b6fb6d0bf0d86707884f3952fee3977251fe"), 600.to(Stuint[256]))
@@ -477,8 +480,11 @@ contract(TestContract):
 #let response = waitFor w3.eth.eth_sendTransaction(cc)
 #echo response
 
-proc sender[T](contract: T, ip: string, port: int, address: array[20, byte]): Sender[T] =
+proc initSender[T](contract: T, ip: string, port: int, address: array[20, byte]): Sender[T] =
   Sender[T](contract: contract, address: address, ip: ip, port: port)
+
+proc initReceiver[T](contract: T, ip: string, port: int): Receiver[T] =
+  Receiver[T](contract: contract, ip: ip, port: port)
 
 #proc sendCoin(sender: Sender[MyContract], receiver: Address, amount: Uint): Bool =
 #  echo "Hello world"
@@ -521,19 +527,42 @@ macro toAddress(input: string): untyped =
 #))
 #)
 
-var x = TestContract(address: "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress)#.TestContract
+contract(TestContract):
+  proc sendCoin(receiver: Address, amount: Uint): Bool
+  proc getBalance(address: Address): Uint {.view.}
+  proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
 
-echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).getBalance(
+var
+  x = TestContract(address:
+    "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress,
+    client: newRpcHttpClient()
+  )
+  sender = x.initSender("127.0.0.1", 8545,
+    "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress)
+  receiver = x.initReceiver("127.0.0.1", 8545)
+  eventListener = receiver.initEventListener()
+
+x.callbacks.Transfer.add proc (fromAddr, toAddr: Address, value: Uint256) =
+  echo $value, " coins were transferred from ", fromAddr.toHex, " to ", toAddr.toHex
+
+echo waitFor sender.getBalance(
   fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
 )
 
-echo toHex(x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).sendCoin(
+echo toHex(waitFor sender.sendCoin(
   fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0"),
   256.to(Stuint[256])
 ))
 
-echo x.sender("127.0.0.1", 8545, "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress).getBalance(
+echo waitFor sender.getBalance(
   fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
 )
-#echo "0x" & $keccak_256.digest("Transfer(address,address,uint256)")
-#joinThreads([thr])
+
+waitFor eventListener.listen()
+
+echo toHex(waitFor sender.sendCoin(
+  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0"),
+  10.to(Stuint[256])
+))
+
+waitFor eventListener.listen()
