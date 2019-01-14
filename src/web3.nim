@@ -155,13 +155,23 @@ type
     function, constructor, event
   MutabilityKind = enum
     pure, view, nonpayable, payable
+  SequenceKind = enum
+    single, fixed, dynamic
   FunctionInputOutput = object
     name: string
     kind: FieldKind
+    case sequenceKind: SequenceKind
+    of single, dynamic: discard
+    of fixed:
+      count: int
   EventInput = object
     name: string
     kind: FieldKind
     indexed: bool
+    case sequenceKind: SequenceKind
+    of single, dynamic: discard
+    of fixed:
+      count: int
   FunctionObject = object
     name: string
     stateMutability: MutabilityKind
@@ -221,10 +231,25 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
     for i in 1..<inputNodes.len:
       let input = inputNodes[i]
       if input.kind == nnkIdentDefs:
-        result.add FunctionInputOutput(
-          name: $input[0].ident,
-          kind: parseEnum[FieldKind]($input[1].ident)
-        )
+        echo input.repr
+        echo input.treerepr
+        if input[1].kind == nnkBracketExpr:
+          result.add FunctionInputOutput(
+            name: $input[0].ident,
+            kind: parseEnum[FieldKind]($input[1][0].ident),
+            sequenceKind: if input[1].len == 2:
+              fixed
+            else:
+              dynamic
+          )
+          if input[1].len == 2:
+            result[^1].count = input[1][1].intVal.int
+        else:
+          result.add FunctionInputOutput(
+            name: $input[0].ident,
+            kind: parseEnum[FieldKind]($input[1].ident),
+            sequenceKind: single
+          )
   proc parseEventInputs(inputNodes: NimNode): seq[EventInput] =
     for i in 1..<inputNodes.len:
       let input = inputNodes[i]
@@ -531,6 +556,7 @@ contract(TestContract):
   proc sendCoin(receiver: Address, amount: Uint): Bool
   proc getBalance(address: Address): Uint {.view.}
   proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
+  proc sendCoins(receiver: Address, amount: Uint[]): Bool
 
 var
   x = TestContract(address:
