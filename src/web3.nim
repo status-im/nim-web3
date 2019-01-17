@@ -151,6 +151,20 @@ macro makeTypeEnum(): untyped =
 makeTypeEnum()
 
 type
+  Encodable = concept x
+    encode(x) is string
+
+func encode(x: seq[Encodable]): string =
+  result = encode(x.len)
+  for i in x:
+    result &= encode(i)
+
+func encode(x: openArray[Encodable]): string =
+  result = ""
+  for i in x:
+    result &= encode(i)
+
+type
   InterfaceObjectKind = enum
     function, constructor, event
   MutabilityKind = enum
@@ -210,10 +224,14 @@ proc getEventSignature(event: EventObject): string =
   var signature = event.name & "("
   for i, input in event.inputs:
     signature.add(
-      case input.kind:
+      (case input.kind:
       of FieldKind.Uint: "uint256"
       of FieldKind.Int: "int256"
-      else: ($input.kind).toLower
+      else: ($input.kind).toLower) &
+      (case input.sequenceKind:
+      of single: ""
+      of dynamic: "[]"
+      of fixed: "[" & $input.count & "]")
     )
     if i != event.inputs.high:
       signature.add ","
@@ -237,10 +255,10 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
           result.add FunctionInputOutput(
             name: $input[0].ident,
             kind: parseEnum[FieldKind]($input[1][0].ident),
-            sequenceKind: if input[1].len == 2:
-              fixed
-            else:
+            sequenceKind: if input[1].len == 1:
               dynamic
+            else:
+              fixed
           )
           if input[1].len == 2:
             result[^1].count = input[1][1].intVal.int
@@ -262,13 +280,26 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
             indexed: false
           )
         of nnkBracketExpr:
-          doAssert($input[1][0].ident == "indexed",
-            "Only `indexed` is allowed as option for event inputs")
-          result.add EventInput(
-            name: $input[0].ident,
-            kind: parseEnum[FieldKind]($input[1][1].ident),
-            indexed: true
-          )
+          #doAssert($input[1][0].ident == "indexed",
+          #  "Only `indexed` is allowed as option for event inputs")
+          if $input[1][0].ident == "indexed":
+            result.add EventInput(
+              name: $input[0].ident,
+              kind: parseEnum[FieldKind]($input[1][1].ident),
+              indexed: true
+            )
+          else:
+            result.add EventInput(
+              name: $input[0].ident,
+              kind: parseEnum[FieldKind]($input[1][0].ident),
+              indexed: false,
+              sequenceKind: if input[1].len == 1:
+                dynamic
+              else:
+                fixed
+            )
+            if input[1].len != 1:
+              result[^1].count = input[1][1].intVal.int
         else:
           doAssert(false,
             "Can't have anything but ident or bracket expression here")
@@ -380,7 +411,20 @@ macro contract(cname: untyped, body: untyped): untyped =
       for input in obj.functionObject.inputs:
         procDef[3].add nnkIdentDefs.newTree(
           ident input.name,
-          ident $input.kind,
+          (case input.sequenceKind:
+          of single: ident $input.kind
+          of dynamic: nnkBracketExpr.newTree(ident "seq", ident $input.kind)
+          of fixed:
+            nnkBracketExpr.newTree(
+              ident "array",
+              nnkInfix.newTree(
+                ident "..",
+                newLit(0),
+                newLit(input.count)
+              ),
+              ident $input.kind
+            )
+          ),
           newEmptyNode()
         )
       case obj.functionObject.stateMutability:
@@ -412,7 +456,7 @@ macro contract(cname: untyped, body: untyped): untyped =
           arguments: seq[NimNode]
           i = 1
           call = nnkCall.newTree(callback)
-        for input in obj.eventObject.inputs:
+        for ii, input in obj.eventObject.inputs:
           params.add nnkIdentDefs.newTree(
             ident input.name,
             ident $input.kind,
@@ -426,7 +470,7 @@ macro contract(cname: untyped, body: untyped): untyped =
                 `receipt`.topics[`i`]
             else:
               quote do:
-                `receipt`.data
+                `receipt`.data[(`ii` - `i` + 1)*256..(`ii` - `i` + 2)*256]
           if input.indexed:
             i += 1
           arguments.add argument
@@ -556,7 +600,8 @@ contract(TestContract):
   proc sendCoin(receiver: Address, amount: Uint): Bool
   proc getBalance(address: Address): Uint {.view.}
   proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
-  proc sendCoins(receiver: Address, amount: Uint[]): Bool
+  proc Transfers(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256[]) {.event.}
+  proc sendCoins(receiver: Address, amount: Uint[10]): Bool
 
 var
   x = TestContract(address:
