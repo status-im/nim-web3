@@ -25,6 +25,8 @@ type
     receiver: Receiver[T]
     lastBlock: string
 
+  EncodeResult = tuple[dynamic: bool, data: string]
+
 #proc initWeb3*(address: string, port: int): Web3 =
 #  ## Just creates a simple dummy wrapper object for now. Functionality should
 #  ## increase as the web3 interface is fleshed out.
@@ -35,18 +37,21 @@ type
 #  result = new Web3
 #  result.eth = client
 
-func encode[bits: static[int]](x: Stuint[bits]): string =
+func encode[bits: static[int]](x: Stuint[bits]): EncodeResult =
   ## Encodes a `Stuint` to a textual representation for use in the JsonRPC
   ## `sendTransaction` call.
-  '0'.repeat((256 - bits) div 4) & x.dumpHex
+  (dynamic: false, data: '0'.repeat((256 - bits) div 4) & x.dumpHex)
 
-func encode[bits: static[int]](x: Stint[bits]): string =
+func encode[bits: static[int]](x: Stint[bits]): EncodeResult =
   ## Encodes a `Stint` to a textual representation for use in the JsonRPC
   ## `sendTransaction` call.
-  if x.isNegative:
-    'f'.repeat((256 - bits) div 4) & x.dumpHex
-  else:
-    '0'.repeat((256 - bits) div 4) & x.dumpHex
+  (dynamic: false,
+  data:
+    if x.isNegative:
+      'f'.repeat((256 - bits) div 4) & x.dumpHex
+    else:
+      '0'.repeat((256 - bits) div 4) & x.dumpHex
+  )
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps
@@ -79,7 +84,7 @@ macro makeTypeEnum(): untyped =
       `identUint`* = Uint256
       `identInt`* = Int256
       `identBool`* = distinct Int256
-    func encode*(x: `identBool`): string = encode(Int256(x))
+    func encode*(x: `identBool`): EncodeResult = encode(Int256(x))
   fields.add [
     identAddress,
     identUint,
@@ -106,10 +111,10 @@ macro makeTypeEnum(): untyped =
       func to*(x: `identUint`, `identT`: typedesc[`identUfixed`]): `identT` =
         T(x)
 
-      func encode*[N: static[int]](x: `identFixed`[N]): string =
+      func encode*[N: static[int]](x: `identFixed`[N]): EncodeResult =
         encode(`identInt`(x) * (10 ^ N).to(`identInt`))
 
-      func encode*[N: static[int]](x: `identUfixed`[N]): string =
+      func encode*[N: static[int]](x: `identUfixed`[N]): EncodeResult =
         encode(`identUint`(x) * (10 ^ N).to(`identUint`))
 
     fields.add ident("Fixed" & $m)
@@ -131,11 +136,12 @@ macro makeTypeEnum(): untyped =
     result.add quote do:
       type
         `identBytes` = array[0..(`i`-1), byte]
-      func encode(x: `identBytes`): string =
-        `identResult` = ""
+      func encode(x: `identBytes`): EncodeResult =
+        `identResult`.dynamic = false
+        `identResult`.data = ""
         for y in x:
-          `identResult` &= y.toHex.toLower
-        `identResult` &= "00".repeat(32 - x.len)
+          `identResult`.data &= y.toHex.toLower
+        `identResult`.data &= "00".repeat(32 - x.len)
 
   fields.add [
     ident("Function"),
@@ -152,17 +158,38 @@ makeTypeEnum()
 
 type
   Encodable = concept x
-    encode(x) is string
+    encode(x) is EncodeResult
 
-func encode(x: seq[Encodable]): string =
-  result = encode(x.len)
+func encode(x: seq[Encodable]): EncodeResult =
+  result.dynamic = true
+  result.data = x.len.toHex(64).toLower
+  var
+    offset = 32*x.len
+    data = ""
   for i in x:
-    result &= encode(i)
+    let encoded = encode(i)
+    if encoded.dynamic:
+      result.data &= offset.toHex(64).toLower
+      data &= encoded.data
+    else:
+      result.data &= encoded.data
+    offset += encoded.data.len
+  result.data &= data
 
-func encode(x: openArray[Encodable]): string =
-  result = ""
+func encode(x: openArray[Encodable]): EncodeResult =
+  result.dynamic = false
+  result.data = ""
+  var
+    offset = 32*x.len
+    data = ""
   for i in x:
-    result &= encode(i)
+    let encoded = encode(i)
+    if encoded.dynamic:
+      result.data &= offset.toHex(64).toLower
+      data &= encoded.data
+    else:
+      result.data &= encoded.data
+    offset += encoded.data.len
 
 type
   InterfaceObjectKind = enum
@@ -397,13 +424,41 @@ macro contract(cname: untyped, body: untyped): untyped =
               newEmptyNode()
             else:
               ident $obj.functionObject.outputs[0].kind
-      var encodedParams = newLit("")
+      var
+        encodedParams = genSym(nskVar)#newLit("")
+        offset = genSym(nskVar)
+        dataBuf = genSym(nskVar)
+        encodings = genSym(nskVar)
+        encoder = newStmtList()
+      encoder.add quote do:
+        var
+          `offset` = 0
+          `encodedParams` = ""
+          `dataBuf` = ""
+          `encodings`: seq[EncodeResult]
       for input in obj.functionObject.inputs:
-        encodedParams = nnkInfix.newTree(
-          ident "&",
-          encodedParams,
-          nnkCall.newTree(ident "encode", ident input.name)
-        )
+        let inputName = ident input.name
+        encoder.add quote do:
+          let encoding = encode(`inputName`)
+          `offset` += (if encoding.dynamic:
+            32
+          else:
+            encoding.data.len)
+          `encodings`.add encoding
+        #encodedParams = nnkInfix.newTree(
+        #  ident "&",
+        #  encodedParams,
+        #  nnkCall.newTree(ident "encode", ident input.name)
+        #)
+      encoder.add quote do:
+        for encoding in `encodings`:
+          if encoding.dynamic:
+            `encodedParams` &= `offset`.toHex(64).toLower
+            `offset` += encoding.data.len
+            `dataBuf` &= encoding.data
+          else:
+            `encodedParams` &= encoding.data
+        `encodedParams` &= `dataBuf`
       var procDef = quote do:
         proc `procName`(`senderName`: Sender[`cname`]): Future[`output`] {.async.} =
           `senderName`.contract.`client`.httpMethod(MethodPost)
@@ -434,7 +489,9 @@ macro contract(cname: untyped, body: untyped): untyped =
           cc.source = some(`senderName`.address)
           #cc.to = `senderName`.contract.Contract.address
           cc.to = `senderName`.contract.address
+          `encoder`
           cc.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
+          echo cc.data
           let response = await `senderName`.contract.`client`.eth_call(cc, "latest")
           return response
       else:
@@ -443,7 +500,9 @@ macro contract(cname: untyped, body: untyped): untyped =
           cc.source = `senderName`.address
           #cc.to = some(`senderName`.contract.Contract.address)
           cc.to = some(`senderName`.contract.address)
+          `encoder`
           cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
+          echo cc.data
           let response = await `senderName`.contract.`client`.eth_sendTransaction(cc)
           return response
       result.add procDef
@@ -470,7 +529,7 @@ macro contract(cname: untyped, body: untyped): untyped =
                 `receipt`.topics[`i`]
             else:
               quote do:
-                `receipt`.data[(`ii` - `i` + 1)*256..(`ii` - `i` + 2)*256]
+                `receipt`.data[(`ii` - `i` + 1)*64+2..<(`ii` - `i` + 2)*64+2]
           if input.indexed:
             i += 1
           arguments.add argument
@@ -600,8 +659,16 @@ contract(TestContract):
   proc sendCoin(receiver: Address, amount: Uint): Bool
   proc getBalance(address: Address): Uint {.view.}
   proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
-  proc Transfers(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256[]) {.event.}
-  proc sendCoins(receiver: Address, amount: Uint[10]): Bool
+  #proc Transfers(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256[]) {.event.}
+  #proc sendCoins(receiver: Address, amount: Uint[]): Bool
+
+#var
+#  x2 = TestContract(address:
+#    "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress,
+#    client: newRpcHttpClient()
+#  )
+#  sender2 = x2.initSender("127.0.0.1", 8545,
+#    "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress)
 
 var
   x = TestContract(address:
