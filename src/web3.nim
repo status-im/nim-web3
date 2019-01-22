@@ -10,22 +10,22 @@ template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 createRpcSigs(RpcHttpClient, sourceDir & DirSep & "ethcallsigs.nim")
 
 type
-  Sender[T] = ref object
+  Sender*[T] = ref object
     contract: T
     address: array[20, byte]
     ip: string
     port: int
 
-  Receiver[T] = ref object
+  Receiver*[T] = ref object
     contract: T
     ip: string
     port: int
 
-  EventListener[T] = ref object
+  EventListener*[T] = ref object
     receiver: Receiver[T]
     lastBlock: string
 
-  EncodeResult = tuple[dynamic: bool, data: string]
+  EncodeResult* = tuple[dynamic: bool, data: string]
 
 #proc initWeb3*(address: string, port: int): Web3 =
 #  ## Just creates a simple dummy wrapper object for now. Functionality should
@@ -102,8 +102,8 @@ macro makeTypeEnum(): untyped =
       # Fixed stuff is not actually implemented yet, these procedures don't
       # do what they are supposed to.
       type
-        `identFixed`[N: static[int]] = distinct `identInt`
-        `identUfixed`[N: static[int]] = distinct `identUint`
+        `identFixed`*[N: static[int]] = distinct `identInt`
+        `identUfixed`*[N: static[int]] = distinct `identUint`
 
       func to*(x: `identInt`, `identT`: typedesc[`identFixed`]): `identT` =
         T(x)
@@ -126,8 +126,8 @@ macro makeTypeEnum(): untyped =
   fields.add identUfixed
   result.add quote do:
     type
-      `identFixed` = distinct Int128
-      `identUfixed` = distinct Uint128
+      `identFixed`* = distinct Int128
+      `identUfixed`* = distinct Uint128
   for i in 1..32:
     let
       identBytes = ident("Bytes" & $i)
@@ -135,7 +135,7 @@ macro makeTypeEnum(): untyped =
     fields.add identBytes
     result.add quote do:
       type
-        `identBytes` = array[0..(`i`-1), byte]
+        `identBytes`* = array[0..(`i`-1), byte]
       func encode(x: `identBytes`): EncodeResult =
         `identResult`.dynamic = false
         `identResult`.data = ""
@@ -150,7 +150,7 @@ macro makeTypeEnum(): untyped =
   ]
   result.add quote do:
     type
-      Bytes = seq[byte]
+      Bytes* = seq[byte]
   result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
   echo result.repr
 
@@ -386,7 +386,7 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
   for event in events:
     result.add InterfaceObject(kind: InterfaceObjectKind.event, eventObject: event)
 
-macro contract(cname: untyped, body: untyped): untyped =
+macro contract*(cname: untyped, body: untyped): untyped =
   var objects = parseContract(body)
   result = newStmtList()
   let
@@ -608,20 +608,20 @@ macro contract(cname: untyped, body: untyped): untyped =
 #let response = waitFor w3.eth.eth_sendTransaction(cc)
 #echo response
 
-proc initSender[T](contract: T, ip: string, port: int, address: array[20, byte]): Sender[T] =
+proc initSender*[T](contract: T, ip: string, port: int, address: array[20, byte]): Sender[T] =
   Sender[T](contract: contract, address: address, ip: ip, port: port)
 
-proc initReceiver[T](contract: T, ip: string, port: int): Receiver[T] =
+proc initReceiver*[T](contract: T, ip: string, port: int): Receiver[T] =
   Receiver[T](contract: contract, ip: ip, port: port)
 
 #proc sendCoin(sender: Sender[MyContract], receiver: Address, amount: Uint): Bool =
 #  echo "Hello world"
 #  return 1.to(Stint[256]).Bool
 #
-proc `$`(b: Bool): string =
+proc `$`*(b: Bool): string =
   $(Stint[256](b))
 
-macro toAddress(input: string): untyped =
+macro toAddress*(input: string): untyped =
   let a = $input
   result = nnkBracket.newTree()
   for c in countup(0, a.high, 2):
@@ -655,52 +655,3 @@ macro toAddress(input: string): untyped =
 #))
 #)
 
-contract(TestContract):
-  proc sendCoin(receiver: Address, amount: Uint): Bool
-  proc getBalance(address: Address): Uint {.view.}
-  proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
-  #proc Transfers(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256[]) {.event.}
-  #proc sendCoins(receiver: Address, amount: Uint[]): Bool
-
-#var
-#  x2 = TestContract(address:
-#    "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress,
-#    client: newRpcHttpClient()
-#  )
-#  sender2 = x2.initSender("127.0.0.1", 8545,
-#    "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress)
-
-var
-  x = TestContract(address:
-    "254dffcd3277C0b1660F6d42EFbB754edaBAbC2B".toAddress,
-    client: newRpcHttpClient()
-  )
-  sender = x.initSender("127.0.0.1", 8545,
-    "90f8bf6a479f320ead074411a4b0e7944ea8c9c1".toAddress)
-  receiver = x.initReceiver("127.0.0.1", 8545)
-  eventListener = receiver.initEventListener()
-
-x.callbacks.Transfer.add proc (fromAddr, toAddr: Address, value: Uint256) =
-  echo $value, " coins were transferred from ", fromAddr.toHex, " to ", toAddr.toHex
-
-echo waitFor sender.getBalance(
-  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
-)
-
-echo toHex(waitFor sender.sendCoin(
-  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0"),
-  256.to(Stuint[256])
-))
-
-echo waitFor sender.getBalance(
-  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0")
-)
-
-waitFor eventListener.listen()
-
-echo toHex(waitFor sender.sendCoin(
-  fromHex(Stuint[256], "ffcf8fdee72ac11b5c542428b35eef5769c409f0"),
-  10.to(Stuint[256])
-))
-
-waitFor eventListener.listen()
