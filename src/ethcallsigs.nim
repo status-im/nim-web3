@@ -27,7 +27,7 @@ proc eth_getCode(data: array[20, byte], quantityTag: string): seq[byte]
 proc eth_sign(data: array[20, byte], message: seq[byte]): seq[byte]
 proc eth_sendTransaction(obj: EthSend): UInt256
 proc eth_sendRawTransaction(data: string, quantityTag: int): UInt256
-proc eth_call(call: EthCall, quantityTag: string): seq[byte]#UInt256
+proc eth_call(call: EthCall, quantityTag: string): string #UInt256
 proc eth_estimateGas(call: EthCall, quantityTag: string): UInt256
 proc eth_getBlockByHash(data: array[32, byte], fullTransactions: bool): BlockObject
 proc eth_getBlockByNumber(quantityTag: string, fullTransactions: bool): BlockObject

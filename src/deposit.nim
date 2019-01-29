@@ -9,7 +9,7 @@ contract(TestContract):
   proc ChainStart(deposit_root: bytes32, time: bytes) {.event.}
   proc deposit(deposit_input: bytes) {.payable.}
   proc get_deposit_root(): bytes32 {.view.}
-  #proc get_branch(leaf: uint256): bytes32[32] {.pure.}
+  proc get_branch(leaf: uint256): bytes32[32] {.view.}
 
 #var
 #  x2 = TestContract(address:
@@ -21,13 +21,15 @@ contract(TestContract):
 
 var
   x = TestContract(address:
-    "4e7f73f0bbee44db86fbf8b957cf7c8bf330c2fe".toAddress,
+    "630170976aBc526b1408Cc2Dd7b7B5599862c02f".toAddress,
     client: newRpcHttpClient()
   )
   sender = x.initSender("127.0.0.1", 8545,
-    "45b6fc37a833d2f20dc25917f0a632f351be474b".toAddress)
-  receiver = x.initReceiver("127.0.0.1", 8545)
-  eventListener = receiver.initEventListener()
+    "c9f03520257dd207a159164c534c2b2664d8fd22".toAddress)
+  #receiver = x.initReceiver("127.0.0.1", 8545)
+  #eventListener = receiver.initEventListener()
+
+echo waitFor sender.getDepositRoot()
 
 #x.callbacks.Transfer.add proc (fromAddr, toAddr: Address, value: Uint256) =
 #  echo $value, " coins were transferred from ", fromAddr.toHex, " to ", toAddr.toHex
@@ -52,4 +54,4 @@ var
 #  10.to(Stuint[256])
 #))
 
-waitFor eventListener.listen()
+#waitFor eventListener.listen()

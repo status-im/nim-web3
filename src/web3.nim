@@ -37,12 +37,12 @@ type
 #  result = new Web3
 #  result.eth = client
 
-func encode[bits: static[int]](x: Stuint[bits]): EncodeResult =
+func encode*[bits: static[int]](x: Stuint[bits]): EncodeResult =
   ## Encodes a `Stuint` to a textual representation for use in the JsonRPC
   ## `sendTransaction` call.
   (dynamic: false, data: '0'.repeat((256 - bits) div 4) & x.dumpHex)
 
-func encode[bits: static[int]](x: Stint[bits]): EncodeResult =
+func encode*[bits: static[int]](x: Stint[bits]): EncodeResult =
   ## Encodes a `Stint` to a textual representation for use in the JsonRPC
   ## `sendTransaction` call.
   (dynamic: false,
@@ -52,6 +52,13 @@ func encode[bits: static[int]](x: Stint[bits]): EncodeResult =
     else:
       '0'.repeat((256 - bits) div 4) & x.dumpHex
   )
+
+func decode*[bits: static[int]](input: string, to: type Stuint[bits]): Stuint[bits] =
+  fromHex(to, input)
+
+func decode*[bits: static[int]](input: string, to: type Stint[bits]): Stint[bits] =
+  cast[Stint[bits]](fromHex(Stuint[bits], input))
+
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps
@@ -85,6 +92,7 @@ macro makeTypeEnum(): untyped =
       `identInt`* = Int256
       `identBool`* = distinct Int256
     func encode*(x: `identBool`): EncodeResult = encode(Int256(x))
+    func decode*(input: string, x: `identBool`): `identBool` = `identBool`(decode(input, Stint[256]))
   fields.add [
     identAddress,
     identUint,
@@ -117,6 +125,12 @@ macro makeTypeEnum(): untyped =
       func encode*[N: static[int]](x: `identUfixed`[N]): EncodeResult =
         encode(`identUint`(x) * (10 ^ N).to(`identUint`))
 
+      func decode*[N: static[int]](input: string, to: `identFixed`[N]): `identFixed`[N] =
+        decode(input, `identInt`) div / (10 ^ N).to(`identInt`)
+
+      func decode*[N: static[int]](input: string, to: `identUfixed`[N]): `identFixed`[N] =
+        decode(input, `identUint`) div / (10 ^ N).to(`identUint`)
+
     fields.add ident("Fixed" & $m)
     fields.add ident("Ufixed" & $m)
   let
@@ -145,6 +159,8 @@ macro makeTypeEnum(): untyped =
       func fromHex*(x: type `identBytes`, s: string): `identBytes` =
         for i in 0..(`i`-1):
           `identResult`[i] = parseHexInt(s[i*2..i*2+1]).uint8
+      func decode*(input: string, to: type `identBytes`): `identBytes` =
+        fromHex(to, input)
 
   fields.add [
     ident("Function"),
@@ -165,6 +181,8 @@ macro makeTypeEnum(): untyped =
       `identResult`.data &= "00".repeat(32 - (x.len mod 32))
     func fromHex*(x: type `identBytes`, s: string): `identBytes` =
       fromHex(s)
+    func decode*(input: string, to: type `identBytes`): `identBytes` =
+      fromHex(to, input)
 
   result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
   echo result.repr
@@ -175,7 +193,7 @@ type
   Encodable = concept x
     encode(x) is EncodeResult
 
-func encode(x: seq[Encodable]): EncodeResult =
+func encode*(x: seq[Encodable]): EncodeResult =
   result.dynamic = true
   result.data = x.len.toHex(64).toLower
   var
@@ -191,7 +209,13 @@ func encode(x: seq[Encodable]): EncodeResult =
     offset += encoded.data.len
   result.data &= data
 
-func encode(x: openArray[Encodable]): EncodeResult =
+func decode*[T](input: string, to: seq[T]): seq[T] =
+  var count = input[0..64].decode(Stuint)
+  result = newSeq[T](count)
+  for i in 0..count:
+    result[i] = input[i*64 .. (i+1)*64].decode(T)
+
+func encode*(x: openArray[Encodable]): EncodeResult =
   result.dynamic = false
   result.data = ""
   var
@@ -205,6 +229,11 @@ func encode(x: openArray[Encodable]): EncodeResult =
     else:
       result.data &= encoded.data
     offset += encoded.data.len
+
+func decode*[T; I: static int](input: string, to: array[0..I, T]): array[0..I, T] =
+  for i in 0..I:
+    result[i] = input[i*64 .. (i+1)*64].decode(T)
+
 
 type
   InterfaceObjectKind = enum
@@ -282,11 +311,31 @@ proc getEventSignature(event: EventObject): string =
 
 proc parseContract(body: NimNode): seq[InterfaceObject] =
   proc parseOutputs(outputNode: NimNode): seq[FunctionInputOutput] =
-    if outputNode.kind == nnkIdent:
+    #if outputNode.kind == nnkIdent:
+    #  result.add FunctionInputOutput(
+    #    name: "",
+    #    kind: parseEnum[FieldKind]($outputNode.ident)
+    #  )
+    case outputNode.kind:
+    of nnkBracketExpr:
       result.add FunctionInputOutput(
         name: "",
-        kind: parseEnum[FieldKind]($outputNode.ident)
+        kind: parseEnum[FieldKind]($outputNode[0].ident),
+        sequenceKind: if outputNode.len == 1:
+          dynamic
+        else:
+          fixed
       )
+      if outputNode.len == 2:
+        result[^1].count = outputNode[1].intVal.int
+    of nnkIdent:
+      result.add FunctionInputOutput(
+        name: "",
+        kind: parseEnum[FieldKind]($outputNode.ident),
+        sequenceKind: single
+      )
+    else:
+      discard
   proc parseInputs(inputNodes: NimNode): seq[FunctionInputOutput] =
     for i in 1..<inputNodes.len:
       let input = inputNodes[i]
@@ -436,7 +485,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
             ident "Address"
           else:
             if obj.functionObject.outputs.len != 1:
-              newEmptyNode()
+              ident "void"#newEmptyNode()
             else:
               ident $obj.functionObject.outputs[0].kind
       var
@@ -499,16 +548,23 @@ macro contract*(cname: untyped, body: untyped): untyped =
         )
       case obj.functionObject.stateMutability:
       of view:
+        let cc = ident "cc"
         procDef[6].add quote do:
-          var cc: EthCall
-          cc.source = some(`senderName`.address)
+          var `cc`: EthCall
+          `cc`.source = some(`senderName`.address)
           #cc.to = `senderName`.contract.Contract.address
-          cc.to = `senderName`.contract.address
+          `cc`.to = `senderName`.contract.address
           `encoder`
-          cc.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
-          echo cc.data
-          let response = await `senderName`.contract.`client`.eth_call(cc, "latest")
-          return response
+          `cc`.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
+          echo `cc`.data
+        if output != ident "void":
+          procDef[6].add quote do:
+            let response = await `senderName`.contract.`client`.eth_call(`cc`, "latest")
+            echo response
+            return response[2..^1].decode(`output`)
+        else:
+          procDef[6].add quote do:
+            await `senderName`.contract.`client`.eth_call(`cc`, "latest")
       else:
         procDef[6].add quote do:
           var cc: EthSend
