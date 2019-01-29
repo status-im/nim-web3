@@ -142,15 +142,30 @@ macro makeTypeEnum(): untyped =
         for y in x:
           `identResult`.data &= y.toHex.toLower
         `identResult`.data &= "00".repeat(32 - x.len)
+      func fromHex*(x: type `identBytes`, s: string): `identBytes` =
+        for i in 0..(`i`-1):
+          `identResult`[i] = parseHexInt(s[i*2..i*2+1]).uint8
 
   fields.add [
     ident("Function"),
     ident("Bytes"),
     ident("String")
   ]
+  let
+    identBytes = ident "Bytes"
+    identResult = ident "result"
   result.add quote do:
     type
-      Bytes* = seq[byte]
+      `identBytes`* = seq[byte]
+    func encode(x: `identBytes`): EncodeResult =
+      `identResult`.dynamic = false
+      `identResult`.data = x.len.toHex(64).toLower
+      for y in x:
+        `identResult`.data &= y.toHex.toLower
+      `identResult`.data &= "00".repeat(32 - (x.len mod 32))
+    func fromHex*(x: type `identBytes`, s: string): `identBytes` =
+      fromHex(s)
+
   result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
   echo result.repr
 

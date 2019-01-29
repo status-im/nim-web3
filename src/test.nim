@@ -8,8 +8,11 @@ contract(TestContract):
   proc sendCoin(receiver: Address, amount: Uint): Bool
   proc getBalance(address: Address): Uint {.view.}
   proc Transfer(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256) {.event.}
-  #proc Transfers(fromAddr: indexed[Address], toAddr: indexed[Address], value: Uint256[]) {.event.}
-  proc sendCoins(receiver: Address, amount: Uint[]): Bool
+  proc Deposit(previous_deposit_root: Bytes32, data: Byte[2064], merkle_tree_index: bytes[8]) {.event.}
+  proc ChainStart(deposit_root: bytes32, time: byte[8])
+  proc deposit(deposit_input: byte[2048]) {.payable.}
+  proc get_deposit_root(): bytes32 {.pure.}
+  proc get_branch(leaf: uint256): bytes32 {.pure.}
 
 #var
 #  x2 = TestContract(address:
