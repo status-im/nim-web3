@@ -6,7 +6,7 @@
 # at your option. This file may not be copied, modified, or distributed except according to those terms.
 
 import  unittest,
-        ../src/web3
+        ../web3
 
 suite "Your first test suite":
   test "Your first test":

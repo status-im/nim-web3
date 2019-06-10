@@ -1,5 +1,5 @@
 import web3
-import asyncdispatch2, nimcrypto, json_rpc/rpcclient
+import chronos, nimcrypto, json_rpc/rpcclient
 import ethtypes, ethprocs, stintjson, ethhexstrings
 import stint except UInt256
 

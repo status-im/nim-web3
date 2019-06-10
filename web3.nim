@@ -1,13 +1,13 @@
 import macros, strutils, options, math, json
 from os import getCurrentDir, DirSep, sleep
 import
-  nimcrypto, stint, httputils, chronicles, asyncdispatch2, json_rpc/rpcclient
-import ethtypes, ethprocs, stintjson, ethhexstrings
+  nimcrypto, stint, httputils, chronicles, chronos, json_rpc/rpcclient
+import web3/[ethtypes, ethprocs, stintjson, ethhexstrings]
 
 template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 
 ## Generate client convenience marshalling wrappers from forward declarations
-createRpcSigs(RpcHttpClient, sourceDir & DirSep & "ethcallsigs.nim")
+createRpcSigs(RpcHttpClient, sourceDir & DirSep & "web3" & DirSep & "ethcallsigs.nim")
 
 type
   Sender*[T] = ref object
