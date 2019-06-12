@@ -14,7 +14,7 @@ proc eth_coinbase(): string
 proc eth_mining(): bool
 proc eth_hashrate(): int
 proc eth_gasPrice(): int64
-proc eth_accounts(): seq[array[20, byte]]
+proc eth_accounts(): seq[Address]
 proc eth_blockNumber(): string
 proc eth_getBalance(data: array[20, byte], quantityTag: string): int
 proc eth_getStorageAt(data: array[20, byte], quantity: int, quantityTag: string): seq[byte]
@@ -25,16 +25,16 @@ proc eth_getUncleCountByBlockHash(data: array[32, byte])
 proc eth_getUncleCountByBlockNumber(quantityTag: string)
 proc eth_getCode(data: array[20, byte], quantityTag: string): seq[byte]
 proc eth_sign(data: array[20, byte], message: seq[byte]): seq[byte]
-proc eth_sendTransaction(obj: EthSend): UInt256
+proc eth_sendTransaction(obj: EthSend): TxHash
 proc eth_sendRawTransaction(data: string, quantityTag: int): UInt256
 proc eth_call(call: EthCall, quantityTag: string): string #UInt256
 proc eth_estimateGas(call: EthCall, quantityTag: string): UInt256
 proc eth_getBlockByHash(data: array[32, byte], fullTransactions: bool): BlockObject
 proc eth_getBlockByNumber(quantityTag: string, fullTransactions: bool): BlockObject
-proc eth_getTransactionByHash(data: Uint256): TransactionObject
+proc eth_getTransactionByHash(data: TxHash): TransactionObject
 proc eth_getTransactionByBlockHashAndIndex(data: UInt256, quantity: int): TransactionObject
 proc eth_getTransactionByBlockNumberAndIndex(quantityTag: string, quantity: int): TransactionObject
-proc eth_getTransactionReceipt(data: UInt256): ReceiptObject
+proc eth_getTransactionReceipt(data: TxHash): ReceiptObject
 proc eth_getUncleByBlockHashAndIndex(data: UInt256, quantity: int64): BlockObject
 proc eth_getUncleByBlockNumberAndIndex(quantityTag: string, quantity: int64): BlockObject
 proc eth_getCompilers(): seq[string]
@@ -51,6 +51,9 @@ proc eth_getLogs(filterOptions: FilterOptions): seq[LogObject]
 proc eth_getWork(): seq[UInt256]
 proc eth_submitWork(nonce: int64, powHash: Uint256, mixDigest: Uint256): bool
 proc eth_submitHashrate(hashRate: UInt256, id: Uint256): bool
+proc eth_subscribe(name: string, options: JsonNode): string
+proc eth_unsubscribe(id: string)
+
 proc shh_post(): string
 proc shh_version(message: WhisperPost): bool
 proc shh_newIdentity(): array[60, byte]

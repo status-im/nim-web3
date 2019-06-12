@@ -7,10 +7,11 @@ license       = "MIT or Apache License 2.0"
 requires "nim >= 0.18.0"
 requires "nimcrypto"
 requires "stint"
-requires "httputils"
 requires "chronicles"
 requires "chronos"
 requires "json_rpc"
+requires "byteutils"
+
 
 ### Helper functions
 proc test(name: string, defaultLang = "c") =

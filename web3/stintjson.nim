@@ -1,5 +1,6 @@
-import json, stint
+import json, options, stint, byteutils
 from json_rpc/rpcserver import expect
+import ethtypes
 
 template stintStr(n: UInt256|Int256): JsonNode =
   var s = n.toHex
@@ -30,3 +31,64 @@ proc fromJson*(n: JsonNode, argName: string, result: var ref UInt256) =
   new result
   result[] = hexStr.parse(StUint[256], 16) # TODO: Handle errors
 
+proc bytesFromJson(n: JsonNode, argName: string, result: var openarray[byte]) =
+  n.kind.expect(JString, argName)
+  let hexStr = n.getStr()
+  if hexStr.len != result.len * 2 + 2: # including "0x"
+    raise newException(ValueError, "Parameter \"" & argName & "\" value wrong length: " & $hexStr.len)
+  hexToByteArray(hexStr, result)
+
+
+proc fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N]) =
+  # expects base 16 string, starting with "0x"
+  bytesFromJson(n, argName, array[N, byte](result))
+
+proc `%`*[N](v: FixedBytes[N]): JsonNode =
+  result = %("0x" & array[N, byte](v).toHex)
+  assert(result.getStr.len == N * 2 + 2)
+
+proc `$`*[N](v: FixedBytes[N]): string =
+  array[N, byte](v).toHex
+
+proc `%`*(x: EthSend): JsonNode =
+  result = newJobject()
+  result["from"] = %x.source
+  if x.to.isSome:
+    result["to"] = %x.to.unsafeGet
+  if x.gas.isSome:
+    result["gas"] = %x.gas.unsafeGet
+  if x.gasPrice.isSome:
+    result["gasPrice"] = %x.gasPrice.unsafeGet
+  if x.value.isSome:
+    result["value"] = %x.value.unsafeGet
+  result["data"] = %x.data
+  if x.nonce.isSome:
+    result["nonce"] = %x.nonce.unsafeGet
+
+proc `%`*(x: EthCall): JsonNode =
+  result = newJobject()
+  result["to"] = %x.to
+  if x.source.isSome:
+    result["source"] = %x.source.unsafeGet
+  if x.gas.isSome:
+    result["gas"] = %x.gas.unsafeGet
+  if x.gasPrice.isSome:
+    result["gasPrice"] = %x.gasPrice.unsafeGet
+  if x.value.isSome:
+    result["value"] = %x.value.unsafeGet
+  if x.data.isSome:
+    result["data"] = %x.data.unsafeGet
+
+proc `%`*(x: byte): JsonNode =
+  %x.int
+
+proc `%`*(x: FilterOptions): JsonNode =
+  result = newJobject()
+  if x.fromBlock.isSome:
+    result["fromBlock"] = %x.fromBlock.unsafeGet
+  if x.toBlock.isSome:
+    result["toBlock"] = %x.toBlock.unsafeGet
+  if x.address.isSome:
+    result["address"] = %x.address.unsafeGet
+  if x.topics.isSome:
+    result["topics"] = %x.topics.unsafeGet

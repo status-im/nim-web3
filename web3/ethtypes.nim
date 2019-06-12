@@ -1,5 +1,5 @@
 import options, json
-import stint
+import stint, byteutils
 
 type
   SyncObject* = object
@@ -7,17 +7,21 @@ type
     currentBlock*: int
     highestBlock*: int
 
+  FixedBytes* [N: static[int]] = distinct array[N, byte]
+  Address* = FixedBytes[20]
+  TxHash* = FixedBytes[32]
+
   EthSend* = object
-    source*: array[20, byte]     # the address the transaction is send from.
-    to*: Option[array[20, byte]] # (optional when creating new contract) the address the transaction is directed to.
+    source*: Address             # the address the transaction is send from.
+    to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
     gas*: Option[int]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
     gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
     value*: Option[int]          # (optional) integer of the value sent with this transaction.
     data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
     nonce*: Option[int]          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
   #EthSend* = object
-  #  source*: array[20, byte]     # the address the transaction is send from.
-  #  to*: array[20, byte] # (optional when creating new contract) the address the transaction is directed to.
+  #  source*: Address     # the address the transaction is send from.
+  #  to*: Address         # (optional when creating new contract) the address the transaction is directed to.
   #  gas*: int            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
   #  gasPrice*: int       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
   #  value*: int          # (optional) integer of the value sent with this transaction.
@@ -25,16 +29,16 @@ type
   #  nonce*: int          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
   EthCall* = object
-    source*: Option[array[20, byte]]  # (optional) The address the transaction is send from.
-    to*: array[20, byte]      # The address the transaction is directed to.
+    source*: Option[Address]  # (optional) The address the transaction is send from.
+    to*: Address      # The address the transaction is directed to.
     gas*: Option[int]                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
     gasPrice*: Option[int]            # (optional) Integer of the gasPrice used for each paid gas.
     value*: Option[int]               # (optional) Integer of the value sent with this transaction.
     data*: Option[string]                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
 
   #EthCall* = object
-  #  source*: array[20, byte]  # (optional) The address the transaction is send from.
-  #  to*: array[20, byte]      # The address the transaction is directed to.
+  #  source*: Address  # (optional) The address the transaction is send from.
+  #  to*: Address      # The address the transaction is directed to.
   #  gas*: int                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
   #  gasPrice*: int            # (optional) Integer of the gasPrice used for each paid gas.
   #  value*: int               # (optional) Integer of the value sent with this transaction.
@@ -51,7 +55,7 @@ type
     transactionsRoot*: UInt256    # the root of the transaction trie of the block.
     stateRoot*: UInt256           # the root of the final state trie of the block.
     receiptsRoot*: UInt256        # the root of the receipts trie of the block.
-    miner*: array[20, byte]       # the address of the beneficiary to whom the mining rewards were given.
+    miner*: Address               # the address of the beneficiary to whom the mining rewards were given.
     difficulty*: int              # integer of the difficulty for this block.
     totalDifficulty*: int         # integer of the total difficulty of the chain until this block.
     extraData*: string            # the "extra data" field of this block.
@@ -68,8 +72,8 @@ type
     blockHash*: UInt256           # hash of the block where this transaction was in. null when its pending.
     blockNumber*: int64           # block number where this transaction was in. null when its pending.
     transactionIndex*: int64      # integer of the transactions index position in the block. null when its pending.
-    source*: array[20, byte]      # address of the sender.
-    to*: array[20, byte]          # address of the receiver. null when its a contract creation transaction.
+    source*: Address              # address of the sender.
+    to*: Address                  # address of the receiver. null when its a contract creation transaction.
     value*: int64                 # value transferred in Wei.
     gasPrice*: int64              # gas price provided by the sender in Wei.
     gas*: int64                   # gas provided by the sender.
@@ -84,9 +88,9 @@ type
     blockNumber*: string#int                 # block number where this transaction was in.
     cumulativeGasUsed*: string#int           # the total amount of gas used when this transaction was executed in the block.
     gasUsed*: string#int                     # the amount of gas used by this specific transaction alone.
-    contractAddress*: Option[array[20, byte]] # the contract address created, if the transaction was a contract creation, otherwise null.
+    contractAddress*: Option[Address] # the contract address created, if the transaction was a contract creation, otherwise null.
     logs*: seq[LogObject]                # TODO: See Wiki for details. list of log objects, which this transaction generated.
-    logsBloom*: Option[array[256, byte]]      # bloom filter for light clients to quickly retrieve related logs.
+    logsBloom*: Option[FixedBytes[256]]      # bloom filter for light clients to quickly retrieve related logs.
     # TODO: 
     #case kind*: ReceiptKind
     #of rkRoot: root*: UInt256         # post-transaction stateroot (pre Byzantium).
@@ -114,7 +118,7 @@ type
     transactionHash*: UInt256   # hash of the transactions this log was created from. null when its pending log.
     blockHash*: UInt256     # hash of the block where this log was in. null when its pending. null when its pending log.
     blockNumber*: string#int64     # the block number where this log was in. null when its pending. null when its pending log.
-    address*: string#array[20, byte]   # address from which this log originated.
+    address*: Address           # address from which this log originated.
     data*: string#seq[UInt256]         # contains one or more 32 Bytes non-indexed arguments of the log.
     topics*: seq[string]#array[4, UInt256]  # array of 0 to 4 32 Bytes DATA of indexed log arguments.
                                 # (In solidity: The first topic is the hash of the signature of the event.
@@ -142,64 +146,15 @@ type
     workProved*: int            # integer of the work this message required before it was send (?).
 
 #  EthSend* = object
-#    source*: array[20, byte]     # the address the transaction is send from.
-#    to*: Option[array[20, byte]] # (optional when creating new contract) the address the transaction is directed to.
+#    source*: Address     # the address the transaction is send from.
+#    to*: Option[Address] # (optional when creating new contract) the address the transaction is directed to.
 #    gas*: Option[int]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
 #    gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
 #    value*: Option[int]          # (optional) integer of the value sent with this transaction.
 #    data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
 #    nonce*: Option[int]          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
-var x: array[20, byte] = [1.byte, 2, 3, 4, 5, 6, 7, 0xab, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+# var x: array[20, byte] = [1.byte, 2, 3, 4, 5, 6, 7, 0xab, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
-const hchars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
-proc toStr*[N: static[int]](x: array[N, byte]): string =
-  result = newString(2 + N*2)
-  result[0] = '0'
-  result[1] = 'x'
-  for i, c in x:
-    result[2 + i*2] = hchars[(c and 0xf0) shr 4]
-    result[2 + i*2 + 1] = hchars[c and 0x0f]
-
-proc `%`*(x: EthSend): JsonNode =
-  result = newJobject()
-  result["from"] = %x.source.toStr
-  if x.to.isSome:
-    result["to"] = %x.to.unsafeGet.toStr
-  if x.gas.isSome:
-    result["gas"] = %x.gas.unsafeGet
-  if x.gasPrice.isSome:
-    result["gasPrice"] = %x.gasPrice.unsafeGet
-  if x.value.isSome:
-    result["value"] = %x.value.unsafeGet
-  result["data"] = %x.data
-  if x.nonce.isSome:
-    result["nonce"] = %x.nonce.unsafeGet
-
-proc `%`*(x: EthCall): JsonNode =
-  result = newJobject()
-  result["to"] = %x.to.toStr
-  if x.source.isSome:
-    result["source"] = %x.source.unsafeGet.toStr
-  if x.gas.isSome:
-    result["gas"] = %x.gas.unsafeGet
-  if x.gasPrice.isSome:
-    result["gasPrice"] = %x.gasPrice.unsafeGet
-  if x.value.isSome:
-    result["value"] = %x.value.unsafeGet
-  if x.data.isSome:
-    result["data"] = %x.data.unsafeGet
-
-proc `%`*(x: byte): JsonNode =
-  %x.int
-
-proc `%`*(x: FilterOptions): JsonNode =
-  result = newJobject()
-  if x.fromBlock.isSome:
-    result["fromBlock"] = %x.fromBlock.unsafeGet
-  if x.toBlock.isSome:
-    result["toBlock"] = %x.toBlock.unsafeGet
-  if x.address.isSome:
-    result["address"] = %x.address.unsafeGet
-  if x.topics.isSome:
-    result["topics"] = %x.topics.unsafeGet
+proc `==`*[N](a, b: FixedBytes[N]): bool {.inline.} =
+  array[N, byte](a) == array[N, byte](b)
