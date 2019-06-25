@@ -1,7 +1,6 @@
 import ../web3
-import chronos, nimcrypto, json_rpc/rpcclient, options, json
+import chronos, nimcrypto, json_rpc/rpcclient, options, json, stint
 import ../web3/[ethtypes, ethprocs, stintjson, ethhexstrings]
-import stint except UInt256
 
 
 #[ Contract NumberStorage
