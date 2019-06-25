@@ -39,15 +39,31 @@ proc bytesFromJson(n: JsonNode, argName: string, result: var openarray[byte]) =
   hexToByteArray(hexStr, result)
 
 
-proc fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N]) =
+proc fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N]) {.inline.} =
   # expects base 16 string, starting with "0x"
   bytesFromJson(n, argName, array[N, byte](result))
 
+proc fromJson*(n: JsonNode, argName: string, result: var Address) {.inline.} =
+  # expects base 16 string, starting with "0x"
+  bytesFromJson(n, argName, array[20, byte](result))
+
 proc `%`*[N](v: FixedBytes[N]): JsonNode =
+  result = %("0x" & array[N, byte](v).toHex)
+
+proc `%`*(v: Address): JsonNode =
+  result = %("0x" & array[20, byte](v).toHex)
+
+proc `%`*[N](v: DynamicBytes[N]): JsonNode =
   result = %("0x" & array[N, byte](v).toHex)
   assert(result.getStr.len == N * 2 + 2)
 
-proc `$`*[N](v: FixedBytes[N]): string =
+proc `$`*[N](v: FixedBytes[N]): string {.inline.} =
+  array[N, byte](v).toHex
+
+proc `$`*(v: Address): string {.inline.} =
+  array[20, byte](v).toHex
+
+proc `$`*[N](v: DynamicBytes[N]): string {.inline.} =
   array[N, byte](v).toHex
 
 proc `%`*(x: EthSend): JsonNode =

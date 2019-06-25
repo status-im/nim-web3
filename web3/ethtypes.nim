@@ -8,7 +8,9 @@ type
     highestBlock*: int
 
   FixedBytes* [N: static[int]] = distinct array[N, byte]
-  Address* = FixedBytes[20]
+  DynamicBytes* [N: static[int]] = distinct array[N, byte]
+
+  Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
 
   EthSend* = object
@@ -16,7 +18,7 @@ type
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
     gas*: Option[int]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
     gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
-    value*: Option[int]          # (optional) integer of the value sent with this transaction.
+    value*: Option[Uint256]          # (optional) integer of the value sent with this transaction.
     data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
     nonce*: Option[int]          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
   #EthSend* = object
@@ -158,3 +160,9 @@ type
 
 proc `==`*[N](a, b: FixedBytes[N]): bool {.inline.} =
   array[N, byte](a) == array[N, byte](b)
+
+proc `==`*[N](a, b: DynamicBytes[N]): bool {.inline.} =
+  array[N, byte](a) == array[N, byte](b)
+
+proc `==`*(a, b: Address): bool {.inline.} =
+  array[20, byte](a) == array[20, byte](b)

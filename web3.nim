@@ -1,5 +1,5 @@
 import macros, strutils, options, math, json, tables
-from os import getCurrentDir, DirSep, sleep
+from os import DirSep
 import
   nimcrypto, stint, httputils, chronicles, chronos, json_rpc/rpcclient,
   byteutils
@@ -12,6 +12,7 @@ template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 createRpcSigs(RpcClient, sourceDir & DirSep & "web3" & DirSep & "ethcallsigs.nim")
 
 export UInt256, Int256, Uint128, Int128
+export ethtypes
 
 type
   Web3* = ref object
@@ -21,11 +22,7 @@ type
   Sender*[T] = ref object
     web3*: Web3
     contractAddress*, fromAddress: Address
-
-  Receiver*[T] = ref object
-    contract: T
-    ip: string
-    port: int
+    value*: Uint256
 
   EncodeResult* = tuple[dynamic: bool, data: string]
 
@@ -36,7 +33,12 @@ type
 
 proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
   let s = w.subscriptions.getOrDefault(j{"subscription"}.getStr())
-  if not s.isNil: s.callback(j{"result"})
+  if not s.isNil:
+    try:
+      s.callback(j{"result"})
+    except Exception as e:
+      echo "Caught exception: ", e.msg
+      echo e.getStackTrace()
 
 proc newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
@@ -71,19 +73,36 @@ func encode*[bits: static[int]](x: Stint[bits]): EncodeResult =
       '0'.repeat((256 - bits) div 4) & x.dumpHex
   )
 
-func decode*[bits: static[int]](input: string, to: type Stuint[bits]): Stuint[bits] =
-  fromHex(to, input)
+func decode*(input: string, offset: int, to: var Stuint): int =
+  let meaningfulLen = to.bits div 8 * 2
+  to = type(to).fromHex(input[offset .. offset + meaningfulLen - 1])
+  meaningfulLen
 
-func decode*[bits: static[int]](input: string, to: type Stint[bits]): Stint[bits] =
-  cast[Stint[bits]](fromHex(Stuint[bits], input))
+func decode*[N](input: string, offset: int, to: var Stint[N]): int =
+  let meaningfulLen = N div 8 * 2
+  fromHex(input[offset .. offset + meaningfulLen], to)
+  meaningfulLen
 
-func encode*[N](b: FixedBytes[N]): EncodeResult =
-  result = (dynamic: false, data: "0".repeat((32 - N) * 2) & array[N, byte](b).toHex)
-  assert(result.data.len == 32 * 2)
+func fixedEncode(a: openarray[byte]): EncodeResult =
+  result = (dynamic: false, data: "00".repeat(32 - a.len mod 32) & byteutils.toHex(a))
+
+func encode*[N](b: FixedBytes[N]): EncodeResult = fixedEncode(array[N, byte](b))
+func encode*(b: Address): EncodeResult = fixedEncode(array[20, byte](b))
+
+
+proc skip0xPrefix(s: string): int =
+  if s.len > 1 and s[0] == '0' and s[1] in {'x', 'X'}: 2
+  else: 0
+
+proc strip0xPrefix(s: string): string =
+  let prefixLen = skip0xPrefix(s)
+  if prefixLen != 0:
+    s[prefixLen .. ^1]
+  else:
+    s
 
 proc fromHexAux(s: string, result: var openarray[byte]) =
-  let prefixLen = if s.len >= 2 and s[0] == '0' and s[1] in {'x', 'X'}: 2
-  else: 0
+  let prefixLen = skip0xPrefix(s)
   let meaningfulLen = s.len - prefixLen
   let requiredChars = result.len * 2
   if meaningfulLen > requiredChars:
@@ -97,8 +116,62 @@ proc fromHexAux(s: string, result: var openarray[byte]) =
 func fromHex*[N](x: type FixedBytes[N], s: string): FixedBytes[N] {.inline.} =
   fromHexAux(s, array[N, byte](result))
 
-func decode*[N](input: string, to: type FixedBytes[N]): FixedBytes[N] {.inline.} =
-  fromHex(to, input)
+func fromHex*(x: type Address, s: string): Address {.inline.} =
+  fromHexAux(s, array[20, byte](result))
+
+func decodeFixed(input: string, offset: int, to: var openarray[byte]): int =
+  let meaningfulLen = to.len * 2
+  let padding = (32 - to.len mod 32) * 2
+  let offset = offset + padding
+  fromHexAux(input[offset .. offset + meaningfulLen - 1], to)
+  meaningfulLen + padding
+
+func decode*[N](input: string, offset: int, to: var FixedBytes[N]): int {.inline.} =
+  decodeFixed(input, offset, array[N, byte](to))
+
+func decode*(input: string, offset: int, to: var Address): int {.inline.} =
+  decodeFixed(input, offset, array[20, byte](to))
+
+func encodeDynamic(v: openarray[byte]): EncodeResult =
+  result.dynamic = true
+  result.data = v.len.toHex(64).toLower
+  for y in v:
+    result.data &= y.toHex.toLower
+  result.data &= "00".repeat(v.len mod 32)
+
+func encode*[N](x: DynamicBytes[N]): EncodeResult {.inline.} =
+  encodeDynamic(array[N, byte](x))
+
+func fromHex*[N](x: type DynamicBytes[N], s: string): DynamicBytes[N] {.inline.} =
+  fromHexAux(s, array[N, byte](result))
+
+func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
+  var dataOffset, dataLen: UInt256
+  result = decode(input, offset, dataOffset)
+  discard decode(input, dataOffset.toInt * 2, dataLen)
+  # TODO: Check data len, and raise?
+  let meaningfulLen = to.len * 2
+  let actualDataOffset = (dataOffset.toInt + 32) * 2
+  fromHexAux(input[actualDataOffset .. actualDataOffset + meaningfulLen - 1], to)
+
+func decode*[N](input: string, offset: int, to: var DynamicBytes[N]): int {.inline.} =
+  decodeDynamic(input, offset, array[N, byte](to))
+
+proc unknownType() = discard # Used for informative errors
+
+template typeSignature(T: typedesc): string =
+  when T is string:
+    "string"
+  elif T is DynamicBytes:
+    "bytes"
+  elif T is FixedBytes:
+    "byte" & $T.N
+  elif T is StUint:
+    "uint" & $T.bits
+  elif T is Address:
+    "address"
+  else:
+    unknownType(T)
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps
@@ -106,7 +179,6 @@ macro makeTypeEnum(): untyped =
   ## identify these types in the contract signatures, along with encoder
   ## functions used in the generated procedures.
   result = newStmtList()
-  var fields: seq[NimNode]
   var lastpow2: int
   for i in countdown(256, 8, 8):
     let
@@ -119,8 +191,6 @@ macro makeTypeEnum(): untyped =
         type
           `identUint`* = Stuint[`lastpow2`]
           `identInt`* = Stint[`lastpow2`]
-    fields.add ident("Uint" & $i)
-    fields.add ident("Int" & $i)
   let
     identUint = ident("Uint")
     identInt = ident("Int")
@@ -130,13 +200,7 @@ macro makeTypeEnum(): untyped =
       `identUint`* = Uint256
       `identInt`* = Int256
       `identBool`* = distinct Int256
-    func encode*(x: `identBool`): EncodeResult = encode(Int256(x))
-    func decode*(input: string, x: `identBool`): `identBool` = `identBool`(decode(input, Stint[256]))
-  fields.add [
-    identUint,
-    identInt,
-    identBool
-  ]
+
   for m in countup(8, 256, 8):
     let
       identInt = ident("Int" & $m)
@@ -151,54 +215,48 @@ macro makeTypeEnum(): untyped =
         `identFixed`*[N: static[int]] = distinct `identInt`
         `identUfixed`*[N: static[int]] = distinct `identUint`
 
-      func to*(x: `identInt`, `identT`: typedesc[`identFixed`]): `identT` =
-        T(x)
+      # func to*(x: `identInt`, `identT`: typedesc[`identFixed`]): `identT` =
+      #   T(x)
 
-      func to*(x: `identUint`, `identT`: typedesc[`identUfixed`]): `identT` =
-        T(x)
+      # func to*(x: `identUint`, `identT`: typedesc[`identUfixed`]): `identT` =
+      #   T(x)
 
-      func encode*[N: static[int]](x: `identFixed`[N]): EncodeResult =
-        encode(`identInt`(x) * (10 ^ N).to(`identInt`))
+      # func encode*[N: static[int]](x: `identFixed`[N]): EncodeResult =
+      #   encode(`identInt`(x) * (10 ^ N).to(`identInt`))
 
-      func encode*[N: static[int]](x: `identUfixed`[N]): EncodeResult =
-        encode(`identUint`(x) * (10 ^ N).to(`identUint`))
+      # func encode*[N: static[int]](x: `identUfixed`[N]): EncodeResult =
+      #   encode(`identUint`(x) * (10 ^ N).to(`identUint`))
 
-      func decode*[N: static[int]](input: string, to: `identFixed`[N]): `identFixed`[N] =
-        decode(input, `identInt`) div / (10 ^ N).to(`identInt`)
+      # func decode*[N: static[int]](input: string, to: `identFixed`[N]): `identFixed`[N] =
+      #   decode(input, `identInt`) div / (10 ^ N).to(`identInt`)
 
-      func decode*[N: static[int]](input: string, to: `identUfixed`[N]): `identFixed`[N] =
-        decode(input, `identUint`) div / (10 ^ N).to(`identUint`)
+      # func decode*[N: static[int]](input: string, to: `identUfixed`[N]): `identFixed`[N] =
+      #   decode(input, `identUint`) div / (10 ^ N).to(`identUint`)
 
-    fields.add ident("Fixed" & $m)
-    fields.add ident("Ufixed" & $m)
   let
     identFixed = ident("Fixed")
     identUfixed = ident("Ufixed")
-  fields.add identFixed
-  fields.add identUfixed
   result.add quote do:
     type
       `identFixed`* = distinct Int128
       `identUfixed`* = distinct Uint128
-  for i in 1..32:
+  for i in 1..256:
     let
       identBytes = ident("Bytes" & $i)
       identResult = ident "result"
-    fields.add identBytes
     result.add quote do:
       type
-        `identBytes`* = FixedBytes[`i`]
-
-  fields.add [
-    ident("Function"),
-    ident("Bytes"),
-    ident("String")
-  ]
+        `identBytes`* = DynamicBytes[`i`]
 
   #result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
   echo result.repr
 
 makeTypeEnum()
+
+func encode*(x: Bool): EncodeResult = encode(Int256(x))
+func decode*[N](input: string, offset: int, to: var Bool): int {.inline.} =
+  decode(input, offset, Stint(to))
+
 
 type
   Encodable = concept x
@@ -288,27 +346,17 @@ type
     of constructor: constructorObject: ConstructorObject
     of event: eventObject: EventObject
 
-proc getMethodSignature(function: FunctionObject): string =
-  result = function.name & "("
-  for i, input in function.inputs:
-    result.add(input.typ.toLowerAscii)
-    if i != function.inputs.high:
-      result.add ","
-  result.add ")"
+proc joinStrings(s: varargs[string]): string = join(s)
 
-proc getEventSignature(event: EventObject): string =
-  result = event.name & "("
-  for i, input in event.inputs:
-    result.add(
-      input.typ.toLower &
-      (case input.sequenceKind:
-      of single: ""
-      of dynamic: "[]"
-      of fixed: "[" & $input.count & "]")
-    )
-    if i != event.inputs.high:
-      result.add ","
-  result.add ")"
+proc getSignature(function: FunctionObject | EventObject): NimNode =
+  result = newCall(bindSym"joinStrings")
+  result.add(newLit(function.name & "("))
+  for i, input in function.inputs:
+    result.add(newCall(bindSym"typeSignature", ident input.typ))
+    if i != function.inputs.high:
+      result.add(newLit(","))
+  result.add(newLit(")"))
+  result = newCall(ident"static", result)
 
 proc parseContract(body: NimNode): seq[InterfaceObject] =
   proc parseOutputs(outputNode: NimNode): seq[FunctionInputOutput] =
@@ -469,7 +517,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
     of function:
       echo "Outputs: ", repr obj.functionObject.outputs
       let
-        signature = getMethodSignature(obj.functionObject)
+        signature = getSignature(obj.functionObject)
         procName = ident obj.functionObject.name
         senderName = ident "sender"
         output =
@@ -510,10 +558,11 @@ macro contract*(cname: untyped, body: untyped): untyped =
         for encoding in `encodings`:
           if encoding.dynamic:
             `encodedParams` &= `offset`.toHex(64).toLower
-            `offset` += encoding.data.len
             `dataBuf` &= encoding.data
           else:
             `encodedParams` &= encoding.data
+          `offset` += encoding.data.len div 2
+
         `encodedParams` &= `dataBuf`
       var procDef = quote do:
         proc `procName`(`senderName`: Sender[`cname`]): Future[`output`] {.async.} =
@@ -544,6 +593,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
           var `cc`: EthCall
           `cc`.source = some(`senderName`.fromAddress)
           `cc`.to = `senderName`.contractAddress
+          `cc`.gas = some(3000000)
           `encoder`
           `cc`.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
           echo "Call data: ", `cc`.data
@@ -551,7 +601,9 @@ macro contract*(cname: untyped, body: untyped): untyped =
           procDef[6].add quote do:
             let response = await `senderName`.web3.provider.eth_call(`cc`, "latest")
             echo "Call response: ", response
-            return response[2..^1].decode(`output`)
+            var res: `output`
+            discard decode(strip0xPrefix(response), 0, res)
+            return res
         else:
           procDef[6].add quote do:
             await `senderName`.provider.eth_call(`cc`, "latest")
@@ -560,6 +612,9 @@ macro contract*(cname: untyped, body: untyped): untyped =
           var cc: EthSend
           cc.source = `senderName`.fromAddress
           cc.to = some(`senderName`.contractAddress)
+          cc.value = some(`senderName`.value)
+          cc.gas = some(3000000)
+
           `encoder`
           cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
           echo "Call data: ", cc.data
@@ -573,33 +628,42 @@ macro contract*(cname: untyped, body: untyped): untyped =
         var
           params = nnkFormalParams.newTree(newEmptyNode())
           argParseBody = newStmtList()
-          arguments: seq[NimNode]
           i = 1
           call = nnkCall.newTree(callbackIdent)
-        for ii, input in obj.eventObject.inputs:
+          offset = ident "offset"
+          inputData = ident "inputData"
+        
+        var offsetInited = false
+
+        for input in obj.eventObject.inputs:
           params.add nnkIdentDefs.newTree(
             ident input.name,
             ident input.typ,
             newEmptyNode()
           )
           let
-            argument = genSym(nskLet)
+            argument = genSym(nskVar)
             kind = ident input.typ
-            inputData = if input.indexed:
-              quote do:
-                `jsonIdent`["topics"][`i`].getStr
-            else:
-              quote do:
-                `jsonIdent`{"data"}.getStr()[(`ii` - `i` + 1)*64+2..<(`ii` - `i` + 2)*64+2]
           if input.indexed:
+            argParseBody.add quote do:
+              var `argument`: `kind`
+              discard decode(strip0xPrefix(`jsonIdent`["topics"][`i`].getStr), 0, `argument`)
             i += 1
-          arguments.add argument
-          argParseBody.add quote do:
-            let `argument` = fromHex(`kind`, `inputData`)
+          else:
+            if not offsetInited:
+              argParseBody.add quote do:
+                var `inputData` = strip0xPrefix(`jsonIdent`["data"].getStr)
+                var `offset` = 0
+
+              offsetInited = true
+
+            argParseBody.add quote do:
+              var `argument`: `kind`
+              `offset` += decode(`inputData`, `offset`, `argument`)
           call.add argument
         let cbident = ident obj.eventObject.name
         let procTy = nnkProcTy.newTree(params, newEmptyNode())
-        let signature = getEventSignature(obj.eventObject)
+        let signature = getSignature(obj.eventObject)
 
         result.add quote do:
           type `cbident` = object
@@ -649,12 +713,3 @@ proc contractSender*(web3: Web3, T: typedesc, toAddress, fromAddress: Address): 
 
 proc `$`*(b: Bool): string =
   $(Stint[256](b))
-
-macro toAddress*(input: string): untyped =
-  let a = $input
-  result = nnkBracket.newTree()
-  for c in countup(0, a.high, 2):
-    result.add nnkDotExpr.newTree(
-      newLit(parseHexInt(a[c..c+1])),
-      ident "byte"
-    )
