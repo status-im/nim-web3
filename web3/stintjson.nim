@@ -1,16 +1,8 @@
-import json, options, stint, byteutils
+import json, options, stint, byteutils, strutils
 from json_rpc/rpcserver import expect
-import ethtypes
+import ethtypes, ethhexstrings
 
-template stintStr(n: UInt256|Int256): JsonNode =
-  var s = n.toHex
-  if s.len mod 2 != 0: s = "0" & s
-  s = "0x" & s
-  %s
-
-proc `%`*(n: UInt256): JsonNode = n.stintStr
-
-proc `%`*(n: Int256): JsonNode = n.stintStr
+proc `%`*(n: Int256|UInt256): JsonNode = %("0x" & n.toHex)
 
 # allows UInt256 to be passed as a json string
 proc fromJson*(n: JsonNode, argName: string, result: var UInt256) =
@@ -46,6 +38,16 @@ proc fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N]) {.inl
 proc fromJson*(n: JsonNode, argName: string, result: var Address) {.inline.} =
   # expects base 16 string, starting with "0x"
   bytesFromJson(n, argName, array[20, byte](result))
+
+proc fromJson*(n: JsonNode, argName: string, result: var Quantity) {.inline.} =
+  if n.kind == JInt:
+    result = Quantity(n.getBiggestInt)
+  else:
+    n.kind.expect(JString, argName)
+    result = Quantity(parseHexInt(n.getStr))
+
+proc `%`*(v: Quantity): JsonNode =
+  result = %encodeQuantity(v.uint64)
 
 proc `%`*[N](v: FixedBytes[N]): JsonNode =
   result = %("0x" & array[N, byte](v).toHex)

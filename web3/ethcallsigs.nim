@@ -15,7 +15,7 @@ proc eth_mining(): bool
 proc eth_hashrate(): int
 proc eth_gasPrice(): int64
 proc eth_accounts(): seq[Address]
-proc eth_blockNumber(): string
+proc eth_blockNumber(): Quantity
 proc eth_getBalance(data: array[20, byte], quantityTag: string): int
 proc eth_getStorageAt(data: array[20, byte], quantity: int, quantityTag: string): seq[byte]
 proc eth_getTransactionCount(data: array[20, byte], quantityTag: string)
@@ -41,13 +41,15 @@ proc eth_getCompilers(): seq[string]
 proc eth_compileLLL(): seq[byte]
 proc eth_compileSolidity(): seq[byte]
 proc eth_compileSerpent(): seq[byte]
-proc eth_newFilter(filterOptions: FilterOptions): int
-proc eth_newBlockFilter(): int
-proc eth_newPendingTransactionFilter(): int
-proc eth_uninstallFilter(filterId: int): bool
-proc eth_getFilterChanges(filterId: int): seq[LogObject]
-proc eth_getFilterLogs(filterId: int): seq[LogObject]
+proc eth_newFilter(filterOptions: FilterOptions): string
+proc eth_newBlockFilter(): string
+proc eth_newPendingTransactionFilter(): string
+proc eth_uninstallFilter(filterId: string): bool
+proc eth_getFilterChanges(filterId: string): JsonNode
+proc eth_getFilterLogs(filterId: string): JsonNode
 proc eth_getLogs(filterOptions: FilterOptions): seq[LogObject]
+proc eth_getLogs(filterOptions: JsonNode): JsonNode
+
 proc eth_getWork(): seq[UInt256]
 proc eth_submitWork(nonce: int64, powHash: Uint256, mixDigest: Uint256): bool
 proc eth_submitHashrate(hashRate: UInt256, id: Uint256): bool

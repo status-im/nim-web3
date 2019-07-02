@@ -13,10 +13,12 @@ type
   Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
 
+  Quantity* = distinct uint64
+
   EthSend* = object
     source*: Address             # the address the transaction is send from.
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
-    gas*: Option[int]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
+    gas*: Option[Quantity]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
     gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
     value*: Option[Uint256]          # (optional) integer of the value sent with this transaction.
     data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
@@ -33,7 +35,7 @@ type
   EthCall* = object
     source*: Option[Address]  # (optional) The address the transaction is send from.
     to*: Address      # The address the transaction is directed to.
-    gas*: Option[int]                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
+    gas*: Option[Quantity]                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
     gasPrice*: Option[int]            # (optional) Integer of the gasPrice used for each paid gas.
     value*: Option[int]               # (optional) Integer of the value sent with this transaction.
     data*: Option[string]                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
@@ -78,7 +80,7 @@ type
     to*: Address                  # address of the receiver. null when its a contract creation transaction.
     value*: int64                 # value transferred in Wei.
     gasPrice*: int64              # gas price provided by the sender in Wei.
-    gas*: int64                   # gas provided by the sender.
+    gas*: Quantity                   # gas provided by the sender.
     input*: seq[byte]             # the data send along with the transaction.
 
   ReceiptKind* = enum rkRoot, rkStatus
@@ -110,7 +112,7 @@ type
   FilterOptions* = object
     fromBlock*: Option[string]              # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
     toBlock*: Option[string]                # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
-    address*: Option[string]  # (optional) contract address or a list of addresses from which logs should originate.
+    address*: Option[Address]  # (optional) contract address or a list of addresses from which logs should originate.
     topics*: Option[seq[string]]#Option[seq[FilterData]]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
 
   LogObject* = object
