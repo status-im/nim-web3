@@ -1,3 +1,5 @@
+import strutils
+
 type
   HexQuantityStr* = distinct string
   HexDataStr* = distinct string

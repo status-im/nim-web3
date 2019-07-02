@@ -1,6 +1,7 @@
 import ../web3
 import chronos, nimcrypto, json_rpc/rpcclient, options, json, stint
 import ../web3/[ethtypes, ethprocs, stintjson, ethhexstrings]
+import test_utils
 
 
 #[ Contract NumberStorage
@@ -66,18 +67,8 @@ proc test() {.async.} =
   echo "accounts: ", accounts
   let defaultAccount = accounts[0]
 
-  proc deployContract(code: string): Future[Address] {.async.} =
-    ## Deploy contract and return its address
-    var tr: EthSend
-    tr.source = defaultAccount
-    tr.data = code
-    tr.gas = 1500000.some
-    let r = await provider.eth_sendTransaction(tr)
-    let receipt = await provider.eth_getTransactionReceipt(r)
-    result = receipt.contractAddress.get
-
   block: # NumberStorage
-    let cc = await deployContract(NumberStorageCode)
+    let cc = await web3.deployContract(NumberStorageCode)
     echo "Deployed NumberStorage contract: ", cc
 
     let ns = web3.contractSender(NumberStorage, cc, defaultAccount)
@@ -88,7 +79,7 @@ proc test() {.async.} =
     assert(n == 5.u256)
 
   block: # MetaCoin
-    let cc = await deployContract(MetaCoinCode)
+    let cc = await web3.deployContract(MetaCoinCode)
     echo "Deployed MetaCoin contract: ", cc
 
     let ns = web3.contractSender(MetaCoin, cc, defaultAccount)

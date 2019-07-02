@@ -30,15 +30,21 @@ type
     id*: string
     web3*: Web3
     callback*: proc(j: JsonNode)
+    pendingEvents: seq[JsonNode]
+    historicalEventsProcessed: bool
+    removed: bool
 
 proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
   let s = w.subscriptions.getOrDefault(j{"subscription"}.getStr())
-  if not s.isNil:
-    try:
-      s.callback(j{"result"})
-    except Exception as e:
-      echo "Caught exception: ", e.msg
-      echo e.getStackTrace()
+  if not s.isNil and not s.removed:
+    if s.historicalEventsProcessed:
+      try:
+        s.callback(j{"result"})
+      except Exception as e:
+        echo "Caught exception in handleSubscriptionNotification: ", e.msg
+        echo e.getStackTrace()
+    else:
+      s.pendingEvents.add(j)
 
 proc newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
@@ -47,6 +53,23 @@ proc newWeb3*(provider: RpcClient): Web3 =
   provider.setMethodHandler("eth_subscription") do(j: JsonNode):
     r.handleSubscriptionNotification(j)
 
+proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
+  try:
+    let logs = await s.web3.provider.eth_getLogs(options)
+    for l in logs:
+      if s.removed: break
+      s.callback(l)
+    s.historicalEventsProcessed = true
+    var i = 0
+    while i < s.pendingEvents.len: # Mind reentrancy
+      if s.removed: break
+      s.callback(s.pendingEvents[i])
+      inc i
+    s.pendingEvents = @[]
+  except Exception as e:
+    echo "Caught exception in getHistoricalEvents: ", e.msg
+    echo e.getStackTrace()
+
 proc subscribe*(w: Web3, name: string, options: JsonNode, callback: proc(j: JsonNode)): Future[Subscription] {.async.} =
   var options = options
   if options.isNil: options = newJNull()
@@ -54,7 +77,13 @@ proc subscribe*(w: Web3, name: string, options: JsonNode, callback: proc(j: Json
   result = Subscription(id: id, web3: w, callback: callback)
   w.subscriptions[id] = result
 
+proc subscribeToLogs*(w: Web3, options: JsonNode, callback: proc(j: JsonNode)): Future[Subscription] {.async.} =
+  result = await subscribe(w, "logs", options, callback)
+  discard getHistoricalEvents(result, options)
+
 proc unsubscribe*(s: Subscription): Future[void] {.async.} =
+  s.web3.subscriptions.del(s.id)
+  s.removed = true
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
 func encode*[bits: static[int]](x: Stuint[bits]): EncodeResult =
@@ -358,6 +387,18 @@ proc getSignature(function: FunctionObject | EventObject): NimNode =
   result.add(newLit(")"))
   result = newCall(ident"static", result)
 
+proc addAddressAndSignatureToOptions(options: JsonNode, address: Address, signature: string): JsonNode =
+  result = options
+  if result.isNil:
+    result = newJObject()
+  if "address" notin result:
+    result["address"] = %address
+  var topics = result{"topics"}
+  if topics.isNil:
+    topics = newJArray()
+    result["topics"] = topics
+  topics.elems.insert(%signature, 0)
+
 proc parseContract(body: NimNode): seq[InterfaceObject] =
   proc parseOutputs(outputNode: NimNode): seq[FunctionInputOutput] =
     #if outputNode.kind == nnkIdent:
@@ -593,7 +634,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
           var `cc`: EthCall
           `cc`.source = some(`senderName`.fromAddress)
           `cc`.to = `senderName`.contractAddress
-          `cc`.gas = some(3000000)
+          `cc`.gas = some(Quantity(3000000))
           `encoder`
           `cc`.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
           echo "Call data: ", `cc`.data
@@ -613,7 +654,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
           cc.source = `senderName`.fromAddress
           cc.to = some(`senderName`.contractAddress)
           cc.value = some(`senderName`.value)
-          cc.gas = some(3000000)
+          cc.gas = some(Quantity(3000000))
 
           `encoder`
           cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
@@ -667,16 +708,13 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
         result.add quote do:
           type `cbident` = object
-          proc subscribe(s: Sender[`cname`], t: typedesc[`cbident`], `callbackIdent`: `procTy`): Future[Subscription] =
-            let options = %*{
-              "fromBlock": "latest",
-              "toBlock": "latest",
-              "address": s.contractAddress,
-              "topics": ["0x" & $keccak256.digest(`signature`)]
-            }
-            s.web3.subscribe("logs", options) do(`jsonIdent`: JsonNode):
+          proc subscribe(s: Sender[`cname`], t: typedesc[`cbident`], options: JsonNode, `callbackIdent`: `procTy`): Future[Subscription] =
+            let options = addAddressAndSignatureToOptions(options, s.contractAddress, "0x" & toLowerAscii($keccak256.digest(`signature`)))
+
+            s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
               `argParseBody`
               `call`
+
     else:
       discard
 
@@ -710,6 +748,9 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
 proc contractSender*(web3: Web3, T: typedesc, toAddress, fromAddress: Address): Sender[T] =
   Sender[T](web3: web3, contractAddress: toAddress, fromAddress: fromAddress)
+
+proc subscribe*(s: Sender, t: typedesc, cb: proc): Future[Subscription] {.inline.} =
+  subscribe(s, t, nil, cb)
 
 proc `$`*(b: Bool): string =
   $(Stint[256](b))
