@@ -668,20 +668,25 @@ macro contract*(cname: untyped, body: untyped): untyped =
         let jsonIdent = ident "j"
         var
           params = nnkFormalParams.newTree(newEmptyNode())
+          paramsWithRawData = nnkFormalParams.newTree(newEmptyNode())
+
           argParseBody = newStmtList()
           i = 1
           call = nnkCall.newTree(callbackIdent)
+          callWithRawData = nnkCall.newTree(callbackIdent)
           offset = ident "offset"
           inputData = ident "inputData"
         
         var offsetInited = false
 
         for input in obj.eventObject.inputs:
-          params.add nnkIdentDefs.newTree(
+          let param = nnkIdentDefs.newTree(
             ident input.name,
             ident input.typ,
             newEmptyNode()
           )
+          params.add param
+          paramsWithRawData.add param
           let
             argument = genSym(nskVar)
             kind = ident input.typ
@@ -702,9 +707,20 @@ macro contract*(cname: untyped, body: untyped): untyped =
               var `argument`: `kind`
               `offset` += decode(`inputData`, `offset`, `argument`)
           call.add argument
-        let cbident = ident obj.eventObject.name
-        let procTy = nnkProcTy.newTree(params, newEmptyNode())
-        let signature = getSignature(obj.eventObject)
+          callWithRawData.add argument
+        let
+          cbident = ident obj.eventObject.name
+          procTy = nnkProcTy.newTree(params, newEmptyNode())
+          signature = getSignature(obj.eventObject)
+
+        callWithRawData.add jsonIdent
+        paramsWithRawData.add nnkIdentDefs.newTree(
+          jsonIdent,
+          bindSym "JsonNode",
+          newEmptyNode()
+        )
+
+        let procTyWithRawData = nnkProcTy.newTree(paramsWithRawData, newEmptyNode())
 
         result.add quote do:
           type `cbident` = object
@@ -714,6 +730,13 @@ macro contract*(cname: untyped, body: untyped): untyped =
             s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
               `argParseBody`
               `call`
+
+          proc subscribe(s: Sender[`cname`], t: typedesc[`cbident`], options: JsonNode, `callbackIdent`: `procTyWithRawData`): Future[Subscription] =
+            let options = addAddressAndSignatureToOptions(options, s.contractAddress, "0x" & toLowerAscii($keccak256.digest(`signature`)))
+
+            s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
+              `argParseBody`
+              `callWithRawData`
 
     else:
       discard
