@@ -19,9 +19,9 @@ proc eth_blockNumber(): Quantity
 proc eth_getBalance(data: array[20, byte], quantityTag: string): int
 proc eth_getStorageAt(data: array[20, byte], quantity: int, quantityTag: string): seq[byte]
 proc eth_getTransactionCount(data: array[20, byte], quantityTag: string)
-proc eth_getBlockTransactionCountByHash(data: array[32, byte])
+proc eth_getBlockTransactionCountByHash(data: BlockHash)
 proc eth_getBlockTransactionCountByNumber(quantityTag: string)
-proc eth_getUncleCountByBlockHash(data: array[32, byte])
+proc eth_getUncleCountByBlockHash(data: BlockHash)
 proc eth_getUncleCountByBlockNumber(quantityTag: string)
 proc eth_getCode(data: array[20, byte], quantityTag: string): seq[byte]
 proc eth_sign(data: array[20, byte], message: seq[byte]): seq[byte]
@@ -29,7 +29,7 @@ proc eth_sendTransaction(obj: EthSend): TxHash
 proc eth_sendRawTransaction(data: string, quantityTag: int): UInt256
 proc eth_call(call: EthCall, quantityTag: string): string #UInt256
 proc eth_estimateGas(call: EthCall, quantityTag: string): UInt256
-proc eth_getBlockByHash(data: array[32, byte], fullTransactions: bool): BlockObject
+proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
 proc eth_getBlockByNumber(quantityTag: string, fullTransactions: bool): BlockObject
 proc eth_getTransactionByHash(data: TxHash): TransactionObject
 proc eth_getTransactionByBlockHashAndIndex(data: UInt256, quantity: int): TransactionObject
