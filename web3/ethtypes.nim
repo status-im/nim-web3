@@ -12,6 +12,7 @@ type
 
   Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
+  BlockHash* = FixedBytes[32]
 
   Quantity* = distinct uint64
 
@@ -50,23 +51,23 @@ type
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
-    number*: int                  # the block number. null when its pending block.
+    number*: Quantity             # the block number. null when its pending block.
     hash*: UInt256                # hash of the block. null when its pending block.
     parentHash*: UInt256          # hash of the parent block.
-    nonce*: int64                 # hash of the generated proof-of-work. null when its pending block.
+    nonce*: Quantity              # hash of the generated proof-of-work. null when its pending block.
     sha3Uncles*: UInt256          # SHA3 of the uncles data in the block.
-    logsBloom*: array[256, byte]  # the bloom filter for the logs of the block. null when its pending block.
+    logsBloom*: FixedBytes[256]   # the bloom filter for the logs of the block. null when its pending block.
     transactionsRoot*: UInt256    # the root of the transaction trie of the block.
     stateRoot*: UInt256           # the root of the final state trie of the block.
     receiptsRoot*: UInt256        # the root of the receipts trie of the block.
     miner*: Address               # the address of the beneficiary to whom the mining rewards were given.
-    difficulty*: int              # integer of the difficulty for this block.
-    totalDifficulty*: int         # integer of the total difficulty of the chain until this block.
+    difficulty*: Quantity         # integer of the difficulty for this block.
+    totalDifficulty*: Quantity    # integer of the total difficulty of the chain until this block.
     extraData*: string            # the "extra data" field of this block.
-    size*: int                    # integer the size of this block in bytes.
-    gasLimit*: int                # the maximum gas allowed in this block.
-    gasUsed*: int                 # the total used gas by all transactions in this block.
-    timestamp*: int               # the unix timestamp for when the block was collated.
+    size*: Quantity               # integer the size of this block in bytes.
+    gasLimit*: Quantity           # the maximum gas allowed in this block.
+    gasUsed*: Quantity            # the total used gas by all transactions in this block.
+    timestamp*: Quantity          # the unix timestamp for when the block was collated.
     transactions*: seq[Uint256]   # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[Uint256]         # list of uncle hashes.
 
