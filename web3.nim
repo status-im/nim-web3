@@ -1,10 +1,10 @@
-import macros, strutils, options, math, json, tables
+import macros, strutils, options, math, json, tables, uri
 from os import DirSep
 import
   nimcrypto, stint, httputils, chronicles, chronos, json_rpc/rpcclient,
   byteutils
 
-import web3/[ethtypes, ethprocs, stintjson, ethhexstrings]
+import web3/[ethtypes, ethprocs, conversions, ethhexstrings]
 
 template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 
@@ -12,7 +12,7 @@ template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 createRpcSigs(RpcClient, sourceDir & DirSep & "web3" & DirSep & "ethcallsigs.nim")
 
 export UInt256, Int256, Uint128, Int128
-export ethtypes
+export ethtypes, conversions
 
 type
   Web3* = ref object
@@ -52,6 +52,22 @@ proc newWeb3*(provider: RpcClient): Web3 =
   let r = result
   provider.setMethodHandler("eth_subscription") do(j: JsonNode):
     r.handleSubscriptionNotification(j)
+
+proc newWeb3*(uri: string): Future[Web3] {.async.} =
+  let u = parseUri(uri)
+  var provider: RpcClient
+  case u.scheme
+  of "http", "https":
+    let p = newRpcHttpClient()
+    await p.connect(uri)
+    provider = p
+  of "ws", "wss":
+    let p = newRpcWebSocketClient()
+    await p.connect(uri)
+    provider = p
+  else:
+    raise newException(CatchableError, "Unknown web3 url scheme")
+  result = newWeb3(provider)
 
 proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
   try:

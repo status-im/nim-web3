@@ -1,6 +1,5 @@
 import ../web3
-import chronos, nimcrypto, json_rpc/rpcclient, options, json, stint
-import ../web3/[ethtypes, ethprocs, stintjson, ethhexstrings]
+import chronos, nimcrypto, options, json, stint
 import test_utils
 
 
@@ -60,10 +59,8 @@ const MetaCoinCode = "608060405234801561001057600080fd5b503260009081526020819052
 
 
 proc test() {.async.} =
-  let provider = newRpcWebSocketClient()
-  await provider.connect("ws://127.0.0.1:8545")
-  let web3 = newWeb3(provider)
-  let accounts = await provider.eth_accounts()
+  let web3 = await newWeb3("ws://127.0.0.1:8545")
+  let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
   let defaultAccount = accounts[0]
 

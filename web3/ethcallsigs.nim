@@ -18,7 +18,7 @@ proc eth_accounts(): seq[Address]
 proc eth_blockNumber(): Quantity
 proc eth_getBalance(data: array[20, byte], quantityTag: string): int
 proc eth_getStorageAt(data: array[20, byte], quantity: int, quantityTag: string): seq[byte]
-proc eth_getTransactionCount(data: array[20, byte], quantityTag: string)
+proc eth_getTransactionCount(data: array[20, byte], quantityTag: string): Quantity
 proc eth_getBlockTransactionCountByHash(data: BlockHash)
 proc eth_getBlockTransactionCountByNumber(quantityTag: string)
 proc eth_getUncleCountByBlockHash(data: BlockHash)
@@ -26,7 +26,7 @@ proc eth_getUncleCountByBlockNumber(quantityTag: string)
 proc eth_getCode(data: array[20, byte], quantityTag: string): seq[byte]
 proc eth_sign(data: array[20, byte], message: seq[byte]): seq[byte]
 proc eth_sendTransaction(obj: EthSend): TxHash
-proc eth_sendRawTransaction(data: string, quantityTag: int): UInt256
+proc eth_sendRawTransaction(data: string): TxHash
 proc eth_call(call: EthCall, quantityTag: string): string #UInt256
 proc eth_estimateGas(call: EthCall, quantityTag: string): UInt256
 proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject

@@ -1,7 +1,7 @@
 import
   strutils, json,
   nimcrypto, stint,
-  ethtypes, ethhexstrings, stintjson, json_rpc/rpcserver
+  ethtypes, ethhexstrings, conversions, json_rpc/rpcserver
 
 #[
   For details on available RPC calls, see: https://github.com/ethereum/wiki/wiki/JSON-RPC
