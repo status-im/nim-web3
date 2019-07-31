@@ -1,6 +1,4 @@
-import ../web3, chronos, options, json_rpc/rpcclient
-import ../web3/[ethtypes]
-
+import ../web3, chronos, options
 
 proc deployContract*(web3: Web3, code: string): Future[Address] {.async.} =
   let provider = web3.provider

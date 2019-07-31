@@ -1,6 +1,5 @@
 import ../web3
-import chronos, nimcrypto, json_rpc/rpcclient, options, json, stint
-import ../web3/[ethtypes, ethprocs, stintjson, ethhexstrings]
+import chronos, nimcrypto, options, json, stint
 import test_utils
 
 import random
@@ -29,14 +28,12 @@ const LoggerContractCode = "6080604052348015600f57600080fd5b5060bc8061001e600039
 var contractAddress = Address.fromHex("0xEA255DeA28c84F698Fa195f87fC83D1d4125ef9C")
 
 proc test() {.async.} =
-  let provider = newRpcWebSocketClient()
-  await provider.connect("ws://localhost:8545")
-  let web3 = newWeb3(provider)
-  let accounts = await provider.eth_accounts()
+  let web3 = await newWeb3("ws://localhost:8545")
+  let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
   let defaultAccount = accounts[0]
-  # let q = await provider.eth_blockNumber()
-  echo "block: ", uint64(await provider.eth_blockNumber())
+  # let q = await web3.provider.eth_blockNumber()
+  echo "block: ", uint64(await web3.provider.eth_blockNumber())
 
 
   block: # LoggerContract

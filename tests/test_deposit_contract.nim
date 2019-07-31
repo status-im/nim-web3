@@ -1,6 +1,5 @@
 import ../web3
-import chronos, nimcrypto, json_rpc/rpcclient, options, json, stint
-import ../web3/[ethtypes, ethprocs, stintjson, ethhexstrings]
+import chronos, nimcrypto, options, json, stint
 import test_utils
 
 contract(DepositContract):
@@ -15,16 +14,12 @@ proc ethToWei(eth: UInt256): UInt256 =
   eth * 1000000000000000000.u256
 
 proc test() {.async.} =
-  let provider = newRpcWebSocketClient()
-  await provider.connect("ws://localhost:8545")
-  let web3 = newWeb3(provider)
-  let accounts = await provider.eth_accounts()
+  let web3 = await newWeb3("ws://localhost:8545")
+  let accounts = await web3.provider.eth_accounts()
   let defaultAccount = accounts[0]
-
 
   contractAddress = await web3.deployContract(contractCode)
   echo "Deployed Deposit contract: ", contractAddress
-
 
   var ns = web3.contractSender(DepositContract, contractAddress, defaultAccount)
 
