@@ -1,3 +1,5 @@
+mode = ScriptMode.Verbose
+
 version       = "0.0.1"
 author        = "Status Research & Development GmbH"
 description   = "This is the humble begginings of library similar to web3.[js|py]"

@@ -294,7 +294,8 @@ macro makeTypeEnum(): untyped =
         `identBytes`* = DynamicBytes[`i`]
 
   #result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
-  echo result.repr
+  when defined(debug):
+    echo result.repr
 
 makeTypeEnum()
 
@@ -446,8 +447,9 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
     for i in 1..<inputNodes.len:
       let input = inputNodes[i]
       if input.kind == nnkIdentDefs:
-        echo input.repr
-        # echo input.treerepr
+        when defined(debug):
+          echo input.repr
+          # echo input.treerepr
         if input[1].kind == nnkBracketExpr:
           result.add FunctionInputOutput(
             name: $input[0].ident,
@@ -500,7 +502,8 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
         else:
           doAssert(false,
             "Can't have anything but ident or bracket expression here")
-  echo body.treeRepr
+  when defined(debug):
+    echo body.treeRepr
   var
     constructor: Option[ConstructorObject]
     functions: seq[FunctionObject]
@@ -546,9 +549,10 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
         inputs: parseEventInputs(procdef[3]),
         anonymous: isanonymous
       )
-  echo constructor
-  echo functions
-  echo events
+  when defined(debug):
+    echo constructor
+    echo functions
+    echo events
   if constructor.isSome:
     result.add InterfaceObject(kind: InterfaceObjectKind.constructor, constructorObject: constructor.unsafeGet)
   for function in functions:
@@ -572,7 +576,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
   for obj in objects:
     case obj.kind:
     of function:
-      echo "Outputs: ", repr obj.functionObject.outputs
+      when defined(debug):
+        echo "Outputs: ", repr obj.functionObject.outputs
       let
         signature = getSignature(obj.functionObject)
         procName = ident obj.functionObject.name
@@ -653,11 +658,13 @@ macro contract*(cname: untyped, body: untyped): untyped =
           `cc`.gas = some(Quantity(3000000))
           `encoder`
           `cc`.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
-          echo "Call data: ", `cc`.data
+          when defined(debug):
+            echo "Call data: ", `cc`.data
         if output != ident "void":
           procDef[6].add quote do:
             let response = await `senderName`.web3.provider.eth_call(`cc`, "latest")
-            echo "Call response: ", response
+            when defined(debug):
+              echo "Call response: ", response
             var res: `output`
             discard decode(strip0xPrefix(response), 0, res)
             return res
@@ -674,7 +681,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
           `encoder`
           cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
-          echo "Call data: ", cc.data
+          when defined(debug):
+            echo "Call data: ", cc.data
           let response = await `senderName`.web3.provider.eth_sendTransaction(cc)
           return response
       result.add procDef
@@ -692,7 +700,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
           callWithRawData = nnkCall.newTree(callbackIdent)
           offset = ident "offset"
           inputData = ident "inputData"
-        
+
         var offsetInited = false
 
         for input in obj.eventObject.inputs:
@@ -757,7 +765,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
     else:
       discard
 
-  echo result.repr
+  when defined(debug):
+    echo result.repr
 
 # This call will generate the `cc.data` part to call that contract method in the code below
 #sendCoin(fromHex(Stuint[256], "e375b6fb6d0bf0d86707884f3952fee3977251fe"), 600.to(Stuint[256]))
