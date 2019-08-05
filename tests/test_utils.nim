@@ -1,6 +1,6 @@
-import ../web3, chronos, options
+import ../web3, chronos, options, stint
 
-proc deployContract*(web3: Web3, code: string): Future[Address] {.async.} =
+proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[Address] {.async.} =
   let provider = web3.provider
   let accounts = await provider.eth_accounts()
 
@@ -8,10 +8,15 @@ proc deployContract*(web3: Web3, code: string): Future[Address] {.async.} =
   if code[1] notin {'x', 'X'}:
     code = "0x" & code
   var tr: EthSend
-  tr.source = accounts[0]
+  tr.source = web3.defaultAccount
   tr.data = code
   tr.gas = Quantity(3000000).some
-  let r = await provider.eth_sendTransaction(tr)
+  if gasPrice != 0:
+    tr.gasPrice = some(gasPrice)
+
+  let r = await web3.send(tr)
   let receipt = await provider.eth_getTransactionReceipt(r)
   result = receipt.contractAddress.get
-  
+
+proc ethToWei*(eth: UInt256): UInt256 =
+  eth * 1000000000000000000.u256

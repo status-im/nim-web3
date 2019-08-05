@@ -10,18 +10,15 @@ const contractCode = "0x600035601c5274010000000000000000000000000000000000000000
 
 var contractAddress = Address.fromHex("e9d8d67ec115e8345606b3ab59fc71cec46761e4")
 
-proc ethToWei(eth: UInt256): UInt256 =
-  eth * 1000000000000000000.u256
-
 proc test() {.async.} =
   let web3 = await newWeb3("ws://localhost:8545")
   let accounts = await web3.provider.eth_accounts()
-  let defaultAccount = accounts[0]
+  web3.defaultAccount = accounts[0]
 
   contractAddress = await web3.deployContract(contractCode)
   echo "Deployed Deposit contract: ", contractAddress
 
-  var ns = web3.contractSender(DepositContract, contractAddress, defaultAccount)
+  var ns = web3.contractSender(DepositContract, contractAddress)
 
   let notifFut = newFuture[void]()
   var notificationsReceived = 0
@@ -42,8 +39,7 @@ proc test() {.async.} =
     assert(pubkey == pk)
     fut.complete()
 
-  ns.value = ethToWei(32.u256)
-  discard await ns.deposit(pk, cr, sig)
+  discard await ns.deposit(pk, cr, sig).send(value = 32.u256.ethToWei)
 
   await fut
 

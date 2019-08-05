@@ -13,6 +13,7 @@ requires "chronicles"
 requires "chronos"
 requires "json_rpc"
 requires "byteutils"
+requires "eth"
 
 
 ### Helper functions

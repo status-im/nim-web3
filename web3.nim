@@ -2,9 +2,9 @@ import macros, strutils, options, math, json, tables, uri
 from os import DirSep
 import
   nimcrypto, stint, httputils, chronicles, chronos, json_rpc/rpcclient,
-  byteutils
+  byteutils, eth/keys
 
-import web3/[ethtypes, ethprocs, conversions, ethhexstrings]
+import web3/[ethtypes, ethprocs, conversions, ethhexstrings, transaction_signing]
 
 template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 
@@ -18,11 +18,12 @@ type
   Web3* = ref object
     provider*: RpcClient
     subscriptions*: Table[string, Subscription]
+    defaultAccount*: Address
+    privateKey*: PrivateKey
 
   Sender*[T] = ref object
     web3*: Web3
-    contractAddress*, fromAddress: Address
-    value*: Uint256
+    contractAddress*: Address
 
   EncodeResult* = tuple[dynamic: bool, data: string]
 
@@ -33,6 +34,14 @@ type
     pendingEvents: seq[JsonNode]
     historicalEventsProcessed: bool
     removed: bool
+
+  ContractCallBase = object {.pure, inheritable.}
+    web3: Web3
+    data: string
+    to: Address
+    value: Uint256
+
+  ContractCall*[T] = object of ContractCallBase
 
 proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
   let s = w.subscriptions.getOrDefault(j{"subscription"}.getStr())
@@ -217,6 +226,11 @@ template typeSignature(T: typedesc): string =
     "address"
   else:
     unknownType(T)
+
+proc initContractCall[T](web3: Web3, data: string, to: Address): ContractCall[T] {.inline.} =
+  result.web3 = web3
+  result.data = data
+  result.to = to
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps
@@ -582,14 +596,10 @@ macro contract*(cname: untyped, body: untyped): untyped =
         signature = getSignature(obj.functionObject)
         procName = ident obj.functionObject.name
         senderName = ident "sender"
-        output =
-          if obj.functionObject.stateMutability in {payable, nonpayable}:
-            ident "TxHash"
+        output = if obj.functionObject.outputs.len != 1:
+            ident "void"
           else:
-            if obj.functionObject.outputs.len != 1:
-              ident "void"
-            else:
-              ident obj.functionObject.outputs[0].typ
+            ident obj.functionObject.outputs[0].typ
       var
         encodedParams = genSym(nskVar)#newLit("")
         offset = genSym(nskVar)
@@ -627,7 +637,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
         `encodedParams` &= `dataBuf`
       var procDef = quote do:
-        proc `procName`(`senderName`: Sender[`cname`]): Future[`output`] {.async.} =
+        proc `procName`(`senderName`: Sender[`cname`]): ContractCall[`output`] =
           discard
       for input in obj.functionObject.inputs:
         procDef[3].add nnkIdentDefs.newTree(
@@ -648,43 +658,13 @@ macro contract*(cname: untyped, body: untyped): untyped =
           ),
           newEmptyNode()
         )
-      case obj.functionObject.stateMutability:
-      of view:
-        let cc = ident "cc"
-        procDef[6].add quote do:
-          var `cc`: EthCall
-          `cc`.source = some(`senderName`.fromAddress)
-          `cc`.to = `senderName`.contractAddress
-          `cc`.gas = some(Quantity(3000000))
-          `encoder`
-          `cc`.data = some("0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`)
-          when defined(debug):
-            echo "Call data: ", `cc`.data
-        if output != ident "void":
-          procDef[6].add quote do:
-            let response = await `senderName`.web3.provider.eth_call(`cc`, "latest")
-            when defined(debug):
-              echo "Call response: ", response
-            var res: `output`
-            discard decode(strip0xPrefix(response), 0, res)
-            return res
-        else:
-          procDef[6].add quote do:
-            await `senderName`.provider.eth_call(`cc`, "latest")
-      else:
-        procDef[6].add quote do:
-          var cc: EthSend
-          cc.source = `senderName`.fromAddress
-          cc.to = some(`senderName`.contractAddress)
-          cc.value = some(`senderName`.value)
-          cc.gas = some(Quantity(3000000))
+      procDef[6].add quote do:
+        `encoder`
+        return initContractCall[`output`](
+            `senderName`.web3,
+            ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`,
+            `senderName`.contractAddress)
 
-          `encoder`
-          cc.data = "0x" & ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`
-          when defined(debug):
-            echo "Call data: ", cc.data
-          let response = await `senderName`.web3.provider.eth_sendTransaction(cc)
-          return response
       result.add procDef
     of event:
       if not obj.eventObject.anonymous:
@@ -768,6 +748,55 @@ macro contract*(cname: untyped, body: untyped): untyped =
   when defined(debug):
     echo result.repr
 
+proc signatureEnabled(w: Web3): bool {.inline.} =
+  var pk: PrivateKey
+  w.privateKey != pk
+
+proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
+  if web3.signatureEnabled():
+    var cc = c
+    if not cc.nonce.isSome:
+      let fromAddress = web3.privateKey.getPublicKey.toCanonicalAddress
+      cc.nonce = some(int(await web3.provider.eth_getTransactionCount(fromAddress, "latest")))
+    let t = encodeTransaction(cc, web3.privateKey)
+    return await web3.provider.eth_sendRawTransaction(t)
+  else:
+    return await web3.provider.eth_sendTransaction(c)
+
+proc send*(c: ContractCallBase, value = 0.u256, gas = 3000000'u64, gasPrice = 0): Future[TxHash] =
+  let web3 = c.web3
+  var cc: EthSend
+  cc.data = "0x" & c.data
+  cc.source = web3.defaultAccount
+  cc.to = some(c.to)
+  cc.gas = some(Quantity(gas))
+  cc.value = some(value)
+
+  if web3.signatureEnabled() or gasPrice != 0:
+    cc.gasPrice = some(gasPrice)
+  web3.send(cc)
+
+proc call*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
+  var cc: EthCall
+  cc.data = some("0x" & c.data)
+  cc.source = some(c.web3.defaultAccount)
+  cc.to = c.to
+  cc.gas = some(Quantity(gas))
+  cc.value = some(value)
+  let response = await c.web3.provider.eth_call(cc, "latest")
+  var res: T
+  discard decode(strip0xPrefix(response), 0, res)
+  return res
+
+proc exec*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
+  let h = await c.send(value, gas)
+  # TODO: Wait for tx to be mined
+  
+  let receipt = await c.web3.provider.eth_getTransactionReceipt(h)
+
+  # TODO: decode result from receipt
+
+
 # This call will generate the `cc.data` part to call that contract method in the code below
 #sendCoin(fromHex(Stuint[256], "e375b6fb6d0bf0d86707884f3952fee3977251fe"), 600.to(Stuint[256]))
 
@@ -794,8 +823,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
 #let response = waitFor w3.eth.eth_sendTransaction(cc)
 #echo response
 
-proc contractSender*(web3: Web3, T: typedesc, toAddress, fromAddress: Address): Sender[T] =
-  Sender[T](web3: web3, contractAddress: toAddress, fromAddress: fromAddress)
+proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
+  Sender[T](web3: web3, contractAddress: toAddress)
 
 proc subscribe*(s: Sender, t: typedesc, cb: proc): Future[Subscription] {.inline.} =
   subscribe(s, t, nil, cb)

@@ -38,7 +38,7 @@ type
     to*: Address      # The address the transaction is directed to.
     gas*: Option[Quantity]                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
     gasPrice*: Option[int]            # (optional) Integer of the gasPrice used for each paid gas.
-    value*: Option[int]               # (optional) Integer of the value sent with this transaction.
+    value*: Option[UInt256]              # (optional) Integer of the value sent with this transaction.
     data*: Option[string]                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
 
   #EthCall* = object

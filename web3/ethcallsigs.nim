@@ -16,7 +16,7 @@ proc eth_hashrate(): int
 proc eth_gasPrice(): int64
 proc eth_accounts(): seq[Address]
 proc eth_blockNumber(): Quantity
-proc eth_getBalance(data: array[20, byte], quantityTag: string): int
+proc eth_getBalance(data: Address, quantityTag: string): UInt256
 proc eth_getStorageAt(data: array[20, byte], quantity: int, quantityTag: string): seq[byte]
 proc eth_getTransactionCount(data: array[20, byte], quantityTag: string): Quantity
 proc eth_getBlockTransactionCountByHash(data: BlockHash)
