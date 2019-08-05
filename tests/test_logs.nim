@@ -31,7 +31,7 @@ proc test() {.async.} =
   let web3 = await newWeb3("ws://localhost:8545")
   let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
-  let defaultAccount = accounts[0]
+  web3.defaultAccount = accounts[0]
   # let q = await web3.provider.eth_blockNumber()
   echo "block: ", uint64(await web3.provider.eth_blockNumber())
 
@@ -41,11 +41,11 @@ proc test() {.async.} =
     contractAddress = await web3.deployContract(LoggerContractCode)
     echo "Deployed LoggerContract contract: ", contractAddress
 
-    let ns = web3.contractSender(LoggerContract, contractAddress, defaultAccount)
+    let ns = web3.contractSender(LoggerContract, contractAddress)
 
     proc testInvoke() {.async.} =
       let r = rand(1 .. 1000000)
-      echo "invoke(", r, "): ", await ns.invoke(r.u256)
+      echo "invoke(", r, "): ", await ns.invoke(r.u256).send()
 
     const invocationsBefore = 5
     const invocationsAfter = 5

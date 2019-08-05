@@ -62,24 +62,24 @@ proc test() {.async.} =
   let web3 = await newWeb3("ws://127.0.0.1:8545")
   let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
-  let defaultAccount = accounts[0]
+  web3.defaultAccount = accounts[0]
 
   block: # NumberStorage
     let cc = await web3.deployContract(NumberStorageCode)
     echo "Deployed NumberStorage contract: ", cc
 
-    let ns = web3.contractSender(NumberStorage, cc, defaultAccount)
+    let ns = web3.contractSender(NumberStorage, cc)
 
-    echo "setnumber: ", await ns.setNumber(5.u256)
+    echo "setnumber: ", await ns.setNumber(5.u256).send()
 
-    let n = await ns.getNumber()
+    let n = await ns.getNumber().call()
     assert(n == 5.u256)
 
   block: # MetaCoin
     let cc = await web3.deployContract(MetaCoinCode)
     echo "Deployed MetaCoin contract: ", cc
 
-    let ns = web3.contractSender(MetaCoin, cc, defaultAccount)
+    let ns = web3.contractSender(MetaCoin, cc)
 
     let notifFut = newFuture[void]()
     var notificationsReceived = 0
@@ -87,23 +87,23 @@ proc test() {.async.} =
     let s = await ns.subscribe(Transfer) do(fromAddr, toAddr: Address, value: Uint256):
       echo "onTransfer: ", fromAddr, " transferred ", value, " to ", toAddr
       inc notificationsReceived
-      assert(fromAddr == defaultAccount)
+      assert(fromAddr == web3.defaultAccount)
       assert((notificationsReceived == 1 and value == 50.u256) or
               (notificationsReceived == 2 and value == 100.u256))
       if notificationsReceived == 2:
         notifFut.complete()
 
-    echo "getbalance: ", await ns.getBalance(defaultAccount)
+    echo "getbalance: ", await ns.getBalance(web3.defaultAccount).call()
 
-    echo "sendCoin: ", await ns.sendCoin(accounts[1], 50.u256)
+    echo "sendCoin: ", await ns.sendCoin(accounts[1], 50.u256).send()
 
-    let newBalance1 = await ns.getBalance(defaultAccount)
+    let newBalance1 = await ns.getBalance(web3.defaultAccount).call()
     assert(newBalance1 == 9950.u256)
 
-    let newBalance2 = await ns.getBalance(accounts[1])
+    let newBalance2 = await ns.getBalance(accounts[1]).call()
     assert(newBalance2 == 50.u256)
 
-    echo "sendCoin: ", await ns.sendCoin(accounts[1], 100.u256)
+    echo "sendCoin: ", await ns.sendCoin(accounts[1], 100.u256).send()
 
     await notifFut
 
