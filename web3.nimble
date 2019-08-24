@@ -12,7 +12,7 @@ requires "stint"
 requires "chronicles"
 requires "chronos"
 requires "json_rpc"
-requires "byteutils"
+requires "stew"
 requires "eth"
 
 

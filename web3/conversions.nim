@@ -1,4 +1,4 @@
-import json, options, stint, byteutils, strutils
+import json, options, stint, stew/byteutils, strutils
 from json_rpc/rpcserver import expect
 import ethtypes, ethhexstrings
 

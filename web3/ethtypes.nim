@@ -1,5 +1,5 @@
 import options, json
-import stint, byteutils
+import stint, stew/byteutils
 
 type
   SyncObject* = object

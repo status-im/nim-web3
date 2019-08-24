@@ -2,7 +2,7 @@ import macros, strutils, options, math, json, tables, uri
 from os import DirSep
 import
   nimcrypto, stint, httputils, chronicles, chronos, json_rpc/rpcclient,
-  byteutils, eth/keys
+  stew/byteutils, eth/keys
 
 import web3/[ethtypes, ethprocs, conversions, ethhexstrings, transaction_signing]
 

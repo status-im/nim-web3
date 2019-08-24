@@ -1,6 +1,6 @@
 import
   options,
-  ethtypes, byteutils, stint,
+  ethtypes, stew/byteutils, stint,
   eth/[common, keys, rlp], eth/common/transaction
 
 proc signTransaction(tr: var Transaction, pk: PrivateKey) =
