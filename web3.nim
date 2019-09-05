@@ -138,7 +138,9 @@ func decode*[N](input: string, offset: int, to: var Stint[N]): int =
   meaningfulLen
 
 func fixedEncode(a: openarray[byte]): EncodeResult =
-  result = (dynamic: false, data: "00".repeat(32 - a.len mod 32) & byteutils.toHex(a))
+  var padding = a.len mod 32
+  if padding != 0: padding = 32 - padding
+  result = (dynamic: false, data: "00".repeat(padding) & byteutils.toHex(a))
 
 func encode*[N](b: FixedBytes[N]): EncodeResult = fixedEncode(array[N, byte](b))
 func encode*(b: Address): EncodeResult = fixedEncode(array[20, byte](b))
@@ -175,7 +177,8 @@ func fromHex*(x: type Address, s: string): Address {.inline.} =
 
 func decodeFixed(input: string, offset: int, to: var openarray[byte]): int =
   let meaningfulLen = to.len * 2
-  let padding = (32 - to.len mod 32) * 2
+  var padding = to.len mod 32
+  if padding != 0: padding = (32 - padding) * 2
   let offset = offset + padding
   fromHexAux(input[offset .. offset + meaningfulLen - 1], to)
   meaningfulLen + padding
@@ -219,7 +222,7 @@ template typeSignature(T: typedesc): string =
   elif T is DynamicBytes:
     "bytes"
   elif T is FixedBytes:
-    "byte" & $T.N
+    "bytes" & $T.N
   elif T is StUint:
     "uint" & $T.bits
   elif T is Address:
@@ -369,23 +372,13 @@ type
     function, constructor, event
   MutabilityKind = enum
     pure, view, nonpayable, payable
-  SequenceKind = enum
-    single, fixed, dynamic
   FunctionInputOutput = object
     name: string
-    typ: string
-    case sequenceKind: SequenceKind
-    of single, dynamic: discard
-    of fixed:
-      count: int
+    typ: NimNode
   EventInput = object
     name: string
-    typ: string
+    typ: NimNode
     indexed: bool
-    case sequenceKind: SequenceKind
-    of single, dynamic: discard
-    of fixed:
-      count: int
   FunctionObject = object
     name: string
     stateMutability: MutabilityKind
@@ -412,7 +405,7 @@ proc getSignature(function: FunctionObject | EventObject): NimNode =
   result = newCall(bindSym"joinStrings")
   result.add(newLit(function.name & "("))
   for i, input in function.inputs:
-    result.add(newCall(bindSym"typeSignature", ident input.typ))
+    result.add(newCall(bindSym"typeSignature", input.typ))
     if i != function.inputs.high:
       result.add(newLit(","))
   result.add(newLit(")"))
@@ -432,90 +425,40 @@ proc addAddressAndSignatureToOptions(options: JsonNode, address: Address, signat
 
 proc parseContract(body: NimNode): seq[InterfaceObject] =
   proc parseOutputs(outputNode: NimNode): seq[FunctionInputOutput] =
-    #if outputNode.kind == nnkIdent:
-    #  result.add FunctionInputOutput(
-    #    name: "",
-    #    typ: $outputNode.ident
-    #  )
-    case outputNode.kind:
-    of nnkBracketExpr:
-      result.add FunctionInputOutput(
-        name: "",
-        typ: $outputNode[0].ident,
-        sequenceKind: if outputNode.len == 1:
-          dynamic
-        else:
-          fixed
-      )
-      if outputNode.len == 2:
-        result[^1].count = outputNode[1].intVal.int
-    of nnkIdent:
-      result.add FunctionInputOutput(
-        name: "",
-        typ: $outputNode.ident,
-        sequenceKind: single
-      )
-    else:
-      discard
+    result.add FunctionInputOutput(typ: (if outputNode.kind == nnkEmpty: ident"void" else: outputNode))
+
   proc parseInputs(inputNodes: NimNode): seq[FunctionInputOutput] =
     for i in 1..<inputNodes.len:
       let input = inputNodes[i]
-      if input.kind == nnkIdentDefs:
-        when defined(debug):
-          echo input.repr
-          # echo input.treerepr
-        if input[1].kind == nnkBracketExpr:
-          result.add FunctionInputOutput(
-            name: $input[0].ident,
-            typ: $input[1][0].ident,
-            sequenceKind: if input[1].len == 1:
-              dynamic
-            else:
-              fixed
-          )
-          if input[1].len == 2:
-            result[^1].count = input[1][1].intVal.int
-        else:
-          result.add FunctionInputOutput(
-            name: $input[0].ident,
-            typ: $input[1].ident,
-            sequenceKind: single
-          )
+      input.expectKind(nnkIdentDefs)
+      let typ = input[^2]
+      for j in 0 .. input.len - 3:
+        let arg = input[j]
+        result.add(FunctionInputOutput(
+          name: $arg,
+          typ: typ,
+        ))
+
   proc parseEventInputs(inputNodes: NimNode): seq[EventInput] =
     for i in 1..<inputNodes.len:
       let input = inputNodes[i]
-      if input.kind == nnkIdentDefs:
-        case input[1].kind:
-        of nnkIdent:
-          result.add EventInput(
-            name: $input[0].ident,
-            typ: $input[1].ident,
-            indexed: false
-          )
+      input.expectKind(nnkIdentDefs)
+      let typ = input[^2]
+      for j in 0 .. input.len - 3:
+        let arg = input[j]
+        case typ.kind:
         of nnkBracketExpr:
-          #doAssert($input[1][0].ident == "indexed",
-          #  "Only `indexed` is allowed as option for event inputs")
-          if $input[1][0].ident == "indexed":
+          if $typ[0] == "indexed":
             result.add EventInput(
-              name: $input[0].ident,
-              typ: $input[1][1].ident,
+              name: $arg,
+              typ: typ[1],
               indexed: true
             )
           else:
-            result.add EventInput(
-              name: $input[0].ident,
-              typ: $input[1][0].ident,
-              indexed: false,
-              sequenceKind: if input[1].len == 1:
-                dynamic
-              else:
-                fixed
-            )
-            if input[1].len != 1:
-              result[^1].count = input[1][1].intVal.int
+            result.add EventInput(name: $arg, typ: typ)
         else:
-          doAssert(false,
-            "Can't have anything but ident or bracket expression here")
+          result.add EventInput(name: $arg, typ: typ)
+
   when defined(debug):
     echo body.treeRepr
   var
@@ -599,7 +542,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         output = if obj.functionObject.outputs.len != 1:
             ident "void"
           else:
-            ident obj.functionObject.outputs[0].typ
+            obj.functionObject.outputs[0].typ
       var
         encodedParams = genSym(nskVar)#newLit("")
         offset = genSym(nskVar)
@@ -619,13 +562,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
           `offset` += (if encoding.dynamic:
             32
           else:
-            encoding.data.len)
+            encoding.data.len div 2)
           `encodings`.add encoding
-        #encodedParams = nnkInfix.newTree(
-        #  ident "&",
-        #  encodedParams,
-        #  nnkCall.newTree(ident "encode", ident input.name)
-        #)
       encoder.add quote do:
         for encoding in `encodings`:
           if encoding.dynamic:
@@ -642,20 +580,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
       for input in obj.functionObject.inputs:
         procDef[3].add nnkIdentDefs.newTree(
           ident input.name,
-          (case input.sequenceKind:
-          of single: ident input.typ
-          of dynamic: nnkBracketExpr.newTree(ident "seq", ident input.typ)
-          of fixed:
-            nnkBracketExpr.newTree(
-              ident "array",
-              nnkInfix.newTree(
-                ident "..",
-                newLit(0),
-                newLit(input.count)
-              ),
-              ident input.typ
-            )
-          ),
+          input.typ,
           newEmptyNode()
         )
       procDef[6].add quote do:
@@ -686,14 +611,14 @@ macro contract*(cname: untyped, body: untyped): untyped =
         for input in obj.eventObject.inputs:
           let param = nnkIdentDefs.newTree(
             ident input.name,
-            ident input.typ,
+            input.typ,
             newEmptyNode()
           )
           params.add param
           paramsWithRawData.add param
           let
             argument = genSym(nskVar)
-            kind = ident input.typ
+            kind = input.typ
           if input.indexed:
             argParseBody.add quote do:
               var `argument`: `kind`
