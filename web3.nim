@@ -30,7 +30,7 @@ type
   Subscription* = ref object
     id*: string
     web3*: Web3
-    callback*: proc(j: JsonNode)
+    callback*: proc(j: JsonNode) {.gcsafe.}
     pendingEvents: seq[JsonNode]
     historicalEventsProcessed: bool
     removed: bool
@@ -95,14 +95,14 @@ proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
     echo "Caught exception in getHistoricalEvents: ", e.msg
     echo e.getStackTrace()
 
-proc subscribe*(w: Web3, name: string, options: JsonNode, callback: proc(j: JsonNode)): Future[Subscription] {.async.} =
+proc subscribe*(w: Web3, name: string, options: JsonNode, callback: proc(j: JsonNode) {.gcsafe.}): Future[Subscription] {.async.} =
   var options = options
   if options.isNil: options = newJNull()
   let id = await w.provider.eth_subscribe(name, options)
   result = Subscription(id: id, web3: w, callback: callback)
   w.subscriptions[id] = result
 
-proc subscribeToLogs*(w: Web3, options: JsonNode, callback: proc(j: JsonNode)): Future[Subscription] {.async.} =
+proc subscribeToLogs*(w: Web3, options: JsonNode, callback: proc(j: JsonNode) {.gcsafe.}): Future[Subscription] {.async.} =
   result = await subscribe(w, "logs", options, callback)
   discard getHistoricalEvents(result, options)
 
@@ -642,6 +642,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
           procTy = nnkProcTy.newTree(params, newEmptyNode())
           signature = getSignature(obj.eventObject)
 
+        procTy[1] = nnkPragma.newTree(ident"gcsafe") # TODO: use addPragma in nim 0.20.4 and later
+
         callWithRawData.add jsonIdent
         paramsWithRawData.add nnkIdentDefs.newTree(
           jsonIdent,
@@ -650,6 +652,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         )
 
         let procTyWithRawData = nnkProcTy.newTree(paramsWithRawData, newEmptyNode())
+        procTyWithRawData[1] = nnkPragma.newTree(ident"gcsafe") # TODO: use addPragma in nim 0.20.4 and later
 
         result.add quote do:
           type `cbident` = object
