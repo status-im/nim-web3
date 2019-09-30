@@ -52,8 +52,8 @@ type
   ## A block object, or null when no block was found
   BlockObject* = ref object
     number*: Quantity             # the block number. null when its pending block.
-    hash*: UInt256                # hash of the block. null when its pending block.
-    parentHash*: UInt256          # hash of the parent block.
+    hash*: BlockHash              # hash of the block. null when its pending block.
+    parentHash*: BlockHash        # hash of the parent block.
     nonce*: Quantity              # hash of the generated proof-of-work. null when its pending block.
     sha3Uncles*: UInt256          # SHA3 of the uncles data in the block.
     logsBloom*: FixedBytes[256]   # the bloom filter for the logs of the block. null when its pending block.
@@ -68,28 +68,28 @@ type
     gasLimit*: Quantity           # the maximum gas allowed in this block.
     gasUsed*: Quantity            # the total used gas by all transactions in this block.
     timestamp*: Quantity          # the unix timestamp for when the block was collated.
-    transactions*: seq[Uint256]   # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
-    uncles*: seq[Uint256]         # list of uncle hashes.
+    transactions*: seq[TxHash]    # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
+    uncles*: seq[BlockHash]       # list of uncle hashes.
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:
-    hash*: UInt256                # hash of the transaction.
+    hash*: TxHash                 # hash of the transaction.
     nonce*: int64                 # TODO: Is int? the number of transactions made by the sender prior to this one.
-    blockHash*: UInt256           # hash of the block where this transaction was in. null when its pending.
+    blockHash*: BlockHash         # hash of the block where this transaction was in. null when its pending.
     blockNumber*: int64           # block number where this transaction was in. null when its pending.
     transactionIndex*: int64      # integer of the transactions index position in the block. null when its pending.
     source*: Address              # address of the sender.
     to*: Address                  # address of the receiver. null when its a contract creation transaction.
     value*: int64                 # value transferred in Wei.
     gasPrice*: int64              # gas price provided by the sender in Wei.
-    gas*: Quantity                   # gas provided by the sender.
+    gas*: Quantity                # gas provided by the sender.
     input*: seq[byte]             # the data send along with the transaction.
 
   ReceiptKind* = enum rkRoot, rkStatus
   ReceiptObject* = object
     # A transaction receipt object, or null when no receipt was found:
-    transactionHash*: UInt256         # hash of the transaction.
+    transactionHash*: TxHash          # hash of the transaction.
     transactionIndex*: string#int            # integer of the transactions index position in the block.
-    blockHash*: UInt256               # hash of the block where this transaction was in.
+    blockHash*: BlockHash             # hash of the block where this transaction was in.
     blockNumber*: string#int                 # block number where this transaction was in.
     cumulativeGasUsed*: string#int           # the total amount of gas used when this transaction was executed in the block.
     gasUsed*: string#int                     # the amount of gas used by this specific transaction alone.
@@ -120,8 +120,8 @@ type
     #removed*: bool              # true when the log was removed, due to a chain reorganization. false if its a valid log.
     logIndex*: string#int              # integer of the log index position in the block. null when its pending log.
     transactionIndex*: string#ref int  # integer of the transactions index position log was created from. null when its pending log.
-    transactionHash*: UInt256   # hash of the transactions this log was created from. null when its pending log.
-    blockHash*: UInt256     # hash of the block where this log was in. null when its pending. null when its pending log.
+    transactionHash*: TxHash    # hash of the transactions this log was created from. null when its pending log.
+    blockHash*: BlockHash       # hash of the block where this log was in. null when its pending. null when its pending log.
     blockNumber*: string#int64     # the block number where this log was in. null when its pending. null when its pending log.
     address*: Address           # address from which this log originated.
     data*: string#seq[UInt256]         # contains one or more 32 Bytes non-indexed arguments of the log.
