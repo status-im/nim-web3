@@ -45,5 +45,6 @@ proc test() {.async.} =
 
   await fut
   echo "hash_tree_root: ", await ns.get_deposit_root().call()
+  await web3.close()
 
 waitFor test()

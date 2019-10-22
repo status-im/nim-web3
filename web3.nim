@@ -78,6 +78,8 @@ proc newWeb3*(uri: string): Future[Web3] {.async.} =
     raise newException(CatchableError, "Unknown web3 url scheme")
   result = newWeb3(provider)
 
+proc close*(web3: Web3): Future[void] = web3.provider.close()
+
 proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
   try:
     let logs = await s.web3.provider.eth_getLogs(options)

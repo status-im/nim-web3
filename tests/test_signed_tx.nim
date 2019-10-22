@@ -65,5 +65,6 @@ proc test() {.async.} =
 
   let n = await c.getNumber().call()
   assert(n == 5.u256)
+  await web3.close()
 
 waitFor test()
