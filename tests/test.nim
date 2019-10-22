@@ -108,5 +108,6 @@ proc test() {.async.} =
     await notifFut
 
     await s.unsubscribe()
+  await web3.close()
 
 waitFor test()
