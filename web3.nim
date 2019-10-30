@@ -686,9 +686,9 @@ proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   if web3.signatureEnabled():
     var cc = c
     if not cc.nonce.isSome:
-      let fromAddress = web3.privateKey.getPublicKey.toCanonicalAddress
+      let fromAddress = web3.privateKey.getPublicKey.toCanonicalAddress.Address
       cc.nonce = some(int(await web3.provider.eth_getTransactionCount(fromAddress, "latest")))
-    let t = encodeTransaction(cc, web3.privateKey)
+    let t = "0x" & encodeTransaction(cc, web3.privateKey)
     return await web3.provider.eth_sendRawTransaction(t)
   else:
     return await web3.provider.eth_sendTransaction(c)
@@ -718,11 +718,20 @@ proc call*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] 
   discard decode(strip0xPrefix(response), 0, res)
   return res
 
+proc getMinedTransactionReceipt*(web3: Web3, tx: TxHash): Future[ReceiptObject] {.async.} =
+  ## Returns the receipt for the transaction. Waits for it to be mined if necessary.
+  # TODO: Potentially more optimal solution is to subscribe and wait for appropriate
+  # notification. Now we're just polling every 500ms which should be ok for most cases.
+  var r: Option[ReceiptObject]
+  while r.isNone:
+    r = await web3.provider.eth_getTransactionReceipt(tx)
+    if r.isNone:
+      await sleepAsync(500.milliseconds)
+  result = r.get
+
 proc exec*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
   let h = await c.send(value, gas)
-  # TODO: Wait for tx to be mined
-  
-  let receipt = await c.web3.provider.eth_getTransactionReceipt(h)
+  let receipt = await c.web3.getMinedTransactionReceipt(h)
 
   # TODO: decode result from receipt
 

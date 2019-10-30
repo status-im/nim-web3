@@ -15,7 +15,7 @@ proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[Address] {.
     tr.gasPrice = some(gasPrice)
 
   let r = await web3.send(tr)
-  let receipt = await provider.eth_getTransactionReceipt(r)
+  let receipt = await web3.getMinedTransactionReceipt(r)
   result = receipt.contractAddress.get
 
 proc ethToWei*(eth: UInt256): UInt256 =

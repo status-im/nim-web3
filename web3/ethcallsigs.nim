@@ -1,7 +1,7 @@
 ## This module contains signatures for the Ethereum client RPCs.
 ## The signatures are not imported directly, but read and processed with parseStmt,
 ## then a procedure body is generated to marshal native Nim parameters to json and visa versa.
-import json, stint, ethtypes
+import json, options, stint, ethtypes
 
 proc web3_clientVersion(): string
 proc web3_sha3(data: string): string
@@ -17,14 +17,14 @@ proc eth_gasPrice(): int64
 proc eth_accounts(): seq[Address]
 proc eth_blockNumber(): Quantity
 proc eth_getBalance(data: Address, quantityTag: string): UInt256
-proc eth_getStorageAt(data: array[20, byte], quantity: int, quantityTag: string): seq[byte]
-proc eth_getTransactionCount(data: array[20, byte], quantityTag: string): Quantity
+proc eth_getStorageAt(data: Address, quantity: int, quantityTag: string): seq[byte]
+proc eth_getTransactionCount(data: Address, quantityTag: string): Quantity
 proc eth_getBlockTransactionCountByHash(data: BlockHash)
 proc eth_getBlockTransactionCountByNumber(quantityTag: string)
 proc eth_getUncleCountByBlockHash(data: BlockHash)
 proc eth_getUncleCountByBlockNumber(quantityTag: string)
-proc eth_getCode(data: array[20, byte], quantityTag: string): seq[byte]
-proc eth_sign(data: array[20, byte], message: seq[byte]): seq[byte]
+proc eth_getCode(data: Address, quantityTag: string): seq[byte]
+proc eth_sign(data: Address, message: seq[byte]): seq[byte]
 proc eth_sendTransaction(obj: EthSend): TxHash
 proc eth_sendRawTransaction(data: string): TxHash
 proc eth_call(call: EthCall, quantityTag: string): string #UInt256
@@ -34,7 +34,7 @@ proc eth_getBlockByNumber(quantityTag: string, fullTransactions: bool): BlockObj
 proc eth_getTransactionByHash(data: TxHash): TransactionObject
 proc eth_getTransactionByBlockHashAndIndex(data: UInt256, quantity: int): TransactionObject
 proc eth_getTransactionByBlockNumberAndIndex(quantityTag: string, quantity: int): TransactionObject
-proc eth_getTransactionReceipt(data: TxHash): ReceiptObject
+proc eth_getTransactionReceipt(data: TxHash): Option[ReceiptObject]
 proc eth_getUncleByBlockHashAndIndex(data: UInt256, quantity: int64): BlockObject
 proc eth_getUncleByBlockNumberAndIndex(quantityTag: string, quantity: int64): BlockObject
 proc eth_getCompilers(): seq[string]
