@@ -313,8 +313,6 @@ macro makeTypeEnum(): untyped =
         `identBytes`* = DynamicBytes[`i`]
 
   #result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
-  when defined(debug):
-    echo result.repr
 
 makeTypeEnum()
 
@@ -461,8 +459,6 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
         else:
           result.add EventInput(name: $arg, typ: typ)
 
-  when defined(debug):
-    echo body.treeRepr
   var
     constructor: Option[ConstructorObject]
     functions: seq[FunctionObject]
@@ -508,10 +504,7 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
         inputs: parseEventInputs(procdef[3]),
         anonymous: isanonymous
       )
-  when defined(debug):
-    echo constructor
-    echo functions
-    echo events
+
   if constructor.isSome:
     result.add InterfaceObject(kind: InterfaceObjectKind.constructor, constructorObject: constructor.unsafeGet)
   for function in functions:
@@ -535,8 +528,6 @@ macro contract*(cname: untyped, body: untyped): untyped =
   for obj in objects:
     case obj.kind:
     of function:
-      when defined(debug):
-        echo "Outputs: ", repr obj.functionObject.outputs
       let
         signature = getSignature(obj.functionObject)
         procName = ident obj.functionObject.name
@@ -674,9 +665,6 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
     else:
       discard
-
-  when defined(debug):
-    echo result.repr
 
 proc signatureEnabled(w: Web3): bool {.inline.} =
   var pk: PrivateKey
