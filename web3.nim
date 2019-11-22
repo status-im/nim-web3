@@ -20,6 +20,7 @@ type
     subscriptions*: Table[string, Subscription]
     defaultAccount*: Address
     privateKey*: PrivateKey
+    onDisconnect*: proc() {.gcsafe.}
 
   Sender*[T] = ref object
     web3*: Web3
@@ -77,6 +78,11 @@ proc newWeb3*(uri: string): Future[Web3] {.async.} =
   else:
     raise newException(CatchableError, "Unknown web3 url scheme")
   result = newWeb3(provider)
+  let r = result
+  provider.onDisconnect = proc() =
+    r.subscriptions.clear()
+    if not r.onDisconnect.isNil:
+      r.onDisconnect()
 
 proc close*(web3: Web3): Future[void] = web3.provider.close()
 
