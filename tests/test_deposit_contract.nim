@@ -16,7 +16,8 @@ proc test() {.async.} =
   let accounts = await web3.provider.eth_accounts()
   web3.defaultAccount = accounts[0]
 
-  contractAddress = await web3.deployContract(contractCode)
+  let receipt = await web3.deployContract(contractCode)
+  contractAddress = receipt.contractAddress.get
   echo "Deployed Deposit contract: ", contractAddress
 
   var ns = web3.contractSender(DepositContract, contractAddress)

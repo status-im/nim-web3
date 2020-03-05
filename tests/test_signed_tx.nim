@@ -55,7 +55,8 @@ proc test() {.async.} =
   assert(balance == ethToWei(5.u256))
 
   # Creating the contract with a signed tx
-  let contractAddress = await web3.deployContract(NumberStorageCode, gasPrice = 1)
+  let receipt = await web3.deployContract(NumberStorageCode, gasPrice = 1)
+  let contractAddress = receipt.contractAddress.get
   balance = await web3.provider.eth_getBalance(acc, "latest")
   assert(balance < ethToWei(5.u256))
 

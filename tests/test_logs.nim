@@ -37,8 +37,8 @@ proc test() {.async.} =
 
 
   block: # LoggerContract
-
-    contractAddress = await web3.deployContract(LoggerContractCode)
+    let receipt = await web3.deployContract(LoggerContractCode)
+    contractAddress = receipt.contractAddress.get
     echo "Deployed LoggerContract contract: ", contractAddress
 
     let ns = web3.contractSender(LoggerContract, contractAddress)

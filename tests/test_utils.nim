@@ -1,6 +1,6 @@
 import ../web3, chronos, options, stint
 
-proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[Address] {.async.} =
+proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[ReceiptObject] {.async.} =
   let provider = web3.provider
   let accounts = await provider.eth_accounts()
 
@@ -15,8 +15,7 @@ proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[Address] {.
     tr.gasPrice = some(gasPrice)
 
   let r = await web3.send(tr)
-  let receipt = await web3.getMinedTransactionReceipt(r)
-  result = receipt.contractAddress.get
+  return await web3.getMinedTransactionReceipt(r)
 
 proc ethToWei*(eth: UInt256): UInt256 =
   eth * 1000000000000000000.u256

@@ -13,6 +13,8 @@ type
   Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
   BlockHash* = FixedBytes[32]
+  BlockNumber* = uint64
+  BlockIdentifier* = string|BlockNumber
 
   Quantity* = distinct uint64
 

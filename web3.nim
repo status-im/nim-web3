@@ -326,7 +326,6 @@ func encode*(x: Bool): EncodeResult = encode(Int256(x))
 func decode*[N](input: string, offset: int, to: var Bool): int {.inline.} =
   decode(input, offset, Stint(to))
 
-
 type
   Encodable = concept x
     encode(x) is EncodeResult
@@ -699,17 +698,28 @@ proc send*(c: ContractCallBase, value = 0.u256, gas = 3000000'u64, gasPrice = 0)
     cc.gasPrice = some(gasPrice)
   web3.send(cc)
 
-proc call*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
+proc call*[T](c: ContractCall[T],
+              value = 0.u256,
+              gas = 3000000'u64,
+              blockNumber = high(uint64)): Future[T] {.async.} =
   var cc: EthCall
   cc.data = some("0x" & c.data)
   cc.source = some(c.web3.defaultAccount)
   cc.to = c.to
   cc.gas = some(Quantity(gas))
   cc.value = some(value)
-  let response = await c.web3.provider.eth_call(cc, "latest")
-  var res: T
-  discard decode(strip0xPrefix(response), 0, res)
-  return res
+  let response = strip0xPrefix:
+    if blockNumber != high(uint64):
+      await c.web3.provider.eth_call(cc, blockNumber)
+    else:
+      await c.web3.provider.eth_call(cc, "latest")
+
+  if response.len > 0:
+    var res: T
+    discard decode(response, 0, res)
+    return res
+  else:
+    raise newException(CatchableError, "No response from the Web3 provider")
 
 proc getMinedTransactionReceipt*(web3: Web3, tx: TxHash): Future[ReceiptObject] {.async.} =
   ## Returns the receipt for the transaction. Waits for it to be mined if necessary.

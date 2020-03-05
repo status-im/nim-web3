@@ -1,5 +1,5 @@
 import ../web3
-import chronos, nimcrypto, options, json, stint
+import chronos, nimcrypto, options, json, stint, parseutils
 import test_utils
 
 
@@ -65,7 +65,9 @@ proc test() {.async.} =
   web3.defaultAccount = accounts[0]
 
   block: # NumberStorage
-    let cc = await web3.deployContract(NumberStorageCode)
+    let
+      receipt = await web3.deployContract(NumberStorageCode)
+      cc = receipt.contractAddress.get
     echo "Deployed NumberStorage contract: ", cc
 
     let ns = web3.contractSender(NumberStorage, cc)
@@ -76,8 +78,13 @@ proc test() {.async.} =
     assert(n == 5.u256)
 
   block: # MetaCoin
-    let cc = await web3.deployContract(MetaCoinCode)
-    echo "Deployed MetaCoin contract: ", cc
+    let
+      receipt = await web3.deployContract(MetaCoinCode)
+      cc = receipt.contractAddress.get
+
+    var deployedAtBlock: uint64
+    discard parseHex(receipt.blockNumber, deployedAtBlock)
+    echo "Deployed MetaCoin contract: ", cc, " at block ", deployedAtBlock
 
     let ns = web3.contractSender(MetaCoin, cc)
 
@@ -93,7 +100,14 @@ proc test() {.async.} =
       if notificationsReceived == 2:
         notifFut.complete()
 
-    echo "getbalance: ", await ns.getBalance(web3.defaultAccount).call()
+    echo "getbalance (now): ", await ns.getBalance(web3.defaultAccount).call()
+    echo "getbalance (after creation): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = deployedAtBlock)
+
+    # Let's try to get the balance at a point in time where the contract was not deployed yet:
+    try:
+      echo "getbalance (first block): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = 1'u64)
+    except CatchableError as err:
+      echo "getbalance (first block): ", err.msg
 
     echo "sendCoin: ", await ns.sendCoin(accounts[1], 50.u256).send()
 

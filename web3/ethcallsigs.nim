@@ -16,27 +16,27 @@ proc eth_hashrate(): int
 proc eth_gasPrice(): int64
 proc eth_accounts(): seq[Address]
 proc eth_blockNumber(): Quantity
-proc eth_getBalance(data: Address, quantityTag: string): UInt256
-proc eth_getStorageAt(data: Address, quantity: int, quantityTag: string): seq[byte]
-proc eth_getTransactionCount(data: Address, quantityTag: string): Quantity
+proc eth_getBalance(data: Address, blockId: BlockIdentifier): UInt256
+proc eth_getStorageAt(data: Address, quantity: int, blockId: BlockIdentifier): seq[byte]
+proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
 proc eth_getBlockTransactionCountByHash(data: BlockHash)
-proc eth_getBlockTransactionCountByNumber(quantityTag: string)
+proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier)
 proc eth_getUncleCountByBlockHash(data: BlockHash)
-proc eth_getUncleCountByBlockNumber(quantityTag: string)
-proc eth_getCode(data: Address, quantityTag: string): seq[byte]
+proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier)
+proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
 proc eth_sign(data: Address, message: seq[byte]): seq[byte]
 proc eth_sendTransaction(obj: EthSend): TxHash
 proc eth_sendRawTransaction(data: string): TxHash
-proc eth_call(call: EthCall, quantityTag: string): string #UInt256
-proc eth_estimateGas(call: EthCall, quantityTag: string): UInt256
+proc eth_call(call: EthCall, blockId: BlockIdentifier): string #UInt256
+proc eth_estimateGas(call: EthCall, blockId: BlockIdentifier): UInt256
 proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
-proc eth_getBlockByNumber(quantityTag: string, fullTransactions: bool): BlockObject
+proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
 proc eth_getTransactionByHash(data: TxHash): TransactionObject
 proc eth_getTransactionByBlockHashAndIndex(data: UInt256, quantity: int): TransactionObject
-proc eth_getTransactionByBlockNumberAndIndex(quantityTag: string, quantity: int): TransactionObject
+proc eth_getTransactionByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: int): TransactionObject
 proc eth_getTransactionReceipt(data: TxHash): Option[ReceiptObject]
 proc eth_getUncleByBlockHashAndIndex(data: UInt256, quantity: int64): BlockObject
-proc eth_getUncleByBlockNumberAndIndex(quantityTag: string, quantity: int64): BlockObject
+proc eth_getUncleByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: int64): BlockObject
 proc eth_getCompilers(): seq[string]
 proc eth_compileLLL(): seq[byte]
 proc eth_compileSolidity(): seq[byte]
