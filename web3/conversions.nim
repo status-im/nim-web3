@@ -110,3 +110,9 @@ proc `%`*(x: FilterOptions): JsonNode =
     result["address"] = %x.address.unsafeGet
   if x.topics.isSome:
     result["topics"] = %x.topics.unsafeGet
+
+proc `%`*(x: RtBlockIdentifier): JsonNode =
+  case x.kind
+  of BlockIdentifierKind.number: %x.number
+  of BlockIdentifierKind.alias: %x.alias
+

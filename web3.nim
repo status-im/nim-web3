@@ -636,7 +636,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
           call.add argument
           callWithRawData.add argument
         let
-          cbident = ident obj.eventObject.name
+          eventName = obj.eventObject.name
+          cbident = ident eventName
           procTy = nnkProcTy.newTree(params, newEmptyNode())
           signature = getSignature(obj.eventObject)
 
@@ -654,20 +655,49 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
         result.add quote do:
           type `cbident` = object
-          proc subscribe(s: Sender[`cname`], t: typedesc[`cbident`], options: JsonNode, `callbackIdent`: `procTy`): Future[Subscription] =
-            let options = addAddressAndSignatureToOptions(options, s.contractAddress, "0x" & toLowerAscii($keccak256.digest(`signature`)))
+
+          template eventTopic(T: type `cbident`): string =
+            "0x" & toLowerAscii($keccak256.digest(`signature`))
+
+          proc subscribe(s: Sender[`cname`],
+                         t: type `cbident`,
+                         options: JsonNode,
+                         `callbackIdent`: `procTy`): Future[Subscription] =
+            let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
             s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
               `argParseBody`
               `call`
 
-          proc subscribe(s: Sender[`cname`], t: typedesc[`cbident`], options: JsonNode, `callbackIdent`: `procTyWithRawData`): Future[Subscription] =
-            let options = addAddressAndSignatureToOptions(options, s.contractAddress, "0x" & toLowerAscii($keccak256.digest(`signature`)))
+          proc subscribe(s: Sender[`cname`],
+                         t: type `cbident`,
+                         options: JsonNode,
+                         `callbackIdent`: `procTyWithRawData`): Future[Subscription] =
+            let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
             s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
               `argParseBody`
               `callWithRawData`
 
+          proc getJsonLogs(s: Sender[`cname`],
+                           t: type `cbident`,
+                           fromBlock, toBlock = none(RtBlockIdentifier),
+                           blockHash = none(BlockHash)): Future[JsonNode] =
+            var options = newJObject()
+            options["address"] = %s.contractAddress
+            var topics = newJArray()
+            topics.elems.insert(%eventTopic(`cbident`), 0)
+            options["topics"] = topics
+            if blockHash.isSome:
+              doAssert fromBlock.isNone and toBlock.isNone
+              options["blockhash"] = %blockHash.unsafeGet
+            else:
+              if fromBlock.isSome:
+                options["fromBlock"] = %fromBlock.unsafeGet
+              if toBlock.isSome:
+                options["toBlock"] = %toBlock.unsafeGet
+
+            s.web3.provider.eth_getLogs(options)
     else:
       discard
 

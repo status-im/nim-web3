@@ -119,6 +119,11 @@ proc test() {.async.} =
 
     echo "sendCoin: ", await ns.sendCoin(accounts[1], 100.u256).send()
 
+    echo "transfers: ", await ns.getJsonLogs(
+      Transfer,
+      fromBlock = some(blockId(deployedAtBlock)),
+      toBlock = some(blockId(1000'u64)))
+
     await notifFut
 
     await s.unsubscribe()

@@ -15,6 +15,17 @@ type
   BlockHash* = FixedBytes[32]
   BlockNumber* = uint64
   BlockIdentifier* = string|BlockNumber
+  
+  BlockIdentifierKind* = enum
+    number
+    alias
+
+  RtBlockIdentifier* = object
+    case kind*: BlockIdentifierKind
+    of BlockIdentifierKind.number:
+      number*: BlockNumber
+    of BlockIdentifierKind.alias:
+      alias*: string
 
   Quantity* = distinct uint64
 
@@ -117,6 +128,7 @@ type
     toBlock*: Option[string]                # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
     address*: Option[Address]  # (optional) contract address or a list of addresses from which logs should originate.
     topics*: Option[seq[string]]#Option[seq[FilterData]]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
+    blockhash*: Option[BlockHash]
 
   LogObject* = object
     #removed*: bool              # true when the log was removed, due to a chain reorganization. false if its a valid log.
@@ -171,3 +183,10 @@ proc `==`*[N](a, b: DynamicBytes[N]): bool {.inline.} =
 
 proc `==`*(a, b: Address): bool {.inline.} =
   array[20, byte](a) == array[20, byte](b)
+
+func blockId*(n: BlockNumber): RtBlockIdentifier =
+  RtBlockIdentifier(kind: BlockIdentifierKind.number, number: n)
+
+func blockId*(a: string): RtBlockIdentifier =
+  RtBlockIdentifier(kind: BlockIdentifierKind.alias, alias: a)
+
