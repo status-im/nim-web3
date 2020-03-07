@@ -656,7 +656,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         result.add quote do:
           type `cbident` = object
 
-          template eventTopic(T: type `cbident`): string =
+          template eventTopic*(T: type `cbident`): string =
             "0x" & toLowerAscii($keccak256.digest(`signature`))
 
           proc subscribe(s: Sender[`cname`],
@@ -678,28 +678,30 @@ macro contract*(cname: untyped, body: untyped): untyped =
             s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
               `argParseBody`
               `callWithRawData`
-
-          proc getJsonLogs(s: Sender[`cname`],
-                           t: type `cbident`,
-                           fromBlock, toBlock = none(RtBlockIdentifier),
-                           blockHash = none(BlockHash)): Future[JsonNode] =
-            var options = newJObject()
-            options["address"] = %s.contractAddress
-            var topics = newJArray()
-            topics.elems.insert(%eventTopic(`cbident`), 0)
-            options["topics"] = topics
-            if blockHash.isSome:
-              doAssert fromBlock.isNone and toBlock.isNone
-              options["blockhash"] = %blockHash.unsafeGet
-            else:
-              if fromBlock.isSome:
-                options["fromBlock"] = %fromBlock.unsafeGet
-              if toBlock.isSome:
-                options["toBlock"] = %toBlock.unsafeGet
-
-            s.web3.provider.eth_getLogs(options)
     else:
       discard
+
+proc getJsonLogs*(s: Sender,
+                  EventName: type,
+                  fromBlock, toBlock = none(RtBlockIdentifier),
+                  blockHash = none(BlockHash)): Future[JsonNode] =
+  mixin eventTopic
+
+  var options = newJObject()
+  options["address"] = %s.contractAddress
+  var topics = newJArray()
+  topics.elems.insert(%eventTopic(EventName), 0)
+  options["topics"] = topics
+  if blockHash.isSome:
+    doAssert fromBlock.isNone and toBlock.isNone
+    options["blockhash"] = %blockHash.unsafeGet
+  else:
+    if fromBlock.isSome:
+      options["fromBlock"] = %fromBlock.unsafeGet
+    if toBlock.isSome:
+      options["toBlock"] = %toBlock.unsafeGet
+
+  s.web3.provider.eth_getLogs(options)
 
 proc signatureEnabled(w: Web3): bool {.inline.} =
   w.privateKey.verify()
