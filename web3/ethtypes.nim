@@ -1,4 +1,4 @@
-import options, json
+import options, json, hashes
 import stint, stew/byteutils
 
 type
@@ -189,4 +189,7 @@ func blockId*(n: BlockNumber): RtBlockIdentifier =
 
 func blockId*(a: string): RtBlockIdentifier =
   RtBlockIdentifier(kind: BlockIdentifierKind.alias, alias: a)
+
+func hash*[N](bytes: FixedBytes[N]): Hash =
+  hash(array[N, byte](bytes))
 

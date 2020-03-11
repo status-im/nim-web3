@@ -50,7 +50,7 @@ proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
     if s.historicalEventsProcessed:
       try:
         s.callback(j{"result"})
-      except Exception as e:
+      except CatchableError as e:
         echo "Caught exception in handleSubscriptionNotification: ", e.msg
         echo e.getStackTrace()
     else:
@@ -99,7 +99,7 @@ proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
       s.callback(s.pendingEvents[i])
       inc i
     s.pendingEvents = @[]
-  except Exception as e:
+  except CatchableError as e:
     echo "Caught exception in getHistoricalEvents: ", e.msg
     echo e.getStackTrace()
 
@@ -154,11 +154,11 @@ func encode*[N](b: FixedBytes[N]): EncodeResult = fixedEncode(array[N, byte](b))
 func encode*(b: Address): EncodeResult = fixedEncode(array[20, byte](b))
 
 
-proc skip0xPrefix(s: string): int =
+proc skip0xPrefix*(s: string): int =
   if s.len > 1 and s[0] == '0' and s[1] in {'x', 'X'}: 2
   else: 0
 
-proc strip0xPrefix(s: string): string =
+proc strip0xPrefix*(s: string): string =
   let prefixLen = skip0xPrefix(s)
   if prefixLen != 0:
     s[prefixLen .. ^1]
@@ -182,6 +182,9 @@ func fromHex*[N](x: type FixedBytes[N], s: string): FixedBytes[N] {.inline.} =
 
 func fromHex*(x: type Address, s: string): Address {.inline.} =
   fromHexAux(s, array[20, byte](result))
+
+template toHex*[N](x: FixedBytes[N]): string =
+  toHex(array[N, byte](x))
 
 func decodeFixed(input: string, offset: int, to: var openarray[byte]): int =
   let meaningfulLen = to.len * 2
@@ -326,6 +329,11 @@ func encode*(x: Bool): EncodeResult = encode(Int256(x))
 func decode*[N](input: string, offset: int, to: var Bool): int {.inline.} =
   decode(input, offset, Stint(to))
 
+func decode*(input: string, offset: int, obj: var object): int =
+  var offset = offset
+  for field in fields(obj):
+    offset += decode(input, offset, field)
+
 type
   Encodable = concept x
     encode(x) is EncodeResult
@@ -370,7 +378,6 @@ func encode*(x: openArray[Encodable]): EncodeResult =
 func decode*[T; I: static int](input: string, to: array[0..I, T]): array[0..I, T] =
   for i in 0..I:
     result[i] = input[i*64 .. (i+1)*64].decode(T)
-
 
 type
   InterfaceObjectKind = enum
@@ -680,6 +687,9 @@ macro contract*(cname: untyped, body: untyped): untyped =
               `callWithRawData`
     else:
       discard
+
+  when defined(debugMacros) or defined(debugWeb3Macros):
+    echo result.repr
 
 proc getJsonLogs*(s: Sender,
                   EventName: type,
