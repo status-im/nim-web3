@@ -673,8 +673,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
       discard
 
 proc signatureEnabled(w: Web3): bool {.inline.} =
-  var pk: PrivateKey
-  w.privateKey != pk
+  not w.privateKey.isZeroKey()
 
 proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   if web3.signatureEnabled():
