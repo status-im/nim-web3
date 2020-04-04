@@ -30,8 +30,8 @@ proc test() {.async.} =
   let accounts = await web3.provider.eth_accounts()
   web3.defaultAccount = accounts[0]
 
-  let pk = newPrivateKey()
-  let acc = Address(toCanonicalAddress(pk.getPublicKey()))
+  let pk = PrivateKEy.random()[]
+  let acc = Address(toCanonicalAddress(pk.toPublicKey()[]))
 
   var tx: EthSend
   tx.source = accounts[0]

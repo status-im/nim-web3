@@ -673,13 +673,13 @@ macro contract*(cname: untyped, body: untyped): untyped =
       discard
 
 proc signatureEnabled(w: Web3): bool {.inline.} =
-  not w.privateKey.isZeroKey()
+  w.privateKey.verify()
 
 proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   if web3.signatureEnabled():
     var cc = c
     if not cc.nonce.isSome:
-      let fromAddress = web3.privateKey.getPublicKey.toCanonicalAddress.Address
+      let fromAddress = web3.privateKey.toPublicKey().tryGet().toCanonicalAddress.Address
       cc.nonce = some(int(await web3.provider.eth_getTransactionCount(fromAddress, "latest")))
     let t = "0x" & encodeTransaction(cc, web3.privateKey)
     return await web3.provider.eth_sendRawTransaction(t)
