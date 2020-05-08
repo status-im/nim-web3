@@ -32,15 +32,21 @@ proc test() {.async.} =
 
   var fut = newFuture[void]()
 
-  let s = await ns.subscribe(DepositEvent, %*{"fromBlock": "0x0"}) do(pubkey: Bytes48, withdrawalCredentials: Bytes32, amount: Bytes8, signature: Bytes96, merkleTreeIndex: Bytes8):
-    echo "onDeposit"
-    echo "pubkey: ", pubkey
-    echo "withdrawalCredentials: ", withdrawalCredentials
-    echo "amount: ", amount
-    echo "signature: ", signature
-    echo "merkleTreeIndex: ", merkleTreeIndex
-    assert(pubkey == pk)
-    fut.complete()
+  let s = await ns.subscribe(DepositEvent, %*{"fromBlock": "0x0"}) do (
+      pubkey: Bytes48, withdrawalCredentials: Bytes32, amount: Bytes8, signature: Bytes96, merkleTreeIndex: Bytes8)
+      {.raises: [Defect], gcsafe.}:
+    try:
+      echo "onDeposit"
+      echo "pubkey: ", pubkey
+      echo "withdrawalCredentials: ", withdrawalCredentials
+      echo "amount: ", amount
+      echo "signature: ", signature
+      echo "merkleTreeIndex: ", merkleTreeIndex
+      assert(pubkey == pk)
+      fut.complete()
+    except Exception as err:
+      # chronos still raises exceptions which inherit directly from Exception
+      doAssert false, err.msg
 
   discard await ns.deposit(pk, cr, sig, dataRoot).send(value = 32.u256.ethToWei)
 

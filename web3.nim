@@ -648,7 +648,18 @@ macro contract*(cname: untyped, body: untyped): untyped =
           procTy = nnkProcTy.newTree(params, newEmptyNode())
           signature = getSignature(obj.eventObject)
 
-        procTy[1] = nnkPragma.newTree(ident"gcsafe") # TODO: use addPragma in nim 0.20.4 and later
+        # generated with dumpAstGen - produces "{.raises: [Defect], gcsafe.}"
+        let pragmas = nnkPragma.newTree(
+          nnkExprColonExpr.newTree(
+            newIdentNode("raises"),
+            nnkBracket.newTree(
+              newIdentNode("Defect")
+            )
+          ),
+          newIdentNode("gcsafe")
+        )
+
+        procTy[1] = pragmas
 
         callWithRawData.add jsonIdent
         paramsWithRawData.add nnkIdentDefs.newTree(
@@ -658,7 +669,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         )
 
         let procTyWithRawData = nnkProcTy.newTree(paramsWithRawData, newEmptyNode())
-        procTyWithRawData[1] = nnkPragma.newTree(ident"gcsafe") # TODO: use addPragma in nim 0.20.4 and later
+        procTyWithRawData[1] = pragmas
 
         result.add quote do:
           type `cbident` = object

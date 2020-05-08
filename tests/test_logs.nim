@@ -62,12 +62,18 @@ proc test() {.async.} =
     let notifFut = newFuture[void]()
     var notificationsReceived = 0
 
-    let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do(sender: Address, value: Uint256):
-      echo "onEvent: ", sender, " value ", value
-      inc notificationsReceived
+    let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do (
+        sender: Address, value: Uint256)
+        {.raises: [Defect], gcsafe.}:
+      try:
+        echo "onEvent: ", sender, " value ", value
+        inc notificationsReceived
 
-      if notificationsReceived == invocationsBefore + invocationsAfter:
-        notifFut.complete()
+        if notificationsReceived == invocationsBefore + invocationsAfter:
+          notifFut.complete()
+      except Exception as err:
+        # chronos still raises exceptions which inherit directly from Exception
+        doAssert false, err.msg
 
     for i in 1 .. invocationsAfter:
       await testInvoke()

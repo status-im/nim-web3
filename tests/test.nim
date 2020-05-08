@@ -91,14 +91,20 @@ proc test() {.async.} =
     let notifFut = newFuture[void]()
     var notificationsReceived = 0
 
-    let s = await ns.subscribe(Transfer) do(fromAddr, toAddr: Address, value: Uint256):
-      echo "onTransfer: ", fromAddr, " transferred ", value, " to ", toAddr
-      inc notificationsReceived
-      assert(fromAddr == web3.defaultAccount)
-      assert((notificationsReceived == 1 and value == 50.u256) or
-              (notificationsReceived == 2 and value == 100.u256))
-      if notificationsReceived == 2:
-        notifFut.complete()
+    let s = await ns.subscribe(Transfer) do (
+        fromAddr, toAddr: Address, value: Uint256)
+        {.raises: [Defect], gcsafe.}:
+      try:
+        echo "onTransfer: ", fromAddr, " transferred ", value, " to ", toAddr
+        inc notificationsReceived
+        assert(fromAddr == web3.defaultAccount)
+        assert((notificationsReceived == 1 and value == 50.u256) or
+                (notificationsReceived == 2 and value == 100.u256))
+        if notificationsReceived == 2:
+          notifFut.complete()
+      except Exception as err:
+        # chronos still raises exceptions which inherit directly from Exception
+        doAssert false, err.msg
 
     echo "getbalance (now): ", await ns.getBalance(web3.defaultAccount).call()
     echo "getbalance (after creation): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = deployedAtBlock)
