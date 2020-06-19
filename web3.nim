@@ -821,6 +821,20 @@ proc exec*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] 
 proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
   Sender[T](web3: web3, contractAddress: toAddress)
 
+proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} =
+  let
+    codeFut = case atBlock.kind
+      of BlockIdentifierKind.number:
+        s.web3.provider.eth_getCode(s.contractAddress, atBlock.number)
+      of BlockIdentifierKind.alias:
+        s.web3.provider.eth_getCode(s.contractAddress, atBlock.alias)
+    code = await codeFut
+
+  # TODO: Check that all methods of the contract are present by
+  #       looking for their ABI signatures within the code:
+  #       https://ethereum.stackexchange.com/questions/11856/how-to-detect-from-web3-if-method-exists-on-a-deployed-contract
+  return code.len > 0
+
 proc subscribe*(s: Sender, t: typedesc, cb: proc): Future[Subscription] {.inline.} =
   subscribe(s, t, nil, cb)
 

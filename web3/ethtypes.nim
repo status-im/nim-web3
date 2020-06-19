@@ -187,6 +187,9 @@ proc `==`*(a, b: Address): bool {.inline.} =
 func blockId*(n: BlockNumber): RtBlockIdentifier =
   RtBlockIdentifier(kind: BlockIdentifierKind.number, number: n)
 
+func blockId*(b: BlockObject): RtBlockIdentifier =
+  RtBlockIdentifier(kind: BlockIdentifierKind.number, number: b.number.uint64)
+
 func blockId*(a: string): RtBlockIdentifier =
   RtBlockIdentifier(kind: BlockIdentifierKind.alias, alias: a)
 
