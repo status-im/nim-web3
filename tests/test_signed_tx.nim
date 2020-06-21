@@ -31,7 +31,7 @@ proc test() {.async.} =
   web3.defaultAccount = accounts[0]
 
   let pk = PrivateKEy.random()[]
-  let acc = Address(toCanonicalAddress(pk.toPublicKey()[]))
+  let acc = Address(toCanonicalAddress(pk.toPublicKey()))
 
   var tx: EthSend
   tx.source = accounts[0]
@@ -44,7 +44,7 @@ proc test() {.async.} =
   assert(balance == ethToWei(10.u256))
 
   # Send 5 eth back
-  web3.privateKey = pk
+  web3.privateKey = some(pk)
   tx.value = some(ethToWei(5.u256))
   tx.to = some(accounts[0])
   tx.gas = some(Quantity(3000000))
