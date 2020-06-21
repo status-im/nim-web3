@@ -19,7 +19,7 @@ type
     provider*: RpcClient
     subscriptions*: Table[string, Subscription]
     defaultAccount*: Address
-    privateKey*: PrivateKey
+    privateKey*: Option[PrivateKey]
     onDisconnect*: proc() {.gcsafe.}
 
   Sender*[T] = ref object
@@ -724,16 +724,13 @@ proc getJsonLogs*(s: Sender,
 
   s.web3.provider.eth_getLogs(options)
 
-proc signatureEnabled(w: Web3): bool {.inline.} =
-  w.privateKey.verify()
-
 proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
-  if web3.signatureEnabled():
+  if web3.privateKey.isSome():
     var cc = c
     if not cc.nonce.isSome:
-      let fromAddress = web3.privateKey.toPublicKey().tryGet().toCanonicalAddress.Address
+      let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress.Address
       cc.nonce = some(int(await web3.provider.eth_getTransactionCount(fromAddress, "latest")))
-    let t = "0x" & encodeTransaction(cc, web3.privateKey)
+    let t = "0x" & encodeTransaction(cc, web3.privateKey.get())
     return await web3.provider.eth_sendRawTransaction(t)
   else:
     return await web3.provider.eth_sendTransaction(c)
@@ -747,7 +744,7 @@ proc send*(c: ContractCallBase, value = 0.u256, gas = 3000000'u64, gasPrice = 0)
   cc.gas = some(Quantity(gas))
   cc.value = some(value)
 
-  if web3.signatureEnabled() or gasPrice != 0:
+  if web3.privateKey.isSome() or gasPrice != 0:
     cc.gasPrice = some(gasPrice)
   web3.send(cc)
 

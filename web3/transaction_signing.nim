@@ -6,10 +6,8 @@ import
 proc signTransaction(tr: var Transaction, pk: PrivateKey) =
   let h = tr.txHashNoSignature
   let s = sign(pk, h)
-  if s.isErr:
-    raise newException(CatchableError, "Could not sign transaction: " & $s.error)
 
-  var r = toRaw(s[])
+  var r = toRaw(s)
   let v = r[64]
 
   tr.R = fromBytesBE(UInt256, r.toOpenArray(0, 31))
