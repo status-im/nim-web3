@@ -60,13 +60,13 @@ proc `%`*[N](v: DynamicBytes[N]): JsonNode =
   assert(result.getStr.len == N * 2 + 2)
 
 proc `$`*[N](v: FixedBytes[N]): string {.inline.} =
-  array[N, byte](v).toHex
+  "0x" & array[N, byte](v).toHex
 
 proc `$`*(v: Address): string {.inline.} =
-  array[20, byte](v).toHex
+  "0x" & array[20, byte](v).toHex
 
 proc `$`*[N](v: DynamicBytes[N]): string {.inline.} =
-  array[N, byte](v).toHex
+  "0x" & array[N, byte](v).toHex
 
 proc `%`*(x: EthSend): JsonNode =
   result = newJobject()
@@ -113,6 +113,6 @@ proc `%`*(x: FilterOptions): JsonNode =
 
 proc `%`*(x: RtBlockIdentifier): JsonNode =
   case x.kind
-  of BlockIdentifierKind.number: %x.number
-  of BlockIdentifierKind.alias: %x.alias
+  of bidNumber: %x.number
+  of bidAlias: %x.alias
 

@@ -17,14 +17,14 @@ type
   BlockIdentifier* = string|BlockNumber
   
   BlockIdentifierKind* = enum
-    number
-    alias
+    bidNumber
+    bidAlias
 
   RtBlockIdentifier* = object
     case kind*: BlockIdentifierKind
-    of BlockIdentifierKind.number:
+    of bidNumber:
       number*: BlockNumber
-    of BlockIdentifierKind.alias:
+    of bidAlias:
       alias*: string
 
   Quantity* = distinct uint64
@@ -185,13 +185,13 @@ proc `==`*(a, b: Address): bool {.inline.} =
   array[20, byte](a) == array[20, byte](b)
 
 func blockId*(n: BlockNumber): RtBlockIdentifier =
-  RtBlockIdentifier(kind: BlockIdentifierKind.number, number: n)
+  RtBlockIdentifier(kind: bidNumber, number: n)
 
 func blockId*(b: BlockObject): RtBlockIdentifier =
-  RtBlockIdentifier(kind: BlockIdentifierKind.number, number: b.number.uint64)
+  RtBlockIdentifier(kind: bidNumber, number: BlockNumber b.number)
 
 func blockId*(a: string): RtBlockIdentifier =
-  RtBlockIdentifier(kind: BlockIdentifierKind.alias, alias: a)
+  RtBlockIdentifier(kind: bidAlias, alias: a)
 
 func hash*[N](bytes: FixedBytes[N]): Hash =
   hash(array[N, byte](bytes))

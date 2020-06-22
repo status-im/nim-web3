@@ -824,9 +824,9 @@ proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
 proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} =
   let
     codeFut = case atBlock.kind
-      of BlockIdentifierKind.number:
+      of bidNumber:
         s.web3.provider.eth_getCode(s.contractAddress, atBlock.number)
-      of BlockIdentifierKind.alias:
+      of bidAlias:
         s.web3.provider.eth_getCode(s.contractAddress, atBlock.alias)
     code = await codeFut
 
