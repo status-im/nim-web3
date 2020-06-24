@@ -1,4 +1,4 @@
-import macros, strutils, options, math, json, tables, uri
+import macros, strutils, options, math, json, tables, uri, strformat
 from os import DirSep
 import
   nimcrypto, stint, httputils, chronicles, chronos, json_rpc/rpcclient,
@@ -760,7 +760,7 @@ proc call*[T](c: ContractCall[T],
   cc.value = some(value)
   let response = strip0xPrefix:
     if blockNumber != high(uint64):
-      await c.web3.provider.eth_call(cc, blockNumber)
+      await c.web3.provider.eth_call(cc, &"0x{blockNumber:X}")
     else:
       await c.web3.provider.eth_call(cc, "latest")
 

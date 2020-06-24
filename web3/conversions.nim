@@ -1,4 +1,4 @@
-import json, options, stint, stew/byteutils, strutils
+import json, options, stint, stew/byteutils, strutils, strformat
 from json_rpc/rpcserver import expect
 import ethtypes, ethhexstrings
 
@@ -113,6 +113,6 @@ proc `%`*(x: FilterOptions): JsonNode =
 
 proc `%`*(x: RtBlockIdentifier): JsonNode =
   case x.kind
-  of bidNumber: %x.number
+  of bidNumber: %(&"0x{x.number:X}")
   of bidAlias: %x.alias
 
