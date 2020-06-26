@@ -62,26 +62,43 @@ type
   #  value*: int               # (optional) Integer of the value sent with this transaction.
   #  data*: int                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
 
+  ## A block header object
+  BlockHeader* = ref object
+    difficulty*: Quantity
+    extraData*: string
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    logsBloom*: FixedBytes[256]
+    miner*: Address
+    nonce*: Quantity
+    number*: Quantity
+    parentHash*: BlockHash
+    receiptsRoot*: BlockHash
+    sha3Uncles*: BlockHash
+    stateRoot*: BlockHash
+    timestamp*: Quantity
+    transactionsRoot*: BlockHash
+
   ## A block object, or null when no block was found
   BlockObject* = ref object
-    number*: Quantity             # the block number. null when its pending block.
-    hash*: BlockHash              # hash of the block. null when its pending block.
-    parentHash*: BlockHash        # hash of the parent block.
-    nonce*: Quantity              # hash of the generated proof-of-work. null when its pending block.
-    sha3Uncles*: UInt256          # SHA3 of the uncles data in the block.
-    logsBloom*: FixedBytes[256]   # the bloom filter for the logs of the block. null when its pending block.
-    transactionsRoot*: UInt256    # the root of the transaction trie of the block.
-    stateRoot*: UInt256           # the root of the final state trie of the block.
-    receiptsRoot*: UInt256        # the root of the receipts trie of the block.
-    miner*: Address               # the address of the beneficiary to whom the mining rewards were given.
     difficulty*: Quantity         # integer of the difficulty for this block.
-    totalDifficulty*: Quantity    # integer of the total difficulty of the chain until this block.
     extraData*: string            # the "extra data" field of this block.
-    size*: Quantity               # integer the size of this block in bytes.
     gasLimit*: Quantity           # the maximum gas allowed in this block.
     gasUsed*: Quantity            # the total used gas by all transactions in this block.
+    hash*: BlockHash              # hash of the block. null when its pending block.
+    logsBloom*: FixedBytes[256]   # the bloom filter for the logs of the block. null when its pending block.
+    miner*: Address               # the address of the beneficiary to whom the mining rewards were given.
+    nonce*: Quantity              # hash of the generated proof-of-work. null when its pending block.
+    number*: Quantity             # the block number. null when its pending block.
+    parentHash*: BlockHash        # hash of the parent block.
+    receiptsRoot*: UInt256        # the root of the receipts trie of the block.
+    sha3Uncles*: UInt256          # SHA3 of the uncles data in the block.
+    size*: Quantity               # integer the size of this block in bytes.
+    stateRoot*: UInt256           # the root of the final state trie of the block.
     timestamp*: Quantity          # the unix timestamp for when the block was collated.
+    totalDifficulty*: Quantity    # integer of the total difficulty of the chain until this block.
     transactions*: seq[TxHash]    # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
+    transactionsRoot*: UInt256    # the root of the transaction trie of the block.
     uncles*: seq[BlockHash]       # list of uncle hashes.
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:

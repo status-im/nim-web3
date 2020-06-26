@@ -1,10 +1,12 @@
-import macros, strutils, options, math, json, tables, uri, strformat
-from os import DirSep
 import
-  nimcrypto, stint, httputils, chronicles, chronos, json_rpc/rpcclient,
-  stew/byteutils, eth/keys
+  macros, strutils, options, math, json, tables, uri, strformat
 
-import web3/[ethtypes, ethprocs, conversions, ethhexstrings, transaction_signing]
+from os import DirSep
+
+import
+  nimcrypto, stint, httputils, chronicles, chronos,
+  json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
+  web3/[ethtypes, ethprocs, conversions, ethhexstrings, transaction_signing]
 
 template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 
@@ -28,10 +30,16 @@ type
 
   EncodeResult* = tuple[dynamic: bool, data: string]
 
+  SubscriptionEventHandler* = proc (j: JsonNode) {.gcsafe, raises: [Defect].}
+  SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [Defect].}
+
+  BlockHeaderHandler* = proc (b: BlockHeader) {.gcsafe, raises: [Defect].}
+
   Subscription* = ref object
     id*: string
     web3*: Web3
-    callback*: proc(j: JsonNode) {.gcsafe.}
+    eventHandler*: SubscriptionEventHandler
+    errorHandler*: SubscriptionErrorHandler
     pendingEvents: seq[JsonNode]
     historicalEventsProcessed: bool
     removed: bool
@@ -48,11 +56,7 @@ proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
   let s = w.subscriptions.getOrDefault(j{"subscription"}.getStr())
   if not s.isNil and not s.removed:
     if s.historicalEventsProcessed:
-      try:
-        s.callback(j{"result"})
-      except CatchableError as e:
-        echo "Caught exception in handleSubscriptionNotification: ", e.msg
-        echo e.getStackTrace()
+      s.eventHandler(j{"result"})
     else:
       s.pendingEvents.add(j)
 
@@ -91,28 +95,60 @@ proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
     let logs = await s.web3.provider.eth_getLogs(options)
     for l in logs:
       if s.removed: break
-      s.callback(l)
+      s.eventHandler(l)
     s.historicalEventsProcessed = true
     var i = 0
     while i < s.pendingEvents.len: # Mind reentrancy
       if s.removed: break
-      s.callback(s.pendingEvents[i])
+      s.eventHandler(s.pendingEvents[i])
       inc i
     s.pendingEvents = @[]
   except CatchableError as e:
     echo "Caught exception in getHistoricalEvents: ", e.msg
     echo e.getStackTrace()
 
-proc subscribe*(w: Web3, name: string, options: JsonNode, callback: proc(j: JsonNode) {.gcsafe.}): Future[Subscription] {.async.} =
-  var options = options
-  if options.isNil: options = newJNull()
-  let id = await w.provider.eth_subscribe(name, options)
-  result = Subscription(id: id, web3: w, callback: callback)
+proc subscribe*(w: Web3, name: string, options: JsonNode,
+                eventHandler: SubscriptionEventHandler,
+                errorHandler: SubscriptionErrorHandler): Future[Subscription]
+               {.async.} =
+  ## Sets up a new subsciption using the `eth_subscribe` RPC call.
+  ##
+  ## May raise a `CatchableError` if the subscription is not established.
+  ##
+  ## Once the subscription is established, the `eventHandler` callback
+  ## will be executed for each event of interest.
+  ##
+  ## In case of any errors or illegal behavior of the remote RPC node,
+  ## the `errorHandler` will be executed with relevant information about
+  ## the error.
+  let id = await w.provider.eth_subscribe(name, if options.isNil: newJNull()
+                                                else: options)
+  result = Subscription(id: id,
+                        web3: w,
+                        eventHandler: eventHandler,
+                        errorHandler: errorHandler)
+
   w.subscriptions[id] = result
 
-proc subscribeToLogs*(w: Web3, options: JsonNode, callback: proc(j: JsonNode) {.gcsafe.}): Future[Subscription] {.async.} =
-  result = await subscribe(w, "logs", options, callback)
+proc subscribeForLogs*(w: Web3, options: JsonNode,
+                       logsHandler: SubscriptionEventHandler,
+                       errorHandler: SubscriptionErrorHandler): Future[Subscription]
+                      {.async.} =
+  result = await subscribe(w, "logs", options, logsHandler, errorHandler)
   discard getHistoricalEvents(result, options)
+
+proc subscribeForBlockHeaders*(w: Web3, options: JsonNode,
+                               blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [Defect].},
+                               errorHandler: SubscriptionErrorHandler): Future[Subscription]
+                              {.async.} =
+  proc eventHandler(json: JsonNode) {.gcsafe, raises: [Defect].} =
+    var blk: BlockHeader
+    try: fromJson(json, "result", blk)
+    except CatchableError as err: errorHandler(err[])
+    blockHeadersCallback(blk)
+
+  result = await subscribe(w, "newHeads", options, eventHandler, errorHandler)
+  result.historicalEventsProcessed = true
 
 proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   s.web3.subscriptions.del(s.id)
@@ -680,22 +716,35 @@ macro contract*(cname: untyped, body: untyped): untyped =
           proc subscribe(s: Sender[`cname`],
                          t: type `cbident`,
                          options: JsonNode,
-                         `callbackIdent`: `procTy`): Future[Subscription] =
+                         `callbackIdent`: `procTy`,
+                         errorHandler: SubscriptionErrorHandler): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
-            s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
-              `argParseBody`
-              `call`
+            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+              try:
+                `argParseBody`
+                `call`
+              except CatchableError as err:
+                errorHandler err[]
+
+            s.web3.subscribeForLogs(options, eventHandler, errorHandler)
 
           proc subscribe(s: Sender[`cname`],
                          t: type `cbident`,
                          options: JsonNode,
-                         `callbackIdent`: `procTyWithRawData`): Future[Subscription] =
+                         `callbackIdent`: `procTyWithRawData`,
+                         errorHandler: SubscriptionErrorHandler): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
-            s.web3.subscribeToLogs(options) do(`jsonIdent`: JsonNode):
-              `argParseBody`
-              `callWithRawData`
+            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+              try:
+                `argParseBody`
+                `callWithRawData`
+              except CatchableError as err:
+                errorHandler err[]
+
+            s.web3.subscribeForLogs(options, eventHandler, errorHandler)
+
     else:
       discard
 
