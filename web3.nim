@@ -132,10 +132,14 @@ proc subscribe*(w: Web3, name: string, options: JsonNode,
 
 proc subscribeForLogs*(w: Web3, options: JsonNode,
                        logsHandler: SubscriptionEventHandler,
-                       errorHandler: SubscriptionErrorHandler): Future[Subscription]
+                       errorHandler: SubscriptionErrorHandler,
+                       withHistoricEvents = true): Future[Subscription]
                       {.async.} =
   result = await subscribe(w, "logs", options, logsHandler, errorHandler)
-  discard getHistoricalEvents(result, options)
+  if withHistoricEvents:
+    discard getHistoricalEvents(result, options)
+  else:
+    result.historicalEventsProcessed = true
 
 proc subscribeForBlockHeaders*(w: Web3, options: JsonNode,
                                blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [Defect].},
@@ -717,7 +721,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          t: type `cbident`,
                          options: JsonNode,
                          `callbackIdent`: `procTy`,
-                         errorHandler: SubscriptionErrorHandler): Future[Subscription] =
+                         errorHandler: SubscriptionErrorHandler,
+                         withHistoricEvents = true): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
@@ -727,13 +732,14 @@ macro contract*(cname: untyped, body: untyped): untyped =
               except CatchableError as err:
                 errorHandler err[]
 
-            s.web3.subscribeForLogs(options, eventHandler, errorHandler)
+            s.web3.subscribeForLogs(options, eventHandler, errorHandler, withHistoricEvents)
 
           proc subscribe(s: Sender[`cname`],
                          t: type `cbident`,
                          options: JsonNode,
                          `callbackIdent`: `procTyWithRawData`,
-                         errorHandler: SubscriptionErrorHandler): Future[Subscription] =
+                         errorHandler: SubscriptionErrorHandler,
+                         withHistoricEvents = true): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
@@ -743,7 +749,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
               except CatchableError as err:
                 errorHandler err[]
 
-            s.web3.subscribeForLogs(options, eventHandler, errorHandler)
+            s.web3.subscribeForLogs(options, eventHandler, errorHandler, withHistoricEvents)
 
     else:
       discard
