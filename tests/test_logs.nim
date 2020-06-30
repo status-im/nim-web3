@@ -74,6 +74,8 @@ proc test() {.async.} =
       except Exception as err:
         # chronos still raises exceptions which inherit directly from Exception
         doAssert false, err.msg
+    do (err: CatchableError):
+      echo "Error from MyEvent subscription: ", err.msg
 
     for i in 1 .. invocationsAfter:
       await testInvoke()

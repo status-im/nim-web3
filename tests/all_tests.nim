@@ -5,4 +5,9 @@
 #   * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 # at your option. This file may not be copied, modified, or distributed except according to those terms.
 
-import test, test_deposit_contract, test_logs, test_signed_tx
+import
+  test,
+  test_deposit_contract,
+  test_logs,
+  test_signed_tx,
+  test_ethhexstrings

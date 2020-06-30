@@ -47,6 +47,8 @@ proc test() {.async.} =
     except Exception as err:
       # chronos still raises exceptions which inherit directly from Exception
       doAssert false, err.msg
+  do (err: CatchableError):
+    echo "Error from DepositEvent subscription: ", err.msg
 
   discard await ns.deposit(pk, cr, sig, dataRoot).send(value = 32.u256.ethToWei)
 

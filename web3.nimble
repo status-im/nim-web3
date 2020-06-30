@@ -15,7 +15,6 @@ requires "json_rpc"
 requires "stew"
 requires "eth"
 
-
 ### Helper functions
 proc test(name: string, defaultLang = "c") =
   # TODO, don't forget to change defaultLang to `cpp` if the project requires C++

@@ -888,7 +888,7 @@ proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} 
   return code.len > 0
 
 proc subscribe*(s: Sender, t: typedesc, cb: proc): Future[Subscription] {.inline.} =
-  subscribe(s, t, nil, cb)
+  subscribe(s, t, newJObject(), cb, SubscriptionErrorHandler nil)
 
 proc `$`*(b: Bool): string =
   $(Stint[256](b))
