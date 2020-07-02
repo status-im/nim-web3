@@ -215,3 +215,35 @@ func blockId*(a: string): RtBlockIdentifier =
 func hash*[N](bytes: FixedBytes[N]): Hash =
   hash(array[N, byte](bytes))
 
+proc skip0xPrefix*(s: string): int =
+  if s.len > 1 and s[0] == '0' and s[1] in {'x', 'X'}: 2
+  else: 0
+
+proc strip0xPrefix*(s: string): string =
+  let prefixLen = skip0xPrefix(s)
+  if prefixLen != 0:
+    s[prefixLen .. ^1]
+  else:
+    s
+
+proc fromHexAux*(s: string, result: var openarray[byte]) =
+  let prefixLen = skip0xPrefix(s)
+  let meaningfulLen = s.len - prefixLen
+  let requiredChars = result.len * 2
+  if meaningfulLen > requiredChars:
+    let start = s.len - requiredChars
+    hexToByteArray(s[start .. s.len - 1], result)
+  elif meaningfulLen == requiredChars:
+    hexToByteArray(s, result)
+  else:
+    raise newException(ValueError, "Short hex string (" & $meaningfulLen & ") for Bytes[" & $result.len & "]")
+
+func fromHex*[N](x: type FixedBytes[N], s: string): FixedBytes[N] {.inline.} =
+  fromHexAux(s, array[N, byte](result))
+
+func fromHex*(x: type Address, s: string): Address {.inline.} =
+  fromHexAux(s, array[20, byte](result))
+
+template toHex*[N](x: FixedBytes[N]): string =
+  toHex(array[N, byte](x))
+
