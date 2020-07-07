@@ -5,7 +5,7 @@ import
 
 proc signTransaction(tr: var Transaction, pk: PrivateKey) =
   let h = tr.txHashNoSignature
-  let s = sign(pk, h)
+  let s = sign(pk, SkMessage(h.data))
 
   var r = toRaw(s)
   let v = r[64]
