@@ -1,6 +1,9 @@
-import json, options, stint, stew/byteutils, strutils, strformat
+import
+  json, options, stint, strutils, strformat, typetraits,
+  stew/byteutils, json_serialization, faststreams/textio,
+  ethtypes, ethhexstrings
+
 from json_rpc/rpcserver import expect
-import ethtypes, ethhexstrings
 
 proc `%`*(n: Int256|UInt256): JsonNode = %("0x" & n.toHex)
 
@@ -30,7 +33,6 @@ proc bytesFromJson(n: JsonNode, argName: string, result: var openarray[byte]) =
     raise newException(ValueError, "Parameter \"" & argName & "\" value wrong length: " & $hexStr.len)
   hexToByteArray(hexStr, result)
 
-
 proc fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N]) {.inline.} =
   # expects base 16 string, starting with "0x"
   bytesFromJson(n, argName, array[N, byte](result))
@@ -54,6 +56,29 @@ proc `%`*[N](v: FixedBytes[N]): JsonNode =
 
 proc `%`*(v: Address): JsonNode =
   result = %("0x" & array[20, byte](v).toHex)
+
+proc writeHexValue(w: JsonWriter, v: openarray[byte]) =
+  w.stream.write "\"0x"
+  w.stream.writeHex v
+  w.stream.write "\""
+
+proc writeValue*[N](w: var JsonWriter, v: DynamicBytes[N]) =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*[N](w: var JsonWriter, v: FixedBytes[N]) =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*(w: var JsonWriter, v: Address) =
+  writeHexValue w, distinctBase(v)
+
+proc readValue*[N](r: var JsonReader, T: type DynamicBytes[N]): T =
+  fromHex(T, r.readValue(string))
+
+proc readValue*[N](r: var JsonReader, T: type FixedBytes[N]): T =
+  fromHex(T, r.readValue(string))
+
+proc readValue*(r: var JsonReader, T: type Address): T =
+  fromHex(T, r.readValue(string))
 
 proc `%`*[N](v: DynamicBytes[N]): JsonNode =
   result = %("0x" & array[N, byte](v).toHex)

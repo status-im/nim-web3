@@ -7,13 +7,15 @@ license       = "MIT or Apache License 2.0"
 
 ### Dependencies
 requires "nim >= 0.18.0"
-requires "nimcrypto"
-requires "stint"
 requires "chronicles"
 requires "chronos"
-requires "json_rpc"
-requires "stew"
 requires "eth"
+requires "faststreams"
+requires "json_rpc"
+requires "json_serialization"
+requires "nimcrypto"
+requires "stew"
+requires "stint"
 
 ### Helper functions
 proc test(name: string, defaultLang = "c") =

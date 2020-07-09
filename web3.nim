@@ -198,7 +198,7 @@ func decodeFixed(input: string, offset: int, to: var openarray[byte]): int =
   var padding = to.len mod 32
   if padding != 0: padding = (32 - padding) * 2
   let offset = offset + padding
-  fromHexAux(input[offset .. offset + meaningfulLen - 1], to)
+  hexToByteArray(input[offset .. offset + meaningfulLen - 1], to)
   meaningfulLen + padding
 
 func decode*[N](input: string, offset: int, to: var FixedBytes[N]): int {.inline.} =
@@ -217,9 +217,6 @@ func encodeDynamic(v: openarray[byte]): EncodeResult =
 func encode*[N](x: DynamicBytes[N]): EncodeResult {.inline.} =
   encodeDynamic(array[N, byte](x))
 
-func fromHex*[N](x: type DynamicBytes[N], s: string): DynamicBytes[N] {.inline.} =
-  fromHexAux(s, array[N, byte](result))
-
 func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
   var dataOffset, dataLen: UInt256
   result = decode(input, offset, dataOffset)
@@ -227,7 +224,7 @@ func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
   # TODO: Check data len, and raise?
   let meaningfulLen = to.len * 2
   let actualDataOffset = (dataOffset.toInt + 32) * 2
-  fromHexAux(input[actualDataOffset .. actualDataOffset + meaningfulLen - 1], to)
+  hexToByteArray(input[actualDataOffset .. actualDataOffset + meaningfulLen - 1], to)
 
 func decode*[N](input: string, offset: int, to: var DynamicBytes[N]): int {.inline.} =
   decodeDynamic(input, offset, array[N, byte](to))
