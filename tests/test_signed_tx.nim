@@ -1,6 +1,6 @@
 import ../web3
 import chronos, options, json, stint, eth/keys
-import test_utils
+import test_utils, test_rng
 
 
 #[ Contract NumberStorage
@@ -24,13 +24,12 @@ contract(NumberStorage):
 
 const NumberStorageCode = "6060604052341561000f57600080fd5b60bb8061001d6000396000f30060606040526004361060485763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416633fb5c1cb8114604d578063f2c9ecd8146062575b600080fd5b3415605757600080fd5b60606004356084565b005b3415606c57600080fd5b60726089565b60405190815260200160405180910390f35b600055565b600054905600a165627a7a7230582023e722f35009f12d5698a4ab22fb9d55a6c0f479fc43875c65be46fbdd8db4310029"
 
-
 proc test() {.async.} =
-  let web3 = await newWeb3("ws://127.0.0.1:8545")
+  let web3 = await newWeb3("ws://127.0.0.1:8545/")
   let accounts = await web3.provider.eth_accounts()
   web3.defaultAccount = accounts[0]
 
-  let pk = PrivateKEy.random()[]
+  let pk = PrivateKey.random(theRNG[])
   let acc = Address(toCanonicalAddress(pk.toPublicKey()))
 
   var tx: EthSend

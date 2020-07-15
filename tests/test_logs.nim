@@ -8,11 +8,11 @@ import random
 pragma solidity >=0.4.25 <0.6.0;
 
 contract LoggerContract {
-    
+
    uint fNum;
-   
+
    event MyEvent(address sender, uint value);
-   
+
 
    function invoke(uint value) public {
        emit MyEvent(msg.sender, value);
@@ -28,7 +28,7 @@ const LoggerContractCode = "6080604052348015600f57600080fd5b5060bc8061001e600039
 var contractAddress = Address.fromHex("0xEA255DeA28c84F698Fa195f87fC83D1d4125ef9C")
 
 proc test() {.async.} =
-  let web3 = await newWeb3("ws://localhost:8545")
+  let web3 = await newWeb3("ws://localhost:8545/")
   let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
   web3.defaultAccount = accounts[0]
@@ -56,7 +56,7 @@ proc test() {.async.} =
     # Now that we have invoked the function `invocationsBefore` let's wait for the transactions to
     # settle and see if we receive the logs after subscription. Note in ganache transactions are
     # processed immediately. With a real eth client we would need to wait for transactions to settle
-  
+
     await sleepAsync(3.seconds)
 
     let notifFut = newFuture[void]()

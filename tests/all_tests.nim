@@ -5,6 +5,8 @@
 #   * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 # at your option. This file may not be copied, modified, or distributed except according to those terms.
 
+{. warning[UnusedImport]:off .}
+
 import
   test,
   test_deposit_contract,
