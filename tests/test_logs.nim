@@ -8,11 +8,11 @@ import random
 pragma solidity >=0.4.25 <0.6.0;
 
 contract LoggerContract {
-    
+
    uint fNum;
-   
+
    event MyEvent(address sender, uint value);
-   
+
 
    function invoke(uint value) public {
        emit MyEvent(msg.sender, value);
@@ -56,7 +56,7 @@ proc test() {.async.} =
     # Now that we have invoked the function `invocationsBefore` let's wait for the transactions to
     # settle and see if we receive the logs after subscription. Note in ganache transactions are
     # processed immediately. With a real eth client we would need to wait for transactions to settle
-  
+
     await sleepAsync(3.seconds)
 
     let notifFut = newFuture[void]()

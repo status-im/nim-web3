@@ -44,7 +44,7 @@ type
     historicalEventsProcessed: bool
     removed: bool
 
-  ContractCallBase = object {.pure, inheritable.}
+  ContractCallBase {.pure, inheritable.} = object
     web3: Web3
     data: string
     to: Address
@@ -220,10 +220,10 @@ func encode*[N](x: DynamicBytes[N]): EncodeResult {.inline.} =
 func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
   var dataOffset, dataLen: UInt256
   result = decode(input, offset, dataOffset)
-  discard decode(input, dataOffset.toInt * 2, dataLen)
+  discard decode(input, dataOffset.truncate(int) * 2, dataLen)
   # TODO: Check data len, and raise?
   let meaningfulLen = to.len * 2
-  let actualDataOffset = (dataOffset.toInt + 32) * 2
+  let actualDataOffset = (dataOffset.truncate(int) + 32) * 2
   hexToByteArray(input[actualDataOffset .. actualDataOffset + meaningfulLen - 1], to)
 
 func decode*[N](input: string, offset: int, to: var DynamicBytes[N]): int {.inline.} =
@@ -483,17 +483,17 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
     doAssert(procdef.kind == nnkProcDef,
       "Contracts can only be built with procedures")
     let
-      isconstructor = procdef[4].findChild(it.ident == !"constructor") != nil
-      isevent = procdef[4].findChild(it.ident == !"event") != nil
+      isconstructor = procdef[4].findChild(it.strVal == "constructor") != nil
+      isevent = procdef[4].findChild(it.strVal == "event") != nil
     doAssert(not (isconstructor and constructor.isSome),
       "Contract can only have a single constructor")
     doAssert(not (isconstructor and isevent),
       "Can't be both event and constructor")
     if not isevent:
       let
-        ispure = procdef[4].findChild(it.ident == !"pure") != nil
-        isview = procdef[4].findChild(it.ident == !"view") != nil
-        ispayable = procdef[4].findChild(it.ident == !"payable") != nil
+        ispure = procdef[4].findChild(it.strVal == "pure") != nil
+        isview = procdef[4].findChild(it.strVal == "view") != nil
+        ispayable = procdef[4].findChild(it.strVal == "payable") != nil
       doAssert(not (ispure and isview),
         "can't be both `pure` and `view`")
       doAssert(not ((ispure or isview) and ispayable),
@@ -506,17 +506,17 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
         ))
       else:
         functions.add FunctionObject(
-          name: $procdef[0].ident,
+          name: procdef[0].strVal,
           stateMutability: if ispure: pure elif isview: view elif ispayable: payable else: nonpayable,
           inputs: parseInputs(procdef[3]),
           outputs: parseOutputs(procdef[3][0])
         )
     else:
-      let isanonymous = procdef[4].findChild(it.ident == !"anonymous") != nil
+      let isanonymous = procdef[4].findChild(it.strVal == "anonymous") != nil
       doAssert(procdef[3][0].kind == nnkEmpty,
         "Events can't have return values")
       events.add EventObject(
-        name: $procdef[0].ident,
+        name: procdef[0].strVal,
         inputs: parseEventInputs(procdef[3]),
         anonymous: isanonymous
       )
