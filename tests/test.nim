@@ -59,7 +59,7 @@ const MetaCoinCode = "608060405234801561001057600080fd5b503260009081526020819052
 
 
 proc test() {.async.} =
-  let web3 = await newWeb3("ws://127.0.0.1:8545")
+  let web3 = await newWeb3("ws://127.0.0.1:8545/")
   let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
   web3.defaultAccount = accounts[0]

@@ -44,7 +44,7 @@ type
     historicalEventsProcessed: bool
     removed: bool
 
-  ContractCallBase {.pure, inheritable.} = object
+  ContractCallBase = object of RootObj
     web3: Web3
     data: string
     to: Address
