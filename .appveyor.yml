@@ -34,7 +34,7 @@ build_script:
   - nimble install -y
 
 test_script:
-  - ps: Start-Process ganache-cli -ArgumentList "-s 0"
+  - ps: Start-Process ganache-cli.cmd -ArgumentList "-s 0"
   - nimble test
 
 deploy: off
