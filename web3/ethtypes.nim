@@ -15,8 +15,8 @@ type
   TxHash* = FixedBytes[32]
   BlockHash* = FixedBytes[32]
   BlockNumber* = uint64
-  BlockIdentifier* = string|BlockNumber
-  
+  BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
+
   BlockIdentifierKind* = enum
     bidNumber
     bidAlias
