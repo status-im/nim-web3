@@ -22,6 +22,7 @@ type
     subscriptions*: Table[string, Subscription]
     defaultAccount*: Address
     privateKey*: Option[PrivateKey]
+    lastKnownNonce*: Option[Nonce]
     onDisconnect*: proc() {.gcsafe.}
 
   Sender*[T] = ref object
@@ -44,13 +45,13 @@ type
     historicalEventsProcessed: bool
     removed: bool
 
-  ContractCallBase = object of RootObj
+  ContractCallBase = ref object of RootObj
     web3: Web3
     data: string
     to: Address
     value: Uint256
 
-  ContractCall*[T] = object of ContractCallBase
+  ContractCall*[T] = ref object of ContractCallBase
 
 proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
   let s = w.subscriptions.getOrDefault(j{"subscription"}.getStr())
@@ -246,9 +247,7 @@ template typeSignature(T: typedesc): string =
     unknownType(T)
 
 proc initContractCall[T](web3: Web3, data: string, to: Address): ContractCall[T] {.inline.} =
-  result.web3 = web3
-  result.data = data
-  result.to = to
+  ContractCall[T](web3: web3, data: data, to: to)
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps
@@ -743,29 +742,46 @@ proc getJsonLogs*(s: Sender,
 
   s.web3.provider.eth_getLogs(options)
 
+proc nextNonce*(web3: Web3): Future[Nonce] {.async.} =
+  if web3.lastKnownNonce.isSome:
+    inc web3.lastKnownNonce.get
+    return web3.lastKnownNonce.get
+  else:
+    let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress.Address
+    result = int(await web3.provider.eth_getTransactionCount(fromAddress, "latest"))
+    web3.lastKnownNonce = some result
+
 proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   if web3.privateKey.isSome():
     var cc = c
-    if not cc.nonce.isSome:
-      let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress.Address
-      cc.nonce = some(int(await web3.provider.eth_getTransactionCount(fromAddress, "latest")))
+    if cc.nonce.isNone:
+      cc.nonce = some(await web3.nextNonce())
     let t = "0x" & encodeTransaction(cc, web3.privateKey.get())
     return await web3.provider.eth_sendRawTransaction(t)
   else:
     return await web3.provider.eth_sendTransaction(c)
 
-proc send*(c: ContractCallBase, value = 0.u256, gas = 3000000'u64, gasPrice = 0): Future[TxHash] =
-  let web3 = c.web3
-  var cc: EthSend
-  cc.data = "0x" & c.data
-  cc.source = web3.defaultAccount
-  cc.to = some(c.to)
-  cc.gas = some(Quantity(gas))
-  cc.value = some(value)
+proc send*(c: ContractCallBase,
+           value = 0.u256,
+           gas = 3000000'u64,
+           gasPrice = 0): Future[TxHash] {.async.} =
+  let
+    web3 = c.web3
+    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice)
+               else: none(int)
+    nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
+            else: none(Nonce)
 
-  if web3.privateKey.isSome() or gasPrice != 0:
-    cc.gasPrice = some(gasPrice)
-  web3.send(cc)
+    cc = EthSend(
+      data: "0x" & c.data,
+      source: web3.defaultAccount,
+      to: some(c.to),
+      gas: some(Quantity(gas)),
+      value: some(value),
+      nonce: nonce,
+      gasPrice: gasPrice)
+
+  return await web3.send(cc)
 
 proc call*[T](c: ContractCall[T],
               value = 0.u256,

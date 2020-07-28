@@ -16,6 +16,7 @@ type
   BlockHash* = FixedBytes[32]
   BlockNumber* = uint64
   BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
+  Nonce* = int
 
   BlockIdentifierKind* = enum
     bidNumber
@@ -37,7 +38,8 @@ type
     gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
     value*: Option[Uint256]          # (optional) integer of the value sent with this transaction.
     data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
-    nonce*: Option[int]          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
+    nonce*: Option[Nonce]        # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
+
   #EthSend* = object
   #  source*: Address     # the address the transaction is send from.
   #  to*: Address         # (optional when creating new contract) the address the transaction is directed to.
@@ -129,7 +131,7 @@ type
     contractAddress*: Option[Address] # the contract address created, if the transaction was a contract creation, otherwise null.
     logs*: seq[LogObject]                # TODO: See Wiki for details. list of log objects, which this transaction generated.
     logsBloom*: Option[FixedBytes[256]]      # bloom filter for light clients to quickly retrieve related logs.
-    # TODO: 
+    # TODO:
     #case kind*: ReceiptKind
     #of rkRoot: root*: UInt256         # post-transaction stateroot (pre Byzantium).
     #of rkStatus: status*: int         # 1 = success, 0 = failure.
