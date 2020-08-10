@@ -14,7 +14,7 @@ template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
 createRpcSigs(RpcClient, sourceDir & DirSep & "web3" & DirSep & "ethcallsigs.nim")
 
 export UInt256, Int256, Uint128, Int128
-export ethtypes, conversions
+export ethtypes, conversions, encoding
 
 type
   Web3* = ref object
