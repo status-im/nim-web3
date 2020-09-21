@@ -2,7 +2,7 @@ import
   strutils, macros, math
 
 import
-  stint, stew/byteutils, web3/ethtypes
+  stint, stew/byteutils, ./ethtypes
 
 type
   EncodeResult* = tuple[dynamic: bool, data: string]
