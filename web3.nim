@@ -122,8 +122,14 @@ proc subscribe*(w: Web3, name: string, options: JsonNode,
   ## In case of any errors or illegal behavior of the remote RPC node,
   ## the `errorHandler` will be executed with relevant information about
   ## the error.
-  let id = await w.provider.eth_subscribe(name, if options.isNil: newJNull()
-                                                else: options)
+
+  # Don't send an empty `{}` object as an extra argument to geth for `newHeads`
+  # See this for more info: https://github.com/ethereum/go-ethereum/issues/21588
+  let id = if name == "newHeads" and (options.isNil or $options == "{}"):
+    await w.provider.eth_subscribe(name)
+  else:
+    await w.provider.eth_subscribe(name, options)
+
   result = Subscription(id: id,
                         web3: w,
                         eventHandler: eventHandler,
