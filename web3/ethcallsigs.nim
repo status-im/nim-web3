@@ -54,6 +54,7 @@ proc eth_getWork(): seq[UInt256]
 proc eth_submitWork(nonce: int64, powHash: Uint256, mixDigest: Uint256): bool
 proc eth_submitHashrate(hashRate: UInt256, id: Uint256): bool
 proc eth_subscribe(name: string, options: JsonNode): string
+proc eth_subscribe(name: string): string
 proc eth_unsubscribe(id: string)
 
 proc shh_post(): string

@@ -122,8 +122,13 @@ proc subscribe*(w: Web3, name: string, options: JsonNode,
   ## In case of any errors or illegal behavior of the remote RPC node,
   ## the `errorHandler` will be executed with relevant information about
   ## the error.
-  let id = await w.provider.eth_subscribe(name, if options.isNil: newJNull()
-                                                else: options)
+
+  # Don't send an empty `{}` object as an extra argument if there are no options
+  let id = if options.isNil:
+    await w.provider.eth_subscribe(name)
+  else:
+    await w.provider.eth_subscribe(name, options)
+
   result = Subscription(id: id,
                         web3: w,
                         eventHandler: eventHandler,
@@ -142,7 +147,7 @@ proc subscribeForLogs*(w: Web3, options: JsonNode,
   else:
     result.historicalEventsProcessed = true
 
-proc subscribeForBlockHeaders*(w: Web3, options: JsonNode,
+proc subscribeForBlockHeaders*(w: Web3,
                                blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [Defect].},
                                errorHandler: SubscriptionErrorHandler): Future[Subscription]
                               {.async.} =
@@ -152,7 +157,9 @@ proc subscribeForBlockHeaders*(w: Web3, options: JsonNode,
     except CatchableError as err: errorHandler(err[])
     blockHeadersCallback(blk)
 
-  result = await subscribe(w, "newHeads", options, eventHandler, errorHandler)
+  # `nil` options so that we skip sending an empty `{}` object as an extra argument
+  # to geth for `newHeads`: https://github.com/ethereum/go-ethereum/issues/21588
+  result = await subscribe(w, "newHeads", nil, eventHandler, errorHandler)
   result.historicalEventsProcessed = true
 
 proc unsubscribe*(s: Subscription): Future[void] {.async.} =
