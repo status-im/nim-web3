@@ -1,17 +1,17 @@
 import
   macros, strutils, options, math, json, tables, uri, strformat
 
-from os import DirSep
+from os import DirSep, AltSep
 
 import
   nimcrypto, stint, httputils, chronicles, chronos,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
   web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding]
 
-template sourceDir: string = currentSourcePath.rsplit(DirSep, 1)[0]
+template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 
 ## Generate client convenience marshalling wrappers from forward declarations
-createRpcSigs(RpcClient, sourceDir & DirSep & "web3" & DirSep & "ethcallsigs.nim")
+createRpcSigs(RpcClient, sourceDir & "/web3/ethcallsigs.nim")
 
 export UInt256, Int256, Uint128, Int128
 export ethtypes, conversions, encoding
