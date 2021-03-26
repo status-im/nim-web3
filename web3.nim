@@ -23,7 +23,7 @@ type
     defaultAccount*: Address
     privateKey*: Option[PrivateKey]
     lastKnownNonce*: Option[Nonce]
-    onDisconnect*: proc() {.gcsafe.}
+    onDisconnect*: proc() {.gcsafe, raises: [Defect].}
 
   Sender*[T] = ref object
     web3*: Web3
