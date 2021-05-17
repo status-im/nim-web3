@@ -3,7 +3,7 @@ import
   ethtypes, stew/byteutils, stint,
   eth/[common, keys, rlp], eth/common/transaction
 
-proc signTransaction(tr: var Transaction, pk: PrivateKey) =
+proc signTransaction(tr: var LegacyTx, pk: PrivateKey) =
   let h = tr.txHashNoSignature
   let s = sign(pk, SkMessage(h.data))
 
@@ -13,10 +13,10 @@ proc signTransaction(tr: var Transaction, pk: PrivateKey) =
   tr.R = fromBytesBE(UInt256, r.toOpenArray(0, 31))
   tr.S = fromBytesBE(UInt256, r.toOpenArray(32, 63))
 
-  tr.V = v + 27 # TODO! Complete this
+  tr.V = int64(v) + 27 # TODO! Complete this
 
 proc encodeTransaction*(s: EthSend, pk: PrivateKey): string =
-  var tr: Transaction
+  var tr: LegacyTx
   tr.gasLimit = GasInt(s.gas.get.uint64)
   tr.gasPrice = s.gasPrice.get
   if s.to.isSome:
@@ -26,7 +26,7 @@ proc encodeTransaction*(s: EthSend, pk: PrivateKey): string =
 
   if s.value.isSome:
     tr.value = s.value.get
-  tr.accountNonce = uint64(s.nonce.get)
+  tr.nonce = uint64(s.nonce.get)
   # TODO: The following is a misdesign indication.
   # All the encodings should be done into seq[byte], not a hex string.
   if s.data.len != 0:
