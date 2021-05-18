@@ -18,7 +18,13 @@ requires "stew"
 requires "stint"
 
 ### Helper functions
-proc test(name: string, defaultLang = "c") =
+proc getLang(): string =
+  var lang = "c"
+  if existsEnv"TEST_LANG":
+    lang = getEnv"TEST_LANG"
+  lang
+
+proc test(name: string, defaultLang = getLang()) =
   # TODO, don't forget to change defaultLang to `cpp` if the project requires C++
   if not dirExists "build":
     mkDir "build"

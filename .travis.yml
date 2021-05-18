@@ -16,7 +16,6 @@ os:
   - osx
 
 install:
-  - npm install -g ganache-cli # 6.4.3 is known to work
   # build nim from our own branch - this to avoid the day-to-day churn and
   # regressions of the fast-paced Nim development while maintaining the
   # flexibility to apply patches

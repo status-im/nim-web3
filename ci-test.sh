@@ -1,7 +1,8 @@
 #!/bin/sh
 
 set -ex
-nohup ganache-cli -s 0 &
+npm install ganache-cli
+nohup ./node_modules/.bin/ganache-cli -s 0 &
 nimble install -y
 
 # Wait until ganache responds
@@ -9,4 +10,4 @@ while ! curl -X POST --data '{"jsonrpc":"2.0","method":"net_version","params":[]
 do
   true
 done
-nimble test
+env TEST_LANG="$TEST_LANG" nimble test
