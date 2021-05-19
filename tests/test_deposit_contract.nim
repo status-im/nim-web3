@@ -12,7 +12,7 @@ const contractCode = "0x740100000000000000000000000000000000000000006020526f7fff
 var contractAddress = Address.fromHex("e9d8d67ec115e8345606b3ab59fc71cec46761e4")
 
 proc test() {.async.} =
-  let web3 = await newWeb3("ws://localhost:8545/")
+  let web3 = await newWeb3("ws://127.0.0.1:8545/")
   let accounts = await web3.provider.eth_accounts()
   web3.defaultAccount = accounts[0]
 

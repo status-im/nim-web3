@@ -28,7 +28,7 @@ const LoggerContractCode = "6080604052348015600f57600080fd5b5060bc8061001e600039
 var contractAddress = Address.fromHex("0xEA255DeA28c84F698Fa195f87fC83D1d4125ef9C")
 
 proc test() {.async.} =
-  let web3 = await newWeb3("ws://localhost:8545/")
+  let web3 = await newWeb3("ws://127.0.0.1:8545/")
   let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
   web3.defaultAccount = accounts[0]
