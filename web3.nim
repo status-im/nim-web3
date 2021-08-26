@@ -180,6 +180,8 @@ template typeSignature(T: typedesc): string =
     "uint" & $T.bits
   elif T is Address:
     "address"
+  elif T is Bool:
+    "bool"
   else:
     unknownType(T)
 
