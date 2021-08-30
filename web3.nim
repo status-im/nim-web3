@@ -342,7 +342,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
     eventListener = ident "eventListener"
   result.add quote do:
     type
-      `cname` = object
+      `cname`* = object
 
   for obj in objects:
     case obj.kind:
@@ -387,7 +387,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
         `encodedParams` &= `dataBuf`
       var procDef = quote do:
-        proc `procName`(`senderName`: Sender[`cname`]): ContractCall[`output`] =
+        proc `procName`*(`senderName`: Sender[`cname`]): ContractCall[`output`] =
           discard
       for input in obj.functionObject.inputs:
         procDef[3].add nnkIdentDefs.newTree(
