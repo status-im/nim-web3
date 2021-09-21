@@ -156,9 +156,18 @@ macro makeTypeEnum(): untyped =
 
 makeTypeEnum()
 
+proc parse*(T: type Bool, val: bool): T =
+  let i = if val: 1 else: 0
+  T i.i256
+
+proc `==`*(a: Bool, b: Bool): bool =
+  Int256(a) == Int256(b)
+
 func encode*(x: Bool): EncodeResult = encode(Int256(x))
-func decode*[N](input: string, offset: int, to: var Bool): int {.inline.} =
-  decode(input, offset, Stint(to))
+func decode*(input: string, offset: int, to: var Bool): int =
+  let meaningfulLen = Int256.bits div 8 * 2
+  to = Bool Int256.fromHex(input[offset .. offset + meaningfulLen - 1])
+  meaningfulLen
 
 func decode*(input: string, offset: int, obj: var object): int =
   var offset = offset

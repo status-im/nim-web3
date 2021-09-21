@@ -3,6 +3,28 @@ import chronos, nimcrypto, options, json, stint, parseutils
 import test_utils
 
 
+contract(EncodingTest):
+  proc setBool(val: Bool)
+  proc getBool(): Bool {.view.}
+
+const EncodingTestCode =  "608060405260008060006101000a81548160ff02191690831515021790555034801561002a57600080fd5b506101048061003a6000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806312a7b91414604e5780631e26fd3314607a575b600080fd5b348015605957600080fd5b50606060a6565b604051808215151515815260200191505060405180910390f35b348015608557600080fd5b5060a460048036038101908080351515906020019092919050505060bc565b005b60008060009054906101000a900460ff16905090565b806000806101000a81548160ff021916908315150217905550505600a165627a7a72305820be0033d3993a43508dbcb21e47d345021ad5f89e26e035767fdae7ba9ef2ae310029"
+
+#[ Contract EncodingTest
+pragma solidity ^0.4.18;
+
+contract EncodingTest {
+    bool boolVal = false;
+
+    function setBool(bool _boolVal) public {
+        boolVal = _boolVal;
+    }
+
+    function getBool() public constant returns (bool) {
+        return boolVal;
+    }
+}
+]#
+
 #[ Contract NumberStorage
 pragma solidity ^0.4.18;
 
@@ -63,6 +85,22 @@ proc test() {.async.} =
   let accounts = await web3.provider.eth_accounts()
   echo "accounts: ", accounts
   web3.defaultAccount = accounts[0]
+
+  block: # EncodingTestStorage
+    let
+      receipt = await web3.deployContract(EncodingTestCode)
+      cc = receipt.contractAddress.get
+    echo "Deployed EncodingTest contract: ", cc
+
+    let ns = web3.contractSender(EncodingTest, cc)
+
+    var b = await ns.getBool().call()
+    assert(b == Bool.parse(false))
+
+    echo "setBool: ", await ns.setBool(Bool.parse(true)).send()
+
+    b = await ns.getBool().call()
+    assert(b == Bool.parse(true))
 
   block: # NumberStorage
     let
