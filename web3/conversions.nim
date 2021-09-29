@@ -37,9 +37,16 @@ proc fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N]) {.inl
   # expects base 16 string, starting with "0x"
   bytesFromJson(n, argName, array[N, byte](result))
 
+proc fromJson*[N](n: JsonNode, argName: string, result: var DynamicBytes[N]) {.inline.} =
+  n.kind.expect(JString, argName)
+  result = fromHex(type result, n.getStr())
+
 proc fromJson*(n: JsonNode, argName: string, result: var Address) {.inline.} =
   # expects base 16 string, starting with "0x"
   bytesFromJson(n, argName, array[20, byte](result))
+
+proc fromJson*(n: JsonNode, argName: string, result: var TypedTransaction) {.inline.} =
+  bytesFromJson(n, argName, distinctBase(result))
 
 proc fromJson*(n: JsonNode, argName: string, result: var Quantity) {.inline.} =
   if n.kind == JInt:
@@ -54,8 +61,14 @@ proc `%`*(v: Quantity): JsonNode =
 proc `%`*[N](v: FixedBytes[N]): JsonNode =
   result = %("0x" & array[N, byte](v).toHex)
 
+proc `%`*[N](v: DynamicBytes[N]): JsonNode =
+  result = %("0x" & toHex(v))
+
 proc `%`*(v: Address): JsonNode =
   result = %("0x" & array[20, byte](v).toHex)
+
+proc `%`*(v: TypedTransaction): JsonNode =
+  result = %("0x" & distinctBase(v).toHex)
 
 proc writeHexValue(w: JsonWriter, v: openarray[byte]) =
   w.stream.write "\"0x"
@@ -71,6 +84,9 @@ proc writeValue*[N](w: var JsonWriter, v: FixedBytes[N]) =
 proc writeValue*(w: var JsonWriter, v: Address) =
   writeHexValue w, distinctBase(v)
 
+proc writeValue*(w: var JsonWriter, v: TypedTransaction) =
+  writeHexValue w, distinctBase(v)
+
 proc readValue*[N](r: var JsonReader, T: type DynamicBytes[N]): T =
   fromHex(T, r.readValue(string))
 
@@ -80,9 +96,8 @@ proc readValue*[N](r: var JsonReader, T: type FixedBytes[N]): T =
 proc readValue*(r: var JsonReader, T: type Address): T =
   fromHex(T, r.readValue(string))
 
-proc `%`*[N](v: DynamicBytes[N]): JsonNode =
-  result = %("0x" & array[N, byte](v).toHex)
-  assert(result.getStr.len == N * 2 + 2)
+proc readValue*(r: var JsonReader, T: type TypedTransaction): T =
+  T fromHex(seq[byte], r.readValue(string))
 
 proc `$`*[N](v: FixedBytes[N]): string {.inline.} =
   "0x" & array[N, byte](v).toHex
@@ -90,8 +105,11 @@ proc `$`*[N](v: FixedBytes[N]): string {.inline.} =
 proc `$`*(v: Address): string {.inline.} =
   "0x" & array[20, byte](v).toHex
 
+proc `$`*(v: TypedTransaction): string {.inline.} =
+  "0x" & distinctBase(v).toHex
+
 proc `$`*[N](v: DynamicBytes[N]): string {.inline.} =
-  "0x" & array[N, byte](v).toHex
+  "0x" & toHex(v)
 
 proc `%`*(x: EthSend): JsonNode =
   result = newJobject()

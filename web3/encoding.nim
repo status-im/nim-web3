@@ -1,5 +1,5 @@
 import
-  strutils, macros, math
+  std/[typetraits, strutils, macros, math]
 
 import
   stint, stew/byteutils, ./ethtypes
@@ -63,7 +63,7 @@ func encodeDynamic(v: openarray[byte]): EncodeResult =
   result.data &= "00".repeat(v.len mod 32)
 
 func encode*[N](x: DynamicBytes[N]): EncodeResult {.inline.} =
-  encodeDynamic(array[N, byte](x))
+  encodeDynamic(distinctBase(x))
 
 func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
   var dataOffset, dataLen: UInt256
@@ -75,7 +75,8 @@ func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
   hexToByteArray(input[actualDataOffset .. actualDataOffset + meaningfulLen - 1], to)
 
 func decode*[N](input: string, offset: int, to: var DynamicBytes[N]): int {.inline.} =
-  decodeDynamic(input, offset, array[N, byte](to))
+  {.fatal: "decodeDynamic is not implemented properly".}
+  decodeDynamic(input, offset, distinctBase(to))
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps
@@ -150,7 +151,7 @@ macro makeTypeEnum(): untyped =
       identResult = ident "result"
     result.add quote do:
       type
-        `identBytes`* = DynamicBytes[`i`]
+        `identBytes`* = FixedBytes[`i`]
 
   #result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
 

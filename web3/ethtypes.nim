@@ -8,8 +8,8 @@ type
     currentBlock*: int
     highestBlock*: int
 
-  FixedBytes* [N: static[int]] = distinct array[N, byte]
-  DynamicBytes* [N: static[int]] = distinct array[N, byte]
+  FixedBytes*[N: static[int]] = distinct array[N, byte]
+  DynamicBytes*[MaxLen: static[int]] = distinct seq[byte]
 
   Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
@@ -197,11 +197,29 @@ type
 
 # var x: array[20, byte] = [1.byte, 2, 3, 4, 5, 6, 7, 0xab, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
-proc `==`*[N](a, b: FixedBytes[N]): bool {.inline.} =
-  array[N, byte](a) == array[N, byte](b)
+  TypedTransaction* = distinct seq[byte]
 
-proc `==`*[N](a, b: DynamicBytes[N]): bool {.inline.} =
-  array[N, byte](a) == array[N, byte](b)
+  ExecutionPayload* = object
+    parentHash*: BlockHash
+    coinbase*: Address
+    stateRoot*: BlockHash
+    receiptRoot*: BlockHash
+    logsBloom*: FixedBytes[256]
+    random*: FixedBytes[32]
+    blockNumber*: Quantity
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    timestamp*: Quantity
+    extraData*: DynamicBytes[32]
+    baseFeePerGas*: UInt256
+    blockHash*: BlockHash
+    transactions*: seq[TypedTransaction]
+
+template `==`*[N](a, b: FixedBytes[N]): bool =
+  distinctBase(a) == distinctBase(b)
+
+template `==`*[N](a, b: DynamicBytes[N]): bool =
+  distinctBase(a) == distinctBase(b)
 
 proc `==`*(a, b: Address): bool {.inline.} =
   array[20, byte](a) == array[20, byte](b)
@@ -230,8 +248,10 @@ template toHex*(x: Address): string =
 template fromHex*(T: type Address, hexStr: string): T =
   T fromHex(distinctBase(T), hexStr)
 
-template fromHex*[N](T: type DynamicBytes[N], hexStr: string): T =
-  T fromHex(distinctBase(T), hexStr)
+func fromHex*[N](T: type DynamicBytes[N], hexStr: string): T =
+  if hexStr.len > N * 2:
+    raise newException(ValueError, "hex input too large")
+  T hexToSeqByte(hexStr)
 
 template fromHex*[N](T: type FixedBytes[N], hexStr: string): T =
   T fromHex(distinctBase(T), hexStr)
