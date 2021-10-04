@@ -153,9 +153,11 @@ proc subscribeForBlockHeaders*(w: Web3,
                               {.async.} =
   proc eventHandler(json: JsonNode) {.gcsafe, raises: [Defect].} =
     var blk: BlockHeader
-    try: fromJson(json, "result", blk)
-    except CatchableError as err: errorHandler(err[])
-    blockHeadersCallback(blk)
+    try:
+      fromJson(json, "result", blk)
+      blockHeadersCallback(blk)
+    except CatchableError as err:
+      errorHandler(err[])
 
   # `nil` options so that we skip sending an empty `{}` object as an extra argument
   # to geth for `newHeads`: https://github.com/ethereum/go-ethereum/issues/21588
