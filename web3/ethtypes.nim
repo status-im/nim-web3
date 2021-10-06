@@ -206,7 +206,7 @@ type
     receiptRoot*: BlockHash
     logsBloom*: FixedBytes[256]
     random*: FixedBytes[32]
-    blockNumber*: Quantity
+    blockNumber*: UInt256
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity

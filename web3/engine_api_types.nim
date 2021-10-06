@@ -35,3 +35,8 @@ type
   ForkChoiceUpdate* = object
     headBlockHash*: BlockHash
     finalizedBlockHash*: BlockHash
+
+const
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.2/src/engine/interop/specification.md
+  UNKNOWN_HEADER* = 4
+  UNKNOWN_PAYLOAD* = 5
