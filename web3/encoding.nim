@@ -62,10 +62,13 @@ func encodeDynamic(v: openarray[byte]): EncodeResult =
     result.data &= y.toHex.toLower
   result.data &= "00".repeat(v.len mod 32)
 
-func encode*[N](x: DynamicBytes[N]): EncodeResult {.inline.} =
-  encodeDynamic(distinctBase(x))
+func encode*(x: DynamicBytes): EncodeResult {.inline.} =
+  encodeDynamic(distinctBase x)
 
-func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
+func decodeDynamic(input: string,
+                   offset: int,
+                   minLen, maxLen: int,
+                   to: var openarray[byte]): int =
   var dataOffset, dataLen: UInt256
   result = decode(input, offset, dataOffset)
   discard decode(input, dataOffset.truncate(int) * 2, dataLen)
@@ -74,9 +77,8 @@ func decodeDynamic(input: string, offset: int, to: var openarray[byte]): int =
   let actualDataOffset = (dataOffset.truncate(int) + 32) * 2
   hexToByteArray(input[actualDataOffset .. actualDataOffset + meaningfulLen - 1], to)
 
-func decode*[N](input: string, offset: int, to: var DynamicBytes[N]): int {.inline.} =
-  {.fatal: "decodeDynamic is not implemented properly".}
-  decodeDynamic(input, offset, distinctBase(to))
+func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline.} =
+  decodeDynamic(input, offset, to.minLen, to.maxLen, distinctBase(to))
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps

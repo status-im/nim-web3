@@ -9,7 +9,9 @@ type
     highestBlock*: int
 
   FixedBytes*[N: static[int]] = distinct array[N, byte]
-  DynamicBytes*[MaxLen: static[int]] = distinct seq[byte]
+  DynamicBytes*[
+    minLen: static[int] = 0,
+    maxLen: static[int] = high(int)] = distinct seq[byte]
 
   Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
@@ -210,7 +212,7 @@ type
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
-    extraData*: DynamicBytes[32]
+    extraData*: DynamicBytes[32, 32]
     baseFeePerGas*: UInt256
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
@@ -218,7 +220,7 @@ type
 template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
 
-template `==`*[N](a, b: DynamicBytes[N]): bool =
+template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
   distinctBase(a) == distinctBase(b)
 
 proc `==`*(a, b: Address): bool {.inline.} =
@@ -239,21 +241,13 @@ func hash*[N](bytes: FixedBytes[N]): Hash =
 template toHex*[N](x: FixedBytes[N]): string =
   toHex(distinctBase x)
 
-template toHex*[N](x: DynamicBytes[N]): string =
+template toHex*[minLen, maxLen](x: DynamicBytes[minLen, maxLen]): string =
   toHex(distinctBase x)
 
 template toHex*(x: Address): string =
   toHex(distinctBase x)
 
 template fromHex*(T: type Address, hexStr: string): T =
-  T fromHex(distinctBase(T), hexStr)
-
-func fromHex*[N](T: type DynamicBytes[N], hexStr: string): T =
-  if hexStr.len > N * 2:
-    raise newException(ValueError, "hex input too large")
-  T hexToSeqByte(hexStr)
-
-template fromHex*[N](T: type FixedBytes[N], hexStr: string): T =
   T fromHex(distinctBase(T), hexStr)
 
 template skip0xPrefix(hexStr: string): int =
@@ -268,4 +262,25 @@ proc strip0xPrefix*(s: string): string =
     s[prefixLen .. ^1]
   else:
     s
+
+func fromHex*[minLen](T: type DynamicBytes[minLen, maxLen], hexStr: string): T =
+  let prefixLen = skip0xPrefix(hexStr)
+  let hexDataLen = hexStr.len - prefixLen
+
+  if hexDataLen < minLen * 2:
+    raise newException(ValueError, "hex input too small")
+
+  if hexDataLen > maxLen * 2:
+    raise newException(ValueError, "hex input too large")
+
+  T hexToSeqByte(hexStr)
+
+template fromHex*[N](T: type FixedBytes[N], hexStr: string): T =
+  T fromHex(distinctBase(T), hexStr)
+
+proc toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
+  copyMem(addr result[0], unsafeAddr distinctBase(data)[0], N)
+
+template bytes*(data: DynamicBytes): seq[byte] =
+  distinctBase data
 
