@@ -28,10 +28,6 @@ type
     valid   = "VALID"
     invalid = "INVALID"
 
-  BlockValidationResult* = object
-    blockHash*: BlockHash
-    status*: string
-
   ForkChoiceUpdate* = object
     headBlockHash*: BlockHash
     finalizedBlockHash*: BlockHash
