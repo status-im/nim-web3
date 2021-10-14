@@ -263,7 +263,7 @@ proc strip0xPrefix*(s: string): string =
   else:
     s
 
-func fromHex*[minLen](T: type DynamicBytes[minLen, maxLen], hexStr: string): T =
+func fromHex*[minLen, maxLen](T: type DynamicBytes[minLen, maxLen], hexStr: string): T =
   let prefixLen = skip0xPrefix(hexStr)
   let hexDataLen = hexStr.len - prefixLen
 
@@ -283,4 +283,7 @@ proc toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
 
 template bytes*(data: DynamicBytes): seq[byte] =
   distinctBase data
+
+template len*(data: DynamicBytes): int =
+  len(distinctBase data)
 
