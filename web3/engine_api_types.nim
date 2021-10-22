@@ -24,10 +24,6 @@ type
   ExecutePayloadResponse* = object
     status*: string
 
-  BlockValidationStatus* {.pure.} = enum
-    valid   = "VALID"
-    invalid = "INVALID"
-
   ForkChoiceUpdate* = object
     headBlockHash*: BlockHash
     finalizedBlockHash*: BlockHash
