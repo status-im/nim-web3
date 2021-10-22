@@ -208,11 +208,11 @@ type
     receiptRoot*: BlockHash
     logsBloom*: FixedBytes[256]
     random*: FixedBytes[32]
-    blockNumber*: UInt256
+    blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
-    extraData*: DynamicBytes[32, 32]
+    extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
