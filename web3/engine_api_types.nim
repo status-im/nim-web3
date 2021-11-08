@@ -1,6 +1,7 @@
-# https://github.com/ethereum/execution-apis/blob/main/src/engine/interop/specification.md
+# https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md
 
 import
+  std/options,
   ethtypes
 
 export
@@ -8,7 +9,7 @@ export
 
 type
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md#payloadattributesv1
-  PayloadAttributes* = object
+  PayloadAttributesV1* = object
     timestamp*: Quantity
     random*: FixedBytes[32]
     feeRecipient*: Address
@@ -20,8 +21,8 @@ type
 
   ExecutePayloadResponse* = object
     status*: string
-    latestValidHash*: BlockHash
-    message*: string
+    latestValidHash*: Option[BlockHash]
+    message*: Option[string]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md#forkchoicestatev1
   ForkchoiceStateV1* = object
@@ -35,7 +36,7 @@ type
 
   ForkchoiceUpdatedResponse* = object
     status*: ForkchoiceUpdatedStatus
-    payloadId*: Quantity
+    payloadId*: Option[Quantity]
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md#errors
