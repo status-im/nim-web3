@@ -201,7 +201,8 @@ type
 
   TypedTransaction* = distinct seq[byte]
 
-  ExecutionPayload* = object
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md#executionpayloadv1
+  ExecutionPayloadV1* = object
     parentHash*: BlockHash
     coinbase*: Address
     stateRoot*: BlockHash
