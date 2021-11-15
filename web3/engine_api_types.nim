@@ -19,6 +19,8 @@ type
     invalid = "INVALID"
     syncing = "SYNCING"
 
+  PayloadID* = FixedBytes[8]
+
   ExecutePayloadResponse* = object
     status*: string
     latestValidHash*: Option[BlockHash]
@@ -36,7 +38,7 @@ type
 
   ForkchoiceUpdatedResponse* = object
     status*: string
-    payloadId*: Option[Quantity]
+    payloadId*: Option[PayloadID]
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/interop/specification.md#error-codes
