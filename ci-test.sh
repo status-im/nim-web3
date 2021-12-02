@@ -1,8 +1,9 @@
 #!/bin/sh
 
 set -ex
-npm install ganache-cli
-nohup ./node_modules/.bin/ganache-cli -s 0 &
+npm install hardhat
+touch hardhat.config.js
+nohup npx hardhat node &
 nimble install -y
 
 # Wait until ganache responds
