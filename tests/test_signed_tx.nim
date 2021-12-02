@@ -32,6 +32,7 @@ suite "Signed transactions":
 
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
       let accounts = await web3.provider.eth_accounts()
+      let gasPrice = int(await web3.provider.eth_gasPrice())
       web3.defaultAccount = accounts[0]
 
       let pk = PrivateKey.random(theRNG[])
@@ -41,6 +42,7 @@ suite "Signed transactions":
       tx.source = accounts[0]
       tx.value = some(ethToWei(10.u256))
       tx.to = some(acc)
+      tx.gasPrice = some(gasPrice)
 
       # Send 10 eth to acc
       discard await web3.send(tx)
@@ -52,21 +54,20 @@ suite "Signed transactions":
       tx.value = some(ethToWei(5.u256))
       tx.to = some(accounts[0])
       tx.gas = some(Quantity(3000000))
-      tx.gasPrice = some(0)
 
       discard await web3.send(tx)
       balance = await web3.provider.eth_getBalance(acc, "latest")
-      assert(balance == ethToWei(5.u256))
+      assert(balance in ethToWei(4.u256)..ethToWei(5.u256)) # 5 minus gas costs
 
       # Creating the contract with a signed tx
-      let receipt = await web3.deployContract(NumberStorageCode, gasPrice = 1)
+      let receipt = await web3.deployContract(NumberStorageCode, gasPrice = gasPrice)
       let contractAddress = receipt.contractAddress.get
       balance = await web3.provider.eth_getBalance(acc, "latest")
       assert(balance < ethToWei(5.u256))
 
       let c = web3.contractSender(NumberStorage, contractAddress)
       # Calling a methof with a signed tx
-      discard await c.setNumber(5.u256).send()
+      discard await c.setNumber(5.u256).send(gasPrice = gasPrice)
 
       let n = await c.getNumber().call()
       assert(n == 5.u256)
