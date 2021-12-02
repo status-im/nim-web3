@@ -1,3 +1,4 @@
+import pkg/unittest2
 import ../web3
 import chronos, nimcrypto, options, json, stint, parseutils
 import test_utils
@@ -80,97 +81,113 @@ contract(MetaCoin):
 const MetaCoinCode = "608060405234801561001057600080fd5b5032600090815260208190526040902061271090556101c2806100346000396000f30060806040526004361061004b5763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166390b98a118114610050578063f8b2cb4f14610095575b600080fd5b34801561005c57600080fd5b5061008173ffffffffffffffffffffffffffffffffffffffff600435166024356100d5565b604080519115158252519081900360200190f35b3480156100a157600080fd5b506100c373ffffffffffffffffffffffffffffffffffffffff6004351661016e565b60408051918252519081900360200190f35b336000908152602081905260408120548211156100f457506000610168565b336000818152602081815260408083208054879003905573ffffffffffffffffffffffffffffffffffffffff871680845292819020805487019055805186815290519293927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929181900390910190a35060015b92915050565b73ffffffffffffffffffffffffffffffffffffffff16600090815260208190526040902054905600a165627a7a72305820000313ec0ebbff4ffefbe79d615d0ab019d8566100c40eb95a4eee617a87d1090029"
 
 
-proc test() {.async.} =
-  let web3 = await newWeb3("ws://127.0.0.1:8545/")
-  let accounts = await web3.provider.eth_accounts()
-  echo "accounts: ", accounts
-  web3.defaultAccount = accounts[0]
+suite "Contracts":
 
-  block: # EncodingTestStorage
-    let
-      receipt = await web3.deployContract(EncodingTestCode)
-      cc = receipt.contractAddress.get
-    echo "Deployed EncodingTest contract: ", cc
+  var web3: Web3
+  var accounts: seq[Address]
 
-    let ns = web3.contractSender(EncodingTest, cc)
+  setup:
+    proc asyncsetup {.async.} =
+      web3 = await newWeb3("ws://127.0.0.1:8545/")
+      accounts = await web3.provider.eth_accounts()
+      echo "accounts: ", accounts
+      web3.defaultAccount = accounts[0]
+    waitFor asyncsetup()
 
-    var b = await ns.getBool().call()
-    assert(b == Bool.parse(false))
+  teardown:
+    proc asyncteardown {.async.} =
+      await web3.close()
+    waitFor asyncteardown()
 
-    echo "setBool: ", await ns.setBool(Bool.parse(true)).send()
+  test "encoding test":
+    proc asynctest {.async.} =
+      let
+        receipt = await web3.deployContract(EncodingTestCode)
+        cc = receipt.contractAddress.get
+      echo "Deployed EncodingTest contract: ", cc
 
-    b = await ns.getBool().call()
-    assert(b == Bool.parse(true))
+      let ns = web3.contractSender(EncodingTest, cc)
 
-  block: # NumberStorage
-    let
-      receipt = await web3.deployContract(NumberStorageCode)
-      cc = receipt.contractAddress.get
-    echo "Deployed NumberStorage contract: ", cc
+      var b = await ns.getBool().call()
+      assert(b == Bool.parse(false))
 
-    let ns = web3.contractSender(NumberStorage, cc)
+      echo "setBool: ", await ns.setBool(Bool.parse(true)).send()
 
-    echo "setnumber: ", await ns.setNumber(5.u256).send()
+      b = await ns.getBool().call()
+      assert(b == Bool.parse(true))
+    waitFor asynctest()
 
-    let n = await ns.getNumber().call()
-    assert(n == 5.u256)
+  test "number storage":
+    proc asynctest {.async.} =
+      let
+        receipt = await web3.deployContract(NumberStorageCode)
+        cc = receipt.contractAddress.get
+      echo "Deployed NumberStorage contract: ", cc
 
-  block: # MetaCoin
-    let
-      receipt = await web3.deployContract(MetaCoinCode)
-      cc = receipt.contractAddress.get
+      let ns = web3.contractSender(NumberStorage, cc)
 
-    var deployedAtBlock: uint64
-    discard parseHex(receipt.blockNumber, deployedAtBlock)
-    echo "Deployed MetaCoin contract: ", cc, " at block ", deployedAtBlock
+      echo "setnumber: ", await ns.setNumber(5.u256).send()
 
-    let ns = web3.contractSender(MetaCoin, cc)
+      let n = await ns.getNumber().call()
+      assert(n == 5.u256)
 
-    let notifFut = newFuture[void]()
-    var notificationsReceived = 0
+    waitFor asynctest()
 
-    let s = await ns.subscribe(Transfer) do (
-        fromAddr, toAddr: Address, value: Uint256)
-        {.raises: [Defect], gcsafe.}:
+  test "metacoin":
+    proc asynctest {.async.} =
+      let
+        receipt = await web3.deployContract(MetaCoinCode)
+        cc = receipt.contractAddress.get
+
+      var deployedAtBlock: uint64
+      discard parseHex(receipt.blockNumber, deployedAtBlock)
+      echo "Deployed MetaCoin contract: ", cc, " at block ", deployedAtBlock
+
+      let ns = web3.contractSender(MetaCoin, cc)
+
+      let notifFut = newFuture[void]()
+      var notificationsReceived = 0
+
+      let s = await ns.subscribe(Transfer) do (
+          fromAddr, toAddr: Address, value: Uint256)
+          {.raises: [Defect], gcsafe.}:
+        try:
+          echo "onTransfer: ", fromAddr, " transferred ", value, " to ", toAddr
+          inc notificationsReceived
+          assert(fromAddr == web3.defaultAccount)
+          assert((notificationsReceived == 1 and value == 50.u256) or
+                  (notificationsReceived == 2 and value == 100.u256))
+          if notificationsReceived == 2:
+            notifFut.complete()
+        except Exception as err:
+          # chronos still raises exceptions which inherit directly from Exception
+          doAssert false, err.msg
+
+      echo "getbalance (now): ", await ns.getBalance(web3.defaultAccount).call()
+      echo "getbalance (after creation): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = deployedAtBlock)
+
+      # Let's try to get the balance at a point in time where the contract was not deployed yet:
       try:
-        echo "onTransfer: ", fromAddr, " transferred ", value, " to ", toAddr
-        inc notificationsReceived
-        assert(fromAddr == web3.defaultAccount)
-        assert((notificationsReceived == 1 and value == 50.u256) or
-                (notificationsReceived == 2 and value == 100.u256))
-        if notificationsReceived == 2:
-          notifFut.complete()
-      except Exception as err:
-        # chronos still raises exceptions which inherit directly from Exception
-        doAssert false, err.msg
+        echo "getbalance (first block): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = 1'u64)
+      except CatchableError as err:
+        echo "getbalance (first block): ", err.msg
 
-    echo "getbalance (now): ", await ns.getBalance(web3.defaultAccount).call()
-    echo "getbalance (after creation): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = deployedAtBlock)
+      echo "sendCoin: ", await ns.sendCoin(accounts[1], 50.u256).send()
 
-    # Let's try to get the balance at a point in time where the contract was not deployed yet:
-    try:
-      echo "getbalance (first block): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = 1'u64)
-    except CatchableError as err:
-      echo "getbalance (first block): ", err.msg
+      let newBalance1 = await ns.getBalance(web3.defaultAccount).call()
+      assert(newBalance1 == 9950.u256)
 
-    echo "sendCoin: ", await ns.sendCoin(accounts[1], 50.u256).send()
+      let newBalance2 = await ns.getBalance(accounts[1]).call()
+      assert(newBalance2 == 50.u256)
 
-    let newBalance1 = await ns.getBalance(web3.defaultAccount).call()
-    assert(newBalance1 == 9950.u256)
+      echo "sendCoin: ", await ns.sendCoin(accounts[1], 100.u256).send()
 
-    let newBalance2 = await ns.getBalance(accounts[1]).call()
-    assert(newBalance2 == 50.u256)
+      echo "transfers: ", await ns.getJsonLogs(
+        Transfer,
+        fromBlock = some(blockId(deployedAtBlock)),
+        toBlock = some(blockId(1000'u64)))
 
-    echo "sendCoin: ", await ns.sendCoin(accounts[1], 100.u256).send()
+      await notifFut
+      await s.unsubscribe()
 
-    echo "transfers: ", await ns.getJsonLogs(
-      Transfer,
-      fromBlock = some(blockId(deployedAtBlock)),
-      toBlock = some(blockId(1000'u64)))
-
-    await notifFut
-
-    await s.unsubscribe()
-  await web3.close()
-
-waitFor test()
+    waitFor asynctest()

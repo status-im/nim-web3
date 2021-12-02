@@ -1,3 +1,4 @@
+import pkg/unittest2
 import ../web3
 import chronos, nimcrypto, options, json, stint
 import test_utils
@@ -27,62 +28,65 @@ const LoggerContractCode = "6080604052348015600f57600080fd5b5060bc8061001e600039
 
 var contractAddress = Address.fromHex("0xEA255DeA28c84F698Fa195f87fC83D1d4125ef9C")
 
-proc test() {.async.} =
-  let web3 = await newWeb3("ws://127.0.0.1:8545/")
-  let accounts = await web3.provider.eth_accounts()
-  echo "accounts: ", accounts
-  web3.defaultAccount = accounts[0]
-  # let q = await web3.provider.eth_blockNumber()
-  echo "block: ", uint64(await web3.provider.eth_blockNumber())
+suite "Logs":
+
+  test "subscribe":
+    proc test() {.async.} =
+      let web3 = await newWeb3("ws://127.0.0.1:8545/")
+      let accounts = await web3.provider.eth_accounts()
+      echo "accounts: ", accounts
+      web3.defaultAccount = accounts[0]
+      # let q = await web3.provider.eth_blockNumber()
+      echo "block: ", uint64(await web3.provider.eth_blockNumber())
 
 
-  block: # LoggerContract
-    let receipt = await web3.deployContract(LoggerContractCode)
-    contractAddress = receipt.contractAddress.get
-    echo "Deployed LoggerContract contract: ", contractAddress
+      block: # LoggerContract
+        let receipt = await web3.deployContract(LoggerContractCode)
+        contractAddress = receipt.contractAddress.get
+        echo "Deployed LoggerContract contract: ", contractAddress
 
-    let ns = web3.contractSender(LoggerContract, contractAddress)
+        let ns = web3.contractSender(LoggerContract, contractAddress)
 
-    proc testInvoke() {.async.} =
-      let r = rand(1 .. 1000000)
-      echo "invoke(", r, "): ", await ns.invoke(r.u256).send()
+        proc testInvoke() {.async.} =
+          let r = rand(1 .. 1000000)
+          echo "invoke(", r, "): ", await ns.invoke(r.u256).send()
 
-    const invocationsBefore = 5
-    const invocationsAfter = 5
+        const invocationsBefore = 5
+        const invocationsAfter = 5
 
-    for i in 1 .. invocationsBefore:
-      await testInvoke()
+        for i in 1 .. invocationsBefore:
+          await testInvoke()
 
-    # Now that we have invoked the function `invocationsBefore` let's wait for the transactions to
-    # settle and see if we receive the logs after subscription. Note in ganache transactions are
-    # processed immediately. With a real eth client we would need to wait for transactions to settle
+        # Now that we have invoked the function `invocationsBefore` let's wait for the transactions to
+        # settle and see if we receive the logs after subscription. Note in ganache transactions are
+        # processed immediately. With a real eth client we would need to wait for transactions to settle
 
-    await sleepAsync(3.seconds)
+        await sleepAsync(3.seconds)
 
-    let notifFut = newFuture[void]()
-    var notificationsReceived = 0
+        let notifFut = newFuture[void]()
+        var notificationsReceived = 0
 
-    let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do (
-        sender: Address, value: Uint256)
-        {.raises: [Defect], gcsafe.}:
-      try:
-        echo "onEvent: ", sender, " value ", value
-        inc notificationsReceived
+        let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do (
+            sender: Address, value: Uint256)
+            {.raises: [Defect], gcsafe.}:
+          try:
+            echo "onEvent: ", sender, " value ", value
+            inc notificationsReceived
 
-        if notificationsReceived == invocationsBefore + invocationsAfter:
-          notifFut.complete()
-      except Exception as err:
-        # chronos still raises exceptions which inherit directly from Exception
-        doAssert false, err.msg
-    do (err: CatchableError):
-      echo "Error from MyEvent subscription: ", err.msg
+            if notificationsReceived == invocationsBefore + invocationsAfter:
+              notifFut.complete()
+          except Exception as err:
+            # chronos still raises exceptions which inherit directly from Exception
+            doAssert false, err.msg
+        do (err: CatchableError):
+          echo "Error from MyEvent subscription: ", err.msg
 
-    for i in 1 .. invocationsAfter:
-      await testInvoke()
+        for i in 1 .. invocationsAfter:
+          await testInvoke()
 
-    await notifFut
+        await notifFut
 
-    await s.unsubscribe()
-  await web3.close()
+        await s.unsubscribe()
+      await web3.close()
 
-waitFor test()
+    waitFor test()
