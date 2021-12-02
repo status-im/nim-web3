@@ -13,7 +13,7 @@ proc eth_syncing(): JsonNode
 proc eth_coinbase(): string
 proc eth_mining(): bool
 proc eth_hashrate(): int
-proc eth_gasPrice(): int64
+proc eth_gasPrice(): Quantity
 proc eth_accounts(): seq[Address]
 proc eth_blockNumber(): Quantity
 proc eth_getBalance(data: Address, blockId: BlockIdentifier): UInt256
