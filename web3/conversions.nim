@@ -122,7 +122,8 @@ proc `%`*(x: EthSend): JsonNode =
     result["gasPrice"] = %x.gasPrice.unsafeGet
   if x.value.isSome:
     result["value"] = %x.value.unsafeGet
-  result["data"] = %x.data
+  if x.data.len > 0:
+    result["data"] = %x.data
   if x.nonce.isSome:
     result["nonce"] = %x.nonce.unsafeGet
 
