@@ -335,6 +335,63 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
   for event in events:
     result.add InterfaceObject(kind: InterfaceObjectKind.event, eventObject: event)
 
+func createFunction(contract: NimNode, function: FunctionObject): auto =
+  let
+    signature = getSignature(function)
+    procName = ident function.name
+    senderName = ident "sender"
+    output = if function.outputs.len != 1:
+        ident "void"
+      else:
+        function.outputs[0].typ
+  var
+    encodedParams = genSym(nskVar)#newLit("")
+    offset = genSym(nskVar)
+    dataBuf = genSym(nskVar)
+    encodings = genSym(nskVar)
+    encoder = newStmtList()
+  encoder.add quote do:
+    var
+      `offset` = 0
+      `encodedParams` = ""
+      `dataBuf` = ""
+      `encodings`: seq[EncodeResult]
+  for input in function.inputs:
+    let inputName = ident input.name
+    encoder.add quote do:
+      let encoding = encode(`inputName`)
+      `offset` += (if encoding.dynamic:
+        32
+      else:
+        encoding.data.len div 2)
+      `encodings`.add encoding
+  encoder.add quote do:
+    for encoding in `encodings`:
+      if encoding.dynamic:
+        `encodedParams` &= `offset`.toHex(64).toLower
+        `dataBuf` &= encoding.data
+      else:
+        `encodedParams` &= encoding.data
+      `offset` += encoding.data.len div 2
+
+    `encodedParams` &= `dataBuf`
+  var procDef = quote do:
+    proc `procName`*(`senderName`: Sender[`contract`]): ContractCall[`output`] =
+      discard
+  for input in function.inputs:
+    procDef[3].add nnkIdentDefs.newTree(
+      ident input.name,
+      input.typ,
+      newEmptyNode()
+    )
+  procDef[6].add quote do:
+    `encoder`
+    return initContractCall[`output`](
+        `senderName`.web3,
+        ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`,
+        `senderName`.contractAddress)
+  procDef
+
 macro contract*(cname: untyped, body: untyped): untyped =
   var objects = parseContract(body)
   result = newStmtList()
@@ -351,62 +408,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
   for obj in objects:
     case obj.kind:
     of function:
-      let
-        signature = getSignature(obj.functionObject)
-        procName = ident obj.functionObject.name
-        senderName = ident "sender"
-        output = if obj.functionObject.outputs.len != 1:
-            ident "void"
-          else:
-            obj.functionObject.outputs[0].typ
-      var
-        encodedParams = genSym(nskVar)#newLit("")
-        offset = genSym(nskVar)
-        dataBuf = genSym(nskVar)
-        encodings = genSym(nskVar)
-        encoder = newStmtList()
-      encoder.add quote do:
-        var
-          `offset` = 0
-          `encodedParams` = ""
-          `dataBuf` = ""
-          `encodings`: seq[EncodeResult]
-      for input in obj.functionObject.inputs:
-        let inputName = ident input.name
-        encoder.add quote do:
-          let encoding = encode(`inputName`)
-          `offset` += (if encoding.dynamic:
-            32
-          else:
-            encoding.data.len div 2)
-          `encodings`.add encoding
-      encoder.add quote do:
-        for encoding in `encodings`:
-          if encoding.dynamic:
-            `encodedParams` &= `offset`.toHex(64).toLower
-            `dataBuf` &= encoding.data
-          else:
-            `encodedParams` &= encoding.data
-          `offset` += encoding.data.len div 2
-
-        `encodedParams` &= `dataBuf`
-      var procDef = quote do:
-        proc `procName`*(`senderName`: Sender[`cname`]): ContractCall[`output`] =
-          discard
-      for input in obj.functionObject.inputs:
-        procDef[3].add nnkIdentDefs.newTree(
-          ident input.name,
-          input.typ,
-          newEmptyNode()
-        )
-      procDef[6].add quote do:
-        `encoder`
-        return initContractCall[`output`](
-            `senderName`.web3,
-            ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`,
-            `senderName`.contractAddress)
-
-      result.add procDef
+      result.add createFunction(cname, obj.functionObject)
     of event:
       if not obj.eventObject.anonymous:
         let callbackIdent = ident "callback"
