@@ -5,9 +5,9 @@ import test_utils
 import ./depositcontract
 
 contract(DepositContract):
-  proc deposit(pubkey: Bytes48, withdrawalCredentials: Bytes32, signature: Bytes96, deposit_data_root: FixedBytes[32])
+  proc deposit(pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], signature: DynamicBytes[0, 96], deposit_data_root: FixedBytes[32])
   proc get_deposit_root(): FixedBytes[32]
-  proc DepositEvent(pubkey: Bytes48, withdrawalCredentials: Bytes32, amount: Bytes8, signature: Bytes96, merkleTreeIndex: Bytes8) {.event.}
+  proc DepositEvent(pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8]) {.event.}
 
 suite "Deposit contract":
 
@@ -19,7 +19,6 @@ suite "Deposit contract":
       web3.defaultAccount = accounts[0]
 
       let receipt = await web3.deployContract(DepositContractCode, gasPrice=gasPrice)
-      let receipt = await web3.deployContract(DepositContractCode)
       let contractAddress = receipt.contractAddress.get
       echo "Deployed Deposit contract: ", contractAddress
 
@@ -28,15 +27,15 @@ suite "Deposit contract":
       let notifFut = newFuture[void]()
       var notificationsReceived = 0
 
-      var pk = Bytes48.fromHex("0x97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb")
-      var cr = Bytes32.fromHex("0xaa000000000000000000000000000000000000000000000000000000000000bb")
-      var sig = Bytes96.fromHex("0xad606d747d9d8590583107e23b41d6191215495df34a34d767e81c3c7f1f2d7041f421f3486186044a02c3dd65a05b44061455c2ca7d6525db68d5fa146e34de8234d3acd8de7e00b971acd4458b740fa6368d437db2c8dae6b2011db9be2f07")
-      var dataRoot = FixedBytes[32].fromHex("0x60D0C2DAF1C10803DB5781D876CDBC42EADD52E6E49C2A1A7C1E5952B279E463")
+      var pk = DynamicBytes[0, 48].fromHex("0xa20469ec49fdfdcaaa68c470642feb9d7d0e612026c6243928772a7277bde77d081e63cc9034cee9eb5abee66ea12861")
+      var cr = DynamicBytes[0, 32].fromHex("0x0012c7b99594801d513ae92396379e5ffcf60e23127cbcabb166db28586f01aa")
+      var sig = DynamicBytes[0, 96].fromHex("0x81c7536816ff1e4ca6a52b5e853c19e9def14c01b07f0e1ac9b1e8a198bf78c98e98e74465d13e2978ae720dcab0a7da10fa56221477773ad7c3f82317c3e0f12a76f47332b9b5350b655ae196db33221f64183d1da3784f608001489ff523d5")
+      var dataRoot = FixedBytes[32].fromHex("0x2ed19a8a1a22a2ff61fbd3862d4ff9f9bd45836efe313e6ecad6dd907f1b6078")
 
       var fut = newFuture[void]()
 
       let s = await ns.subscribe(DepositEvent, %*{"fromBlock": "0x0"}) do (
-          pubkey: Bytes48, withdrawalCredentials: Bytes32, amount: Bytes8, signature: Bytes96, merkleTreeIndex: Bytes8)
+          pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8])
           {.raises: [Defect], gcsafe.}:
         try:
           echo "onDeposit"
