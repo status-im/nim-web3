@@ -1,4 +1,4 @@
-# https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md
+# https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.5/src/engine/specification.md
 
 import
   std/options,
@@ -8,11 +8,11 @@ export
   ethtypes
 
 type
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md#payloadattributesv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.5/src/engine/specification.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
     random*: FixedBytes[32]
-    feeRecipient*: Address
+    suggestedFeeRecipient*: Address
 
   PayloadExecutionStatus* {.pure.} = enum
     valid   = "VALID"
@@ -26,7 +26,7 @@ type
     latestValidHash*: Option[BlockHash]
     message*: Option[string]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/specification.md#forkchoicestatev1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.5/src/engine/specification.md#forkchoicestatev1
   ForkchoiceStateV1* = object
     headBlockHash*: BlockHash
     safeBlockHash*: BlockHash
@@ -39,8 +39,3 @@ type
   ForkchoiceUpdatedResponse* = object
     status*: string
     payloadId*: Option[PayloadID]
-
-const
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.4/src/engine/interop/specification.md#error-codes
-  UNKNOWN_HEADER* = 4
-  UNKNOWN_PAYLOAD* = 5
