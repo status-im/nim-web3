@@ -288,3 +288,5 @@ template bytes*(data: DynamicBytes): seq[byte] =
 template len*(data: DynamicBytes): int =
   len(distinctBase data)
 
+func `$`*[minLen, maxLen](data: DynamicBytes[minLen, maxLen]): string =
+  "0x" & byteutils.toHex(distinctbase(data))
