@@ -15,8 +15,10 @@ suite "Deposit contract":
     proc test() {.async.} =
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
       let accounts = await web3.provider.eth_accounts()
+      let gasPrice = int(await web3.provider.eth_gasPrice())
       web3.defaultAccount = accounts[0]
 
+      let receipt = await web3.deployContract(DepositContractCode, gasPrice=gasPrice)
       let receipt = await web3.deployContract(DepositContractCode)
       let contractAddress = receipt.contractAddress.get
       echo "Deployed Deposit contract: ", contractAddress
@@ -51,7 +53,7 @@ suite "Deposit contract":
       do (err: CatchableError):
         echo "Error from DepositEvent subscription: ", err.msg
 
-      discard await ns.deposit(pk, cr, sig, dataRoot).send(value = 32.u256.ethToWei)
+      discard await ns.deposit(pk, cr, sig, dataRoot).send(value = 32.u256.ethToWei, gasPrice=gasPrice)
 
       await fut
       echo "hash_tree_root: ", await ns.get_deposit_root().call()
