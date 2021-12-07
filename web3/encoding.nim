@@ -65,20 +65,13 @@ func encodeDynamic(v: openarray[byte]): EncodeResult =
 func encode*(x: DynamicBytes): EncodeResult {.inline.} =
   encodeDynamic(distinctBase x)
 
-func decodeDynamic(input: string,
-                   offset: int,
-                   minLen, maxLen: int,
-                   to: var openarray[byte]): int =
+func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline.} =
   var dataOffset, dataLen: UInt256
   result = decode(input, offset, dataOffset)
   discard decode(input, dataOffset.truncate(int) * 2, dataLen)
   # TODO: Check data len, and raise?
-  let meaningfulLen = to.len * 2
   let actualDataOffset = (dataOffset.truncate(int) + 32) * 2
-  hexToByteArray(input[actualDataOffset .. actualDataOffset + meaningfulLen - 1], to)
-
-func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline.} =
-  decodeDynamic(input, offset, to.minLen, to.maxLen, distinctBase(to))
+  to = typeof(to)(hexToSeqByte(input[actualDataOffset ..< actualDataOffset + dataLen.truncate(int) * 2]))
 
 macro makeTypeEnum(): untyped =
   ## This macro creates all the various types of Solidity contracts and maps
