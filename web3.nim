@@ -8,6 +8,9 @@ import
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
   web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding]
 
+import std/typetraits
+import pkg/contractabi
+
 template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 
 ## Generate client convenience marshalling wrappers from forward declarations
@@ -335,41 +338,23 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
   for event in events:
     result.add InterfaceObject(kind: InterfaceObjectKind.event, eventObject: event)
 
-func encodeParams(function: FunctionObject): auto =
-  var
-    encodedParams = genSym(nskVar)#newLit("")
-    offset = genSym(nskVar)
-    dataBuf = genSym(nskVar)
-    encodings = genSym(nskVar)
-    encoder = newStmtList()
-  encoder.add quote do:
-    var
-      `offset` = 0
-      `encodedParams` = ""
-      `dataBuf` = ""
-      `encodings`: seq[EncodeResult]
-  for input in function.inputs:
-    let inputName = ident input.name
-    encoder.add quote do:
-      let encoding = encode(`inputName`)
-      `offset` += (if encoding.dynamic:
-        32
-      else:
-        encoding.data.len div 2)
-      `encodings`.add encoding
-  encoder.add quote do:
-    for encoding in `encodings`:
-      if encoding.dynamic:
-        `encodedParams` &= `offset`.toHex(64).toLower
-        `dataBuf` &= encoding.data
-      else:
-        `encodedParams` &= encoding.data
-      `offset` += encoding.data.len div 2
+func encode*(encoder: var AbiEncoder, value: FixedBytes|DynamicBytes) =
+  encoder.write(distinctBase(value))
 
-    `encodedParams` &= `dataBuf`
+func encode*(encoder: var AbiEncoder, value: Bool) =
+  encoder.write(Int256(value) != 0.i256)
+
+func encode*(encoder: var AbiEncoder, value: Address) =
+  var padded: array[32, byte]
+  padded[12..<32] = array[20, byte](value)
+  encoder.write(padded)
+
+func encodeParams(function: FunctionObject): auto =
+  var tupl = newNimNode(nnkTupleConstr)
+  for input in function.inputs:
+    tupl.add(ident input.name)
   quote do:
-    `encoder`
-    `encodedParams`
+    byteutils.toHex(AbiEncoder.encode(`tupl`))
 
 func createFunction(contract: NimNode, function: FunctionObject): auto =
   let
