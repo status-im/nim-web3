@@ -1,6 +1,7 @@
 import std/options
 import pkg/unittest2
 import pkg/chronos
+import pkg/stint
 import ../web3
 import ./test_utils
 import ./encodingcontract
@@ -8,6 +9,12 @@ import ./encodingcontract
 contract(EncodingTest):
   proc setBool(val: Bool)
   proc getBool(): Bool {.view.}
+  proc mixedArguments(
+    integer: UInt256,
+    fixedbytes: FixedBytes[32],
+    address: Address,
+    dynamicbytes: DynamicBytes
+  )
 
 suite "ABI encoding":
 
@@ -44,3 +51,25 @@ suite "ABI encoding":
       assert(b == Bool.parse(true))
     waitFor asynctest()
 
+  test "encodes dynamic and fixed arguments in a single call":
+    proc asynctest {.async.} =
+      let
+        receipt = await web3.deployContract(EncodingTestCode)
+        cc = receipt.contractAddress.get
+
+      let ns = web3.contractSender(EncodingTest, cc)
+      var arr: array[32, byte]
+      var address: array[20, byte]
+      var sequence: seq[byte]
+      try:
+        discard await ns.mixedArguments(
+          0.u256,
+          FixedBytes[32](arr),
+          Address(address),
+          DynamicBytes(sequence)
+        ).send()
+      except Exception as error:
+        echo error.msg
+        fail()
+
+    waitFor asynctest()
