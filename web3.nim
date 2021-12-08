@@ -335,15 +335,7 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
   for event in events:
     result.add InterfaceObject(kind: InterfaceObjectKind.event, eventObject: event)
 
-func createFunction(contract: NimNode, function: FunctionObject): auto =
-  let
-    signature = getSignature(function)
-    procName = ident function.name
-    senderName = ident "sender"
-    output = if function.outputs.len != 1:
-        ident "void"
-      else:
-        function.outputs[0].typ
+func encodeParams(function: FunctionObject): auto =
   var
     encodedParams = genSym(nskVar)#newLit("")
     offset = genSym(nskVar)
@@ -375,6 +367,19 @@ func createFunction(contract: NimNode, function: FunctionObject): auto =
       `offset` += encoding.data.len div 2
 
     `encodedParams` &= `dataBuf`
+  quote do:
+    `encoder`
+    `encodedParams`
+
+func createFunction(contract: NimNode, function: FunctionObject): auto =
+  let
+    signature = getSignature(function)
+    procName = ident function.name
+    senderName = ident "sender"
+    output = if function.outputs.len != 1:
+        ident "void"
+      else:
+        function.outputs[0].typ
   var procDef = quote do:
     proc `procName`*(`senderName`: Sender[`contract`]): ContractCall[`output`] =
       discard
@@ -384,8 +389,8 @@ func createFunction(contract: NimNode, function: FunctionObject): auto =
       input.typ,
       newEmptyNode()
     )
+  let encodedParams = encodeParams(function)
   procDef[6].add quote do:
-    `encoder`
     return initContractCall[`output`](
         `senderName`.web3,
         ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`,
