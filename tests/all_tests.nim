@@ -12,4 +12,5 @@ import
   test_deposit_contract,
   test_logs,
   test_signed_tx,
-  test_ethhexstrings
+  test_ethhexstrings,
+  test_encoding
