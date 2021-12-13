@@ -46,6 +46,15 @@ proc fromJson*(n: JsonNode, argName: string, result: var Address) {.inline.} =
   bytesFromJson(n, argName, array[20, byte](result))
 
 proc fromJson*(n: JsonNode, argName: string, result: var TypedTransaction) {.inline.} =
+  let hexStrLen = n.getStr().len
+  if hexStrLen < 2:
+    # "0x" prefix
+    raise newException(ValueError, "Parameter \"" & argName & "\" value too short:" & $hexStrLen)
+  if hexStrLen mod 2 != 0:
+    # Spare nibble
+    raise newException(ValueError, "Parameter \"" & argName & "\" value not byte-aligned:" & $hexStrLen)
+
+  distinctBase(result).setLen((hexStrLen - 2) div 2)
   bytesFromJson(n, argName, distinctBase(result))
 
 proc fromJson*(n: JsonNode, argName: string, result: var Quantity) {.inline.} =
