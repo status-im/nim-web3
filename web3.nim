@@ -349,6 +349,12 @@ func encode*(encoder: var AbiEncoder, value: Address) =
   padded[12..<32] = array[20, byte](value)
   encoder.write(padded)
 
+func decode*(decoder: var AbiDecoder, T: type Address): Result[T, ref CatchableError] =
+  let padded = ?decoder.read(array[32, byte])
+  var bytes: array[20, byte]
+  bytes[0..<20] = padded[12..<32]
+  ok Address(bytes)
+
 func encodeParams(function: FunctionObject): auto =
   var tupl = newNimNode(nnkTupleConstr)
   for input in function.inputs:
@@ -411,8 +417,9 @@ func createEvent(contract: NimNode, event: EventObject): auto =
       kind = input.typ
     if input.indexed:
       argParseBody.add quote do:
-        var `argument`: `kind`
-        discard decode(strip0xPrefix(`jsonIdent`["topics"][`i`].getStr), 0, `argument`)
+        let json = `jsonIdent`["topics"][`i`].getStr
+        let bytes = seq[byte].fromHex(json).tryGet()
+        var `argument` = AbiDecoder.decode(bytes, `kind`).tryGet()
       i += 1
     else:
       if not offsetInited:
