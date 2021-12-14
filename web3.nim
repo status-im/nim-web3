@@ -355,6 +355,10 @@ func decode*(decoder: var AbiDecoder, T: type Address): Result[T, ref CatchableE
   bytes[0..<20] = padded[12..<32]
   ok Address(bytes)
 
+func decode*(decoder: var AbiDecoder, T: type DynamicBytes): Result[T, ref CatchableError] =
+  let bytes = ?decoder.read(distinctBase(T))
+  ok T(bytes)
+
 func encodeParams(function: FunctionObject): auto =
   var tupl = newNimNode(nnkTupleConstr)
   for input in function.inputs:
@@ -388,116 +392,120 @@ func createFunction(contract: NimNode, function: FunctionObject): auto =
         `senderName`.contractAddress)
   procDef
 
-func createEvent(contract: NimNode, event: EventObject): auto =
-  let callbackIdent = ident "callback"
-  let jsonIdent = ident "j"
-  var
-    params = nnkFormalParams.newTree(newEmptyNode())
-    paramsWithRawData = nnkFormalParams.newTree(newEmptyNode())
+func newLetTupleStmt(names: seq[NimNode], expression: NimNode): NimNode =
+  var tupl = newNimNode(nnkVarTuple)
+  for name in names:
+    tupl.add name
+  tupl.add newEmptyNode()
+  tupl.add expression
+  newNimNode(nnkLetSection).add(tupl)
 
-    argParseBody = newStmtList()
-    i = 1
-    call = nnkCall.newTree(callbackIdent)
-    callWithRawData = nnkCall.newTree(callbackIdent)
-    offset = ident "offset"
-    inputData = ident "inputData"
-
-  var offsetInited = false
-
+func decodeArguments(event: EventObject): NimNode =
+  result = newStmtList()
+  var types = newNimNode(nnkTupleConstr)
+  var names: seq[NimNode]
   for input in event.inputs:
-    let param = nnkIdentDefs.newTree(
-      ident input.name,
-      input.typ,
-      newEmptyNode()
-    )
-    params.add param
-    paramsWithRawData.add param
-    let
-      argument = genSym(nskVar)
-      kind = input.typ
+    if not input.indexed:
+      types.add input.typ
+      names.add ident input.name
+  if names.len > 0:
+    let bytes = genSym(nskLet, "bytes")
+    let decode = quote do: AbiDecoder.decode(`bytes`, `types`).tryGet()
+    let assign = newLetTupleStmt(names, decode)
+    result.add quote do:
+      let json = j["data"].getStr
+      let `bytes` = seq[byte].fromHex(json).tryGet()
+      `assign`
+
+func decodeIndexedArguments(event: EventObject): NimNode =
+  result = newStmtList()
+  var i = 1
+  for input in event.inputs:
     if input.indexed:
-      argParseBody.add quote do:
-        let json = `jsonIdent`["topics"][`i`].getStr
+      let name = ident input.name
+      let typ = input.typ
+      result.add quote do:
+        let json = j["topics"][`i`].getStr
         let bytes = seq[byte].fromHex(json).tryGet()
-        var `argument` = AbiDecoder.decode(bytes, `kind`).tryGet()
-      i += 1
-    else:
-      if not offsetInited:
-        argParseBody.add quote do:
-          var `inputData` = strip0xPrefix(`jsonIdent`["data"].getStr)
-          var `offset` = 0
+        let `name` = AbiDecoder.decode(bytes, `typ`).tryGet()
+      inc i
 
-        offsetInited = true
+func createCallbackCall(event: EventObject, extraParams: seq[NimNode] = @[]): NimNode =
+  result = newStmtList()
+  result.add decodeArguments(event)
+  result.add decodeIndexedArguments(event)
 
-      argParseBody.add quote do:
-        var `argument`: `kind`
-        `offset` += decode(`inputData`, `offset`, `argument`)
-    call.add argument
-    callWithRawData.add argument
-  let
-    eventName = event.name
-    cbident = ident eventName
-    procTy = nnkProcTy.newTree(params, newEmptyNode())
-    signature = getSignature(event)
+  var arguments: seq[NimNode]
+  for input in event.inputs:
+    arguments.add ident input.name
 
-  # generated with dumpAstGen - produces "{.raises: [Defect], gcsafe.}"
-  let pragmas = nnkPragma.newTree(
-    nnkExprColonExpr.newTree(
-      newIdentNode("raises"),
-      nnkBracket.newTree(
-        newIdentNode("Defect")
-      )
-    ),
-    newIdentNode("gcsafe")
-  )
+  for param in extraParams:
+    arguments.add param
 
-  procTy[1] = pragmas
+  result.add newCall("callback", arguments)
+  result = newBlockStmt(result)
 
-  callWithRawData.add jsonIdent
-  paramsWithRawData.add nnkIdentDefs.newTree(
-    jsonIdent,
-    ident "JsonNode",
-    newEmptyNode()
-  )
+func createCallbackType(event: EventObject, extraParams: seq[NimNode] = @[]): NimNode =
+  var parameters = newNimNode(nnkFormalParams).add(newEmptyNode())
+  for input in event.inputs:
+    parameters.add newNimNode(nnkIdentDefs)
+                    .add(ident input.name)
+                    .add(input.typ)
+                    .add(newEmptyNode())
+  for parameter in extraParams:
+    parameters.add parameter
+  newNimNode(nnkProcTy)
+    .add(parameters)
+    .add(quote do: {.raises:[Defect], gcsafe.})
 
-  let procTyWithRawData = nnkProcTy.newTree(paramsWithRawData, newEmptyNode())
-  procTyWithRawData[1] = pragmas
+func createEvent(contract: NimNode, event: EventObject): auto =
+  let eventName = ident event.name
+  let callbackName = ident "callback"
+  let json = ident "j"
+  let signature = getSignature(event)
+  let jsonType = newNimNode(nnkIdentDefs)
+                  .add(json)
+                  .add(ident "JsonNode")
+                  .add(newEmptyNode())
+
+  let callback = createCallbackCall(event)
+  let callbackType = createCallbackType(event)
+  let rawCallback = createCallbackCall(event, @[json])
+  let rawCallbackType = createCallbackType(event, @[jsonType])
 
   quote do:
-    type `cbident` = object
+    type `eventName` = object
 
-    template eventTopic*(T: type `cbident`): string =
+    template eventTopic*(T: type `eventName`): string =
       "0x" & toLowerAscii($keccak256.digest(`signature`))
 
     proc subscribe(s: Sender[`contract`],
-                    t: type `cbident`,
+                    t: type `eventName`,
                     options: JsonNode,
-                    `callbackIdent`: `procTy`,
+                    `callbackName`: `callbackType`,
                     errorHandler: SubscriptionErrorHandler,
                     withHistoricEvents = true): Future[Subscription] =
-      let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
+      let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`eventName`))
 
-      proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+      proc eventHandler(`json`: JsonNode) {.gcsafe, raises: [Defect].} =
         try:
-          `argParseBody`
-          `call`
+          `callback`
         except CatchableError as err:
           errorHandler err[]
 
       s.web3.subscribeForLogs(options, eventHandler, errorHandler, withHistoricEvents)
 
     proc subscribe(s: Sender[`contract`],
-                    t: type `cbident`,
+                    t: type `eventName`,
                     options: JsonNode,
-                    `callbackIdent`: `procTyWithRawData`,
+                    `callbackName`: `rawCallbackType`,
                     errorHandler: SubscriptionErrorHandler,
                     withHistoricEvents = true): Future[Subscription] =
-      let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
+      let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`eventName`))
 
-      proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+      proc eventHandler(`json`: JsonNode) {.gcsafe, raises: [Defect].} =
         try:
-          `argParseBody`
-          `callWithRawData`
+          `rawCallback`
         except CatchableError as err:
           errorHandler err[]
 
