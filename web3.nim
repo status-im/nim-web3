@@ -359,6 +359,10 @@ func decode*(decoder: var AbiDecoder, T: type DynamicBytes): Result[T, ref Catch
   let bytes = ?decoder.read(distinctBase(T))
   ok T(bytes)
 
+func decode*(decoder: var AbiDecoder, T: type FixedBytes): Result[T, ref CatchableError] =
+  let bytes = ?decoder.read(distinctBase(T))
+  ok T(bytes)
+
 func encodeParams(function: FunctionObject): auto =
   var tupl = newNimNode(nnkTupleConstr)
   for input in function.inputs:

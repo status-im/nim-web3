@@ -2,6 +2,7 @@ import std/options
 import pkg/unittest2
 import pkg/chronos
 import pkg/stint
+import pkg/nimcrypto
 import ../web3
 import ./test_utils
 import ./encodingcontract
@@ -15,6 +16,12 @@ contract(EncodingTest):
     address: Address,
     dynamicbytes: DynamicBytes
   )
+  proc MixedArguments(
+    integer: UInt256,
+    fixedbytes: FixedBytes[32],
+    address: Address,
+    dynamicbytes: DynamicBytes[0, int.high]
+  ) {.event.}
 
 suite "ABI encoding":
 
@@ -71,5 +78,48 @@ suite "ABI encoding":
       except Exception as error:
         echo error.msg
         fail()
+
+    waitFor asynctest()
+
+  test "decodes dynamic and fixed arguments from an event":
+
+    proc randomBytes(amount: static int): array[amount, byte] =
+      doAssert randomBytes(result) == amount
+
+    proc asynctest {.async.} =
+      let
+        receipt = await web3.deployContract(EncodingTestCode)
+        cc = receipt.contractAddress.get
+
+      let ns = web3.contractSender(EncodingTest, cc)
+
+      let integer = UInt256.fromBytes(randomBytes(32))
+      let fixedbytes = FixedBytes[32](randomBytes(32))
+      let address = Address(randomBytes(20))
+      let dynamicbytes = DynamicBytes[0, int.high](@(randomBytes(10)))
+
+      var done = newFuture[void]()
+
+      proc callback(eventInteger: UInt256,
+                    eventFixedbytes: FixedBytes[32],
+                    eventAddress: Address,
+                    eventDynamicbytes: DynamicBytes[0, int.high]) {.gcsafe.} =
+        check eventInteger == integer
+        check eventFixedbytes == fixedbytes
+        check eventAddress == address
+        check eventDynamicbytes == dynamicbytes
+        done.complete()
+
+      let subscription = await ns.subscribe(MixedArguments, callback)
+
+      discard await ns.mixedArguments(
+        integer,
+        fixedbytes,
+        address,
+        dynamicbytes
+      ).send()
+
+      await done
+      await subscription.unsubscribe()
 
     waitFor asynctest()
