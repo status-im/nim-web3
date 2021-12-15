@@ -359,6 +359,9 @@ func decode*(decoder: var AbiDecoder, T: type DynamicBytes): Result[T, ref Catch
   let bytes = ?decoder.read(distinctBase(T))
   ok T(bytes)
 
+func decode*(decoder: var AbiDecoder, T: type Bool): Result[T, ref CatchableError] =
+  ok Bool.parse(?decoder.read(bool))
+
 func decode*(decoder: var AbiDecoder, T: type FixedBytes): Result[T, ref CatchableError] =
   let bytes = ?decoder.read(distinctBase(T))
   ok T(bytes)
@@ -606,16 +609,15 @@ proc call*[T](c: ContractCall[T],
   cc.to = c.to
   cc.gas = some(Quantity(gas))
   cc.value = some(value)
-  let response = strip0xPrefix:
+  let response =
     if blockNumber != high(uint64):
       await c.web3.provider.eth_call(cc, &"0x{blockNumber:X}")
     else:
       await c.web3.provider.eth_call(cc, "latest")
 
   if response.len > 0:
-    var res: T
-    discard decode(response, 0, res)
-    return res
+    let bytes = seq[byte].fromHex(response).tryGet()
+    return AbiDecoder.decode(bytes, T).tryGet()
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
 
