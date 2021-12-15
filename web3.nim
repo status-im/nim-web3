@@ -413,7 +413,7 @@ func decodeArguments(event: EventObject): NimNode =
     let decode = quote do: AbiDecoder.decode(`bytes`, `types`).tryGet()
     let assign = newLetTupleStmt(names, decode)
     result.add quote do:
-      let json = j["data"].getStr
+      let json = getStr(j["data"])
       let `bytes` = seq[byte].fromHex(json).tryGet()
       `assign`
 
@@ -425,7 +425,7 @@ func decodeIndexedArguments(event: EventObject): NimNode =
       let name = ident input.name
       let typ = input.typ
       result.add quote do:
-        let json = j["topics"][`i`].getStr
+        let json = getStr(j["topics"][`i`])
         let bytes = seq[byte].fromHex(json).tryGet()
         let `name` = AbiDecoder.decode(bytes, `typ`).tryGet()
       inc i
@@ -465,7 +465,7 @@ func createEvent(contract: NimNode, event: EventObject): auto =
   let signature = getSignature(event)
   let jsonType = newNimNode(nnkIdentDefs)
                   .add(json)
-                  .add(ident "JsonNode")
+                  .add(quote do: JsonNode)
                   .add(newEmptyNode())
 
   let callback = createCallbackCall(event)
