@@ -5,6 +5,7 @@ import
   stint, stew/byteutils, ./ethtypes
 
 export ethtypes
+{.push deprecated: "use contractabi instead".}
 
 type
   EncodeResult* = tuple[dynamic: bool, data: string]
@@ -130,3 +131,5 @@ func encode*(x: openArray[Encodable]): EncodeResult =
 func decode*[T; I: static int](input: string, to: array[0..I, T]): array[0..I, T] =
   for i in 0..I:
     result[i] = input[i*64 .. (i+1)*64].decode(T)
+
+{.pop.}
