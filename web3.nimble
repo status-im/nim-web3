@@ -16,7 +16,7 @@ requires "json_serialization"
 requires "nimcrypto"
 requires "stew"
 requires "stint"
-requires "contractabi >= 0.3.0 & < 0.4.0"
+requires "contractabi >= 0.4.0 & < 0.5.0"
 
 ### Helper functions
 proc getLang(): string =
