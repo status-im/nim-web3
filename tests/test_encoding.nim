@@ -1,11 +1,12 @@
-import std/options
-import pkg/unittest2
-import pkg/chronos
-import pkg/stint
-import pkg/nimcrypto
-import ../web3
-import ./test_utils
-import ./encodingcontract
+import
+  std/options,
+  unittest2,
+  chronos,
+  stint,
+  nimcrypto,
+  ../web3,
+  ./test_utils,
+  ./encodingcontract
 
 contract(EncodingTest):
   proc setBool(val: Bool)

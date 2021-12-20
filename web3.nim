@@ -1,15 +1,14 @@
 import
-  macros, strutils, options, math, json, tables, uri, strformat
+  macros, strutils, options, math, json, tables, uri, strformat,
+  typetraits
 
 from os import DirSep, AltSep
 
 import
   nimcrypto, stint, httputils, chronicles, chronos,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
-  web3/[ethtypes, conversions, ethhexstrings, transaction_signing]
-
-import std/typetraits
-import pkg/contractabi
+  web3/[ethtypes, conversions, ethhexstrings, transaction_signing],
+  contractabi
 
 template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 
