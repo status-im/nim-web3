@@ -1,7 +1,8 @@
 import
-  json, options, stint, strutils, strformat, typetraits,
-  stew/byteutils, json_serialization, faststreams/textio,
-  ethtypes, ethhexstrings
+  std/[json, options, strutils, strformat, tables, typetraits],
+  stint, stew/byteutils, json_serialization, faststreams/textio,
+  ethtypes, ethhexstrings,
+  ./engine_api_types
 
 from json_rpc/rpcserver import expect
 
@@ -63,6 +64,23 @@ proc fromJson*(n: JsonNode, argName: string, result: var Quantity) {.inline.} =
   else:
     n.kind.expect(JString, argName)
     result = Quantity(parseHexInt(n.getStr))
+
+func getEnumStringTable(enumType: typedesc): Table[string, enumType] {.compileTime.} =
+  var res: Table[string, enumType]
+  # Not intended for enums with ordinal holes or repeated stringification
+  # strings.
+  for value in enumType:
+    res[$value] = value
+  res
+
+proc fromJson*(n: JsonNode, argName: string, result: var PayloadExecutionStatus) {.inline.} =
+  n.kind.expect(JString, argName)
+  const enumStrings = static: getEnumStringTable(type(result))
+  try:
+    enumStrings[n.getStr]
+  except KeyError:
+    raise newException(
+      ValueError, "Parameter \"" & argName & "\" value invalid: " & n.getStr)
 
 proc `%`*(v: Quantity): JsonNode =
   result = %encodeQuantity(v.uint64)

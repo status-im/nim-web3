@@ -22,7 +22,7 @@ type
   PayloadID* = FixedBytes[8]
 
   ExecutePayloadResponse* = object
-    status*: string
+    status*: PayloadExecutionStatus
     latestValidHash*: Option[BlockHash]
     message*: Option[string]
 
