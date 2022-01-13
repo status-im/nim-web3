@@ -73,11 +73,22 @@ func getEnumStringTable(enumType: typedesc): Table[string, enumType] {.compileTi
     res[$value] = value
   res
 
-proc fromJson*(n: JsonNode, argName: string, result: var PayloadExecutionStatus) {.inline.} =
+proc fromJson*(
+    n: JsonNode, argName: string, result: var ForkchoiceUpdatedStatus) {.inline.} =
   n.kind.expect(JString, argName)
   const enumStrings = static: getEnumStringTable(type(result))
   try:
-    enumStrings[n.getStr]
+    result = enumStrings[n.getStr]
+  except KeyError:
+    raise newException(
+      ValueError, "Parameter \"" & argName & "\" value invalid: " & n.getStr)
+
+proc fromJson*(
+    n: JsonNode, argName: string, result: var PayloadExecutionStatus) {.inline.} =
+  n.kind.expect(JString, argName)
+  const enumStrings = static: getEnumStringTable(type(result))
+  try:
+    result = enumStrings[n.getStr]
   except KeyError:
     raise newException(
       ValueError, "Parameter \"" & argName & "\" value invalid: " & n.getStr)

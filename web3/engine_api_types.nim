@@ -1,5 +1,3 @@
-# https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.5/src/engine/specification.md
-
 import
   std/options,
   ethtypes
@@ -37,5 +35,5 @@ type
     syncing = "SYNCING"
 
   ForkchoiceUpdatedResponse* = object
-    status*: string
+    status*: ForkchoiceUpdatedStatus
     payloadId*: Option[PayloadID]
