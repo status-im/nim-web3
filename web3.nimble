@@ -19,7 +19,6 @@ requires "stint"
 
 ### Helper functions
 proc test(args, path: string) =
-  # Compilation language is controlled by TEST_LANG
   if not dirExists "build":
     mkDir "build"
   exec "nim " & getEnv("TEST_LANG", "c") & " " & getEnv("NIMFLAGS") & " " & args &

@@ -11,4 +11,7 @@ while ! curl -X POST --data '{"jsonrpc":"2.0","method":"net_version","params":[]
 do
   sleep 1
 done
-env TEST_LANG="$TEST_LANG" nimble test
+if [[ -n "${TEST_LANG}" ]]; then
+  export TEST_LANG
+fi
+nimble test
