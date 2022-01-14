@@ -18,20 +18,13 @@ requires "stew"
 requires "stint"
 
 ### Helper functions
-proc getLang(): string =
-  var lang = "c"
-  if existsEnv"TEST_LANG":
-    lang = getEnv"TEST_LANG"
-  lang
-
-proc test(name: string, defaultLang = getLang()) =
-  # TODO, don't forget to change defaultLang to `cpp` if the project requires C++
+proc test(args, path: string) =
   if not dirExists "build":
     mkDir "build"
-  --run
-  switch("out", ("./build/" & name))
-  setCommand defaultLang, "tests/" & name & ".nim"
+  exec "nim " & getEnv("TEST_LANG", "c") & " " & getEnv("NIMFLAGS") & " " & args &
+    " --outdir:build -r --hints:off --warnings:off --skipParentCfg " & path
+
 
 ### tasks
 task test, "Run all tests":
-  test "all_tests"
+  test "", "tests/all_tests.nim"
