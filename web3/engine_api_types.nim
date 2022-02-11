@@ -33,16 +33,10 @@ type
     finalizedBlockHash*: BlockHash
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.6/src/engine/specification.md#response-1
-  ForkchoiceUpdatedStatus* {.pure.} = enum
-    valid                  = "VALID"
-    invalid                = "INVALID"
-    syncing                = "SYNCING"
-    invalid_terminal_block = "INVALID_TERMINAL_BLOCK"
-
   PayloadID* = FixedBytes[8]
 
   ForkchoiceUpdatedResponse* = object
-    payloadStatus*: ForkchoiceUpdatedStatus
+    payloadStatus*: PayloadStatusV1
     payloadId*: Option[PayloadID]
 
 const
