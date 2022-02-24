@@ -210,7 +210,7 @@ type
     stateRoot*: BlockHash
     receiptsRoot*: BlockHash
     logsBloom*: FixedBytes[256]
-    random*: FixedBytes[32]
+    prevRandao*: FixedBytes[32]
     blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity

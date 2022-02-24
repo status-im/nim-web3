@@ -10,7 +10,7 @@ type
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.7/src/engine/specification.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
-    random*: FixedBytes[32]
+    prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.7/src/engine/specification.md#payloadstatusv1
