@@ -1,4 +1,4 @@
-# https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.7/src/engine/specification.md#core
+# https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.8/src/engine/specification.md#core
 
 import ethtypes, engine_api_types
 
