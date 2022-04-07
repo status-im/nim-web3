@@ -42,7 +42,7 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.8/src/engine/specification.md#transitionconfigurationv1
   TransitionConfigurationV1* = object
-    terminalTotalDifficulty*: Uint256
+    terminalTotalDifficulty*: UInt256
     terminalBlockHash*: BlockHash
     terminalBlockNumber*: Quantity
 

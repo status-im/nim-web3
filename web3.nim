@@ -49,7 +49,7 @@ type
     web3: Web3
     data: string
     to: Address
-    value: Uint256
+    value: UInt256
 
   ContractCall*[T] = ref object of ContractCallBase
 
@@ -405,7 +405,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         `encoder`
         return initContractCall[`output`](
             `senderName`.web3,
-            ($keccak_256.digest(`signature`))[0..<8].toLower & `encodedParams`,
+            ($keccak256.digest(`signature`))[0..<8].toLower & `encodedParams`,
             `senderName`.contractAddress)
 
       result.add procDef
@@ -681,4 +681,4 @@ proc subscribe*(s: Sender, t: typedesc, cb: proc): Future[Subscription] {.inline
   subscribe(s, t, newJObject(), cb, SubscriptionErrorHandler nil)
 
 proc `$`*(b: Bool): string =
-  $(Stint[256](b))
+  $(StInt[256](b))

@@ -21,8 +21,8 @@ contract LoggerContract {
 }
 ]#
 contract(LoggerContract):
-  proc MyEvent(sender: Address, number: Uint256) {.event.}
-  proc invoke(value: Uint256)
+  proc MyEvent(sender: Address, number: UInt256) {.event.}
+  proc invoke(value: UInt256)
 
 const LoggerContractCode = "6080604052348015600f57600080fd5b5060bc8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c80632b30d2b814602d575b600080fd5b604760048036036020811015604157600080fd5b50356049565b005b604080513381526020810183905281517fdf50c7bb3b25f812aedef81bc334454040e7b27e27de95a79451d663013b7e17929181900390910190a15056fea265627a7a723058202ed7f5086297d2a49fbe359f4e489a007b69eb5077f5c76328bffdb63f164b4b64736f6c63430005090032"
 
@@ -67,7 +67,7 @@ suite "Logs":
         var notificationsReceived = 0
 
         let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do (
-            sender: Address, value: Uint256)
+            sender: Address, value: UInt256)
             {.raises: [Defect], gcsafe.}:
           try:
             echo "onEvent: ", sender, " value ", value
