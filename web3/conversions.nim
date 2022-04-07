@@ -27,7 +27,7 @@ proc fromJson*(n: JsonNode, argName: string, result: var ref UInt256) =
   new result
   result[] = hexStr.parse(StUint[256], 16) # TODO: Handle errors
 
-proc bytesFromJson(n: JsonNode, argName: string, result: var openarray[byte]) =
+proc bytesFromJson(n: JsonNode, argName: string, result: var openArray[byte]) =
   n.kind.expect(JString, argName)
   let hexStr = n.getStr()
   if hexStr.len != result.len * 2 + 2: # including "0x"
@@ -98,7 +98,7 @@ proc `%`*(v: Address): JsonNode =
 proc `%`*(v: TypedTransaction): JsonNode =
   result = %("0x" & distinctBase(v).toHex)
 
-proc writeHexValue(w: JsonWriter, v: openarray[byte]) =
+proc writeHexValue(w: JsonWriter, v: openArray[byte]) =
   w.stream.write "\"0x"
   w.stream.writeHex v
   w.stream.write "\""
@@ -140,7 +140,7 @@ proc `$`*(v: DynamicBytes): string {.inline.} =
   "0x" & toHex(v)
 
 proc `%`*(x: EthSend): JsonNode =
-  result = newJobject()
+  result = newJObject()
   result["from"] = %x.source
   if x.to.isSome:
     result["to"] = %x.to.unsafeGet
@@ -156,7 +156,7 @@ proc `%`*(x: EthSend): JsonNode =
     result["nonce"] = %x.nonce.unsafeGet
 
 proc `%`*(x: EthCall): JsonNode =
-  result = newJobject()
+  result = newJObject()
   result["to"] = %x.to
   if x.source.isSome:
     result["source"] = %x.source.unsafeGet
@@ -173,7 +173,7 @@ proc `%`*(x: byte): JsonNode =
   %x.int
 
 proc `%`*(x: FilterOptions): JsonNode =
-  result = newJobject()
+  result = newJObject()
   if x.fromBlock.isSome:
     result["fromBlock"] = %x.fromBlock.unsafeGet
   if x.toBlock.isSome:

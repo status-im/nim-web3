@@ -7,13 +7,13 @@ import
 type
   EncodeResult* = tuple[dynamic: bool, data: string]
 
-func encode*[bits: static[int]](x: Stuint[bits]): EncodeResult =
-  ## Encodes a `Stuint` to a textual representation for use in the JsonRPC
+func encode*[bits: static[int]](x: StUint[bits]): EncodeResult =
+  ## Encodes a `StUint` to a textual representation for use in the JsonRPC
   ## `sendTransaction` call.
   (dynamic: false, data: '0'.repeat((256 - bits) div 4) & x.dumpHex)
 
-func encode*[bits: static[int]](x: Stint[bits]): EncodeResult =
-  ## Encodes a `Stint` to a textual representation for use in the JsonRPC
+func encode*[bits: static[int]](x: StInt[bits]): EncodeResult =
+  ## Encodes a `StInt` to a textual representation for use in the JsonRPC
   ## `sendTransaction` call.
   (dynamic: false,
   data:
@@ -23,17 +23,17 @@ func encode*[bits: static[int]](x: Stint[bits]): EncodeResult =
       '0'.repeat((256 - bits) div 4) & x.dumpHex
   )
 
-func decode*(input: string, offset: int, to: var Stuint): int =
+func decode*(input: string, offset: int, to: var StUint): int =
   let meaningfulLen = to.bits div 8 * 2
   to = type(to).fromHex(input[offset .. offset + meaningfulLen - 1])
   meaningfulLen
 
-func decode*[N](input: string, offset: int, to: var Stint[N]): int =
+func decode*[N](input: string, offset: int, to: var StInt[N]): int =
   let meaningfulLen = N div 8 * 2
   fromHex(input[offset .. offset + meaningfulLen], to)
   meaningfulLen
 
-func fixedEncode(a: openarray[byte]): EncodeResult =
+func fixedEncode(a: openArray[byte]): EncodeResult =
   var padding = a.len mod 32
   if padding != 0: padding = 32 - padding
   result = (dynamic: false, data: "00".repeat(padding) & byteutils.toHex(a))
@@ -41,7 +41,7 @@ func fixedEncode(a: openarray[byte]): EncodeResult =
 func encode*[N](b: FixedBytes[N]): EncodeResult = fixedEncode(array[N, byte](b))
 func encode*(b: Address): EncodeResult = fixedEncode(array[20, byte](b))
 
-func decodeFixed(input: string, offset: int, to: var openarray[byte]): int =
+func decodeFixed(input: string, offset: int, to: var openArray[byte]): int =
   let meaningfulLen = to.len * 2
   var padding = to.len mod 32
   if padding != 0: padding = (32 - padding) * 2
@@ -55,7 +55,7 @@ func decode*[N](input: string, offset: int, to: var FixedBytes[N]): int {.inline
 func decode*(input: string, offset: int, to: var Address): int {.inline.} =
   decodeFixed(input, offset, array[20, byte](to))
 
-func encodeDynamic(v: openarray[byte]): EncodeResult =
+func encodeDynamic(v: openArray[byte]): EncodeResult =
   result.dynamic = true
   result.data = v.len.toHex(64).toLower
   for y in v:
@@ -86,18 +86,18 @@ macro makeTypeEnum(): untyped =
       identInt = newIdentNode("Int" & $i)
     if ceil(log2(i.float)) == floor(log2(i.float)):
       lastpow2 = i
-    if i notin {256, 125}: # Int/Uint256/128 are already defined in stint. No need to repeat.
+    if i notin {256, 125}: # Int/UInt256/128 are already defined in stint. No need to repeat.
       result.add quote do:
         type
-          `identUint`* = Stuint[`lastpow2`]
-          `identInt`* = Stint[`lastpow2`]
+          `identUint`* = StUint[`lastpow2`]
+          `identInt`* = StInt[`lastpow2`]
   let
     identUint = ident("Uint")
     identInt = ident("Int")
     identBool = ident("Bool")
   result.add quote do:
     type
-      `identUint`* = Uint256
+      `identUint`* = UInt256
       `identInt`* = Int256
       `identBool`* = distinct Int256
 
@@ -139,7 +139,7 @@ macro makeTypeEnum(): untyped =
   result.add quote do:
     type
       `identFixed`* = distinct Int128
-      `identUfixed`* = distinct Uint128
+      `identUfixed`* = distinct UInt128
   for i in 1..256:
     let
       identBytes = ident("Bytes" & $i)
@@ -191,7 +191,7 @@ func encode*(x: seq[Encodable]): EncodeResult =
   result.data &= data
 
 func decode*[T](input: string, to: seq[T]): seq[T] =
-  var count = input[0..64].decode(Stuint)
+  var count = input[0..64].decode(StUint)
   result = newSeq[T](count)
   for i in 0..count:
     result[i] = input[i*64 .. (i+1)*64].decode(T)
