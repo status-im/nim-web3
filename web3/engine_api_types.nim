@@ -15,11 +15,11 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.9/src/engine/specification.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
-    valid                  = "VALID"
-    invalid                = "INVALID"
-    syncing                = "SYNCING"
-    accepted               = "ACCEPTED"
-    invalid_block_hash     = "INVALID_BLOCK_HASH"
+    syncing            = "SYNCING"      # safe default
+    valid              = "VALID"
+    invalid            = "INVALID"
+    accepted           = "ACCEPTED"
+    invalid_block_hash = "INVALID_BLOCK_HASH"
 
   PayloadStatusV1* = object
     status*: PayloadExecutionStatus
