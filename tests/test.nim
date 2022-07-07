@@ -87,7 +87,7 @@ suite "Contracts":
   var accounts: seq[Address]
 
   setup:
-    proc asyncsetup {.async.} =
+    proc asyncsetup {.async, gcsafe.} =
       web3 = await newWeb3("ws://127.0.0.1:8545/")
       accounts = await web3.provider.eth_accounts()
       echo "accounts: ", accounts
@@ -95,12 +95,12 @@ suite "Contracts":
     waitFor asyncsetup()
 
   teardown:
-    proc asyncteardown {.async.} =
+    proc asyncteardown {.async, gcsafe.} =
       await web3.close()
     waitFor asyncteardown()
 
   test "encoding test":
-    proc asynctest {.async.} =
+    proc asynctest {.async, gcsafe.} =
       let
         receipt = await web3.deployContract(EncodingTestCode)
         cc = receipt.contractAddress.get
@@ -118,7 +118,7 @@ suite "Contracts":
     waitFor asynctest()
 
   test "number storage":
-    proc asynctest {.async.} =
+    proc asynctest {.async, gcsafe.} =
       let
         receipt = await web3.deployContract(NumberStorageCode)
         cc = receipt.contractAddress.get
@@ -134,7 +134,7 @@ suite "Contracts":
     waitFor asynctest()
 
   test "metacoin":
-    proc asynctest {.async.} =
+    proc asynctest {.async, gcsafe.} =
       let
         receipt = await web3.deployContract(MetaCoinCode)
         cc = receipt.contractAddress.get
