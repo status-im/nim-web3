@@ -17,5 +17,5 @@ proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[ReceiptObje
   let r = await web3.send(tr)
   return await web3.getMinedTransactionReceipt(r)
 
-proc ethToWei*(eth: UInt256): UInt256 =
+func ethToWei*(eth: UInt256): UInt256 =
   eth * 1000000000000000000.u256
