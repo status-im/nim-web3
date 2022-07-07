@@ -92,12 +92,14 @@ suite "Contracts":
       accounts = await web3.provider.eth_accounts()
       echo "accounts: ", accounts
       web3.defaultAccount = accounts[0]
-    waitFor asyncsetup()
+    {.gcsafe.}:
+      waitFor asyncsetup()
 
   teardown:
     proc asyncteardown {.async, gcsafe.} =
       await web3.close()
-    waitFor asyncteardown()
+    {.gcsafe.}:
+      waitFor asyncteardown()
 
   test "encoding test":
     proc asynctest {.async, gcsafe.} =
@@ -115,7 +117,8 @@ suite "Contracts":
 
       b = await ns.getBool().call()
       assert(b == Bool.parse(true))
-    waitFor asynctest()
+    {.gcsafe.}:
+      waitFor asynctest()
 
   test "number storage":
     proc asynctest {.async, gcsafe.} =
@@ -131,7 +134,8 @@ suite "Contracts":
       let n = await ns.getNumber().call()
       assert(n == 5.u256)
 
-    waitFor asynctest()
+    {.gcsafe.}:
+      waitFor asynctest()
 
   test "metacoin":
     proc asynctest {.async, gcsafe.} =
@@ -190,4 +194,5 @@ suite "Contracts":
       await notifFut
       await s.unsubscribe()
 
-    waitFor asynctest()
+    {.gcsafe.}:
+      waitFor asynctest()
