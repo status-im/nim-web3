@@ -21,7 +21,13 @@ template invalidQuantityPrefix(s: string): bool =
   #
   # strutils.parseHexStr treats 0x as optional otherwise. UInt256.parse treats
   # standalone "0x" as valid input.
-  (not s.startsWith "0x") or s == "0x" or (s != "0x0" and s.startsWith "0x0")
+
+  # TODO https://github.com/status-im/nimbus-eth2/pull/3850
+  # requiring 0x prefis is okay, but can't yet enforce no-leading-zeros
+  when false:
+    (not s.startsWith "0x") or s == "0x" or (s != "0x0" and s.startsWith "0x0")
+  else:
+    (not s.startsWith "0x") or s == "0x"
 
 func `%`*(n: Int256|UInt256): JsonNode = %("0x" & n.toHex)
 

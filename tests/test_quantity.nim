@@ -23,8 +23,10 @@ suite "JSON-RPC Quantity":
         resUInt256Ref[] == validQuantity.u256
 
   test "Invalid Quantity/UInt256/ref UInt256":
+    # TODO once https://github.com/status-im/nimbus-eth2/pull/3850 addressed,
+    # re-add "0x0400" test case as invalid.
     for invalidStr in [
-        "", "1234", "01234", "x1234", "0x", "0x0400", "ff"]:
+        "", "1234", "01234", "x1234", "0x", "ff"]:
       template checkInvalids(typeName: untyped) =
         var resQuantity: `typeName`
         try:
