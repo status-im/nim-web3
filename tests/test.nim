@@ -82,11 +82,10 @@ const MetaCoinCode = "608060405234801561001057600080fd5b503260009081526020819052
 
 
 suite "Contracts":
-
-  var web3: Web3
-  var accounts: seq[Address]
-
   setup:
+    var web3: Web3
+    var accounts: seq[Address]
+
     proc asyncsetup {.async.} =
       web3 = await newWeb3("ws://127.0.0.1:8545/")
       accounts = await web3.provider.eth_accounts()

@@ -152,11 +152,11 @@ macro makeTypeEnum(): untyped =
 
 makeTypeEnum()
 
-proc parse*(T: type Bool, val: bool): T =
+func parse*(T: type Bool, val: bool): T =
   let i = if val: 1 else: 0
   T i.i256
 
-proc `==`*(a: Bool, b: Bool): bool =
+func `==`*(a: Bool, b: Bool): bool =
   Int256(a) == Int256(b)
 
 func encode*(x: Bool): EncodeResult = encode(Int256(x))

@@ -485,7 +485,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         procTyWithRawData[1] = pragmas
 
         result.add quote do:
-          type `cbident` = object
+          type `cbident`* = object
 
           template eventTopic*(T: type `cbident`): string =
             "0x" & toLowerAscii($keccak256.digest(`signature`))
