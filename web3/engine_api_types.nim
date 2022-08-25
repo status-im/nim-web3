@@ -54,5 +54,4 @@ const
   engineApiInternalError* = -32603
   engineApiServerError* = -32000
   engineApiUnknownPayload* = -38001
-  engineApiInvalidForkchoiceState* = -38002
-  engineApiInvalidPayloadAttributes* = -38003
+  engineApiInvalidPayloadAttributes* = -38002
