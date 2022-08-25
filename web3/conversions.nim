@@ -14,7 +14,7 @@ from json_rpc/rpcserver import expect
 
 template invalidQuantityPrefix(s: string): bool =
   # https://ethereum.org/en/developers/docs/apis/json-rpc/#hex-value-encoding
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.9/src/engine/specification.md#structures
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#structures
   # "When encoding quantities (integers, numbers): encode as hex, prefix with
   # "0x", the most compact representation (slight exception: zero should be
   # represented as "0x0")."
