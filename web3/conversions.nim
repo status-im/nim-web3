@@ -88,6 +88,19 @@ func fromJson*(n: JsonNode, argName: string, result: var TypedTransaction)
   distinctBase(result).setLen((hexStrLen - 2) div 2)
   bytesFromJson(n, argName, distinctBase(result))
 
+func fromJson*(n: JsonNode, argName: string, result: var RlpEncodedBytes)
+    {.inline.} =
+  let hexStrLen = n.getStr().len
+  if hexStrLen < 2:
+    # "0x" prefix
+    raise newException(ValueError, "Parameter \"" & argName & "\" value too short:" & $hexStrLen)
+  if hexStrLen mod 2 != 0:
+    # Spare nibble
+    raise newException(ValueError, "Parameter \"" & argName & "\" value not byte-aligned:" & $hexStrLen)
+
+  distinctBase(result).setLen((hexStrLen - 2) div 2)
+  bytesFromJson(n, argName, distinctBase(result))
+
 func fromJson*(n: JsonNode, argName: string, result: var Quantity) {.inline.} =
   n.kind.expect(JString, argName)
   let hexStr = n.getStr
@@ -130,6 +143,9 @@ func `%`*(v: Address): JsonNode =
 func `%`*(v: TypedTransaction): JsonNode =
   %("0x" & distinctBase(v).toHex)
 
+func `%`*(v: RlpEncodedBytes): JsonNode =
+  %("0x" & distinctBase(v).toHex)
+
 proc writeHexValue(w: JsonWriter, v: openArray[byte]) =
   w.stream.write "\"0x"
   w.stream.writeHex v
@@ -147,6 +163,9 @@ proc writeValue*(w: var JsonWriter, v: Address) =
 proc writeValue*(w: var JsonWriter, v: TypedTransaction) =
   writeHexValue w, distinctBase(v)
 
+proc writeValue*(w: var JsonWriter, v: RlpEncodedBytes) =
+  writeHexValue w, distinctBase(v)
+
 proc readValue*(r: var JsonReader, T: type DynamicBytes): T =
   fromHex(T, r.readValue(string))
 
@@ -159,6 +178,12 @@ proc readValue*(r: var JsonReader, T: type Address): T =
 proc readValue*(r: var JsonReader, T: type TypedTransaction): T =
   T fromHex(seq[byte], r.readValue(string))
 
+proc readValue*(r: var JsonReader, T: type RlpEncodedBytes): T =
+  T fromHex(seq[byte], r.readValue(string))
+
+func `$`*(v: Quantity): string {.inline.} =
+  encodeQuantity(v.uint64)
+
 func `$`*[N](v: FixedBytes[N]): string {.inline.} =
   "0x" & array[N, byte](v).toHex
 
@@ -166,6 +191,9 @@ func `$`*(v: Address): string {.inline.} =
   "0x" & array[20, byte](v).toHex
 
 func `$`*(v: TypedTransaction): string {.inline.} =
+  "0x" & distinctBase(v).toHex
+
+func `$`*(v: RlpEncodedBytes): string {.inline.} =
   "0x" & distinctBase(v).toHex
 
 func `$`*(v: DynamicBytes): string {.inline.} =

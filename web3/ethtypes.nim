@@ -19,6 +19,8 @@ type
   BlockNumber* = uint64
   BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
   Nonce* = int
+  CodeHash* = FixedBytes[32]
+  StorageHash* = FixedBytes[32]
 
   BlockIdentifierKind* = enum
     bidNumber
@@ -219,6 +221,22 @@ type
     baseFeePerGas*: UInt256
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
+
+  RlpEncodedBytes* = distinct seq[byte]
+
+  StorageProof* = object
+    key*: UInt256
+    value*: UInt256
+    proof*: seq[RlpEncodedBytes]
+
+  ProofResponse* = object
+    address*: Address
+    accountProof*: seq[RlpEncodedBytes]
+    balance*: UInt256
+    codeHash*: CodeHash
+    nonce*: Quantity
+    storageHash*: StorageHash
+    storageProof*: seq[StorageProof]
 
 template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
