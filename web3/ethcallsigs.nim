@@ -58,6 +58,11 @@ proc eth_subscribe(name: string, options: JsonNode): string
 proc eth_subscribe(name: string): string
 proc eth_unsubscribe(id: string)
 
+proc eth_getProof(
+  address: Address,
+  slots: seq[UInt256],
+  blockId: BlockIdentifier): ProofResponse
+
 proc shh_post(): string
 proc shh_version(message: WhisperPost): bool
 proc shh_newIdentity(): array[60, byte]

@@ -35,6 +35,11 @@ suite "Hex quantity":
         source = "x1234"
         x = hexQuantityStr source
       check %x != %source
+  test "Hex encoded 0x0":
+    let
+      source = "0x0"
+      x = hexQuantityStr"0x0"
+    check %x == %source
 
 suite "Hex data":
   test "Even length":

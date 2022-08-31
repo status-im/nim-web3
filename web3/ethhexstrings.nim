@@ -34,8 +34,8 @@ func validate*(value: HexQuantityStr): bool =
   template strVal: untyped = value.string
   if not value.hasHexHeader:
     return false
-  # No leading zeros
-  if strVal[2] == '0': return false
+  # No leading zeros (but allow 0x0)
+  if strVal.len < 3 or (strVal.len > 3 and strVal[2] == '0'): return false
   for i in 2..<strVal.len:
     let c = strVal[i]
     if not c.isHexChar:
