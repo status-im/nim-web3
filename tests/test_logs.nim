@@ -1,6 +1,6 @@
 import pkg/unittest2
 import ../web3
-import chronos, nimcrypto, options, json, stint
+import chronos, options, json, stint
 import test_utils
 
 import random

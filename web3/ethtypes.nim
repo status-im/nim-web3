@@ -1,6 +1,9 @@
 import
-  options, json, hashes, typetraits,
+  std/[options, hashes, typetraits],
   stint, stew/byteutils
+
+export
+  hashes, options
 
 type
   SyncObject* = object

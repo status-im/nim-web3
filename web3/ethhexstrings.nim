@@ -1,4 +1,9 @@
-import std/strutils
+import
+  std/[json, strutils]
+
+from json_rpc/rpcserver import expect
+
+export json
 
 type
   HexQuantityStr* = distinct string
@@ -61,9 +66,6 @@ template hexDataStr*(value: string): HexDataStr = value.HexDataStr
 template hexQuantityStr*(value: string): HexQuantityStr = value.HexQuantityStr
 
 # Converters
-
-import std/json
-from json_rpc/rpcserver import expect
 
 func `%`*(value: HexDataStr): JsonNode =
   if not value.validate:
