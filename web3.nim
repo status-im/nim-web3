@@ -1,5 +1,5 @@
 import
-  macros, strutils, options, math, json, tables, uri, strformat
+  std/[macros, strutils, options, math, json, tables, uri, strformat]
 
 from os import DirSep, AltSep
 
