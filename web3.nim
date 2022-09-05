@@ -4,7 +4,7 @@ import
 from os import DirSep, AltSep
 
 import
-  nimcrypto, stint, httputils, chronicles, chronos,
+  stint, httputils, chronicles, chronos, nimcrypto/keccak,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
   web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding]
 
