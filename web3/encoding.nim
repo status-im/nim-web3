@@ -198,9 +198,7 @@ func decode*[T](input: string, offset: int, to: var seq[T]): int =
   var x = input[64..127]
   var count: StUint[256] 
   discard decode(x, 0, count)
-  debugEcho count.toInt
   const size = sizeOf(T)
-  debugEcho size
   for i in 0..count.toInt-1:
     var t:T
     x = input[128+i*64 .. 128+(i+1)*64-1]
