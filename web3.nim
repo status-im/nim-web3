@@ -69,17 +69,17 @@ proc newWeb3*(provider: RpcClient): Web3 =
     r.handleSubscriptionNotification(j)
 
 proc newWeb3*(
-    uri: string, getHeaders: GetJsonRpcRequestHeaders = nil):
+    uri: string):
     Future[Web3] {.async.} =
   let u = parseUri(uri)
   var provider: RpcClient
   case u.scheme
   of "http", "https":
-    let p = newRpcHttpClient(getHeaders = getHeaders)
+    let p = newRpcHttpClient()
     await p.connect(uri)
     provider = p
   of "ws", "wss":
-    let p = newRpcWebSocketClient(getHeaders = getHeaders)
+    let p = newRpcWebSocketClient()
     await p.connect(uri)
     provider = p
   else:
@@ -185,7 +185,9 @@ template typeSignature(T: typedesc): string =
   elif T is Address:
     "address"
   elif T is Bool:
-    "bool"
+    "bool" 
+  elif T is openArray[Address]:
+    "address[]"
   else:
     unknownType(T)
 

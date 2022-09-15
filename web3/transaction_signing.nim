@@ -30,4 +30,6 @@ proc encodeTransaction*(s: EthSend, pk: PrivateKey): string =
   if s.data.len != 0:
     tr.payload = hexToSeqByte(s.data)
   signTransaction(tr, pk)
-  return rlp.encode(tr).toHex
+  result = rlp.encode(tr).toHex
+  echo result
+  return result

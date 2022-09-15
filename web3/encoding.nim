@@ -23,6 +23,10 @@ func encode*[bits: static[int]](x: StInt[bits]): EncodeResult =
       '0'.repeat((256 - bits) div 4) & x.dumpHex
   )
 
+func decode*(input: string, offset: int, to: var string): int =
+  to = input
+  to.len
+
 func decode*(input: string, offset: int, to: var StUint): int =
   let meaningfulLen = to.bits div 8 * 2
   to = type(to).fromHex(input[offset .. offset + meaningfulLen - 1])
@@ -190,11 +194,19 @@ func encode*(x: seq[Encodable]): EncodeResult =
     offset += encoded.data.len
   result.data &= data
 
-func decode*[T](input: string, to: seq[T]): seq[T] =
-  var count = input[0..64].decode(StUint)
-  result = newSeq[T](count)
-  for i in 0..count:
-    result[i] = input[i*64 .. (i+1)*64].decode(T)
+func decode*[T](input: string, offset: int, to: var seq[T]): int =
+  var x = input[64..127]
+  var count: StUint[256] 
+  discard decode(x, 0, count)
+  debugEcho count.toInt
+  const size = sizeOf(T)
+  debugEcho size
+  for i in 0..count.toInt-1:
+    var t:T
+    x = input[128+i*64 .. 128+(i+1)*64-1]
+    discard decode(x,0, t)
+    to.add t
+
 
 func encode*(x: openArray[Encodable]): EncodeResult =
   result.dynamic = false
