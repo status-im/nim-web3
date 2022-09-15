@@ -1,4 +1,9 @@
-import strutils
+import
+  std/[json, strutils]
+
+from json_rpc/rpcserver import expect
+
+export json
 
 type
   HexQuantityStr* = distinct string
@@ -13,7 +18,7 @@ template stripLeadingZeros(value: string): string =
     cidx.inc
   value[cidx .. ^1]
 
-proc encodeQuantity*(value: SomeUnsignedInt): string =
+func encodeQuantity*(value: SomeUnsignedInt): string =
   var hValue = value.toHex.stripLeadingZeros
   result = "0x" & hValue
 
@@ -30,19 +35,19 @@ func isHexChar*(c: char): bool =
       c notin {'A'..'F'}: false
   else: true
 
-proc validate*(value: HexQuantityStr): bool =
+func validate*(value: HexQuantityStr): bool =
   template strVal: untyped = value.string
   if not value.hasHexHeader:
     return false
-  # No leading zeros
-  if strVal[2] == '0': return false
+  # No leading zeros (but allow 0x0)
+  if strVal.len < 3 or (strVal.len > 3 and strVal[2] == '0'): return false
   for i in 2..<strVal.len:
     let c = strVal[i]
     if not c.isHexChar:
       return false
   return true
 
-proc validate*(value: HexDataStr): bool =
+func validate*(value: HexDataStr): bool =
   template strVal: untyped = value.string
   if not value.hasHexHeader:
     return false
@@ -62,22 +67,19 @@ template hexQuantityStr*(value: string): HexQuantityStr = value.HexQuantityStr
 
 # Converters
 
-import json
-from json_rpc/rpcserver import expect
-
-proc `%`*(value: HexDataStr): JsonNode =
+func `%`*(value: HexDataStr): JsonNode =
   if not value.validate:
     raise newException(ValueError, "HexDataStr: Invalid hex for Ethereum: " & value.string)
   else:
     result = %(value.string)
 
-proc `%`*(value: HexQuantityStr): JsonNode =
+func `%`*(value: HexQuantityStr): JsonNode =
   if not value.validate:
     raise newException(ValueError, "HexQuantityStr: Invalid hex for Ethereum: " & value.string)
   else:
     result = %(value.string)
 
-proc fromJson*(n: JsonNode, argName: string, result: var HexDataStr) =
+func fromJson*(n: JsonNode, argName: string, result: var HexDataStr) =
   # Note that '0x' is stripped after validation
   n.kind.expect(JString, argName)
   let hexStr = n.getStr()
@@ -85,11 +87,10 @@ proc fromJson*(n: JsonNode, argName: string, result: var HexDataStr) =
     raise newException(ValueError, "Parameter \"" & argName & "\" value is not valid as a Ethereum data \"" & hexStr & "\"")
   result = hexStr[2..hexStr.high].hexDataStr
 
-proc fromJson*(n: JsonNode, argName: string, result: var HexQuantityStr) =
+func fromJson*(n: JsonNode, argName: string, result: var HexQuantityStr) =
   # Note that '0x' is stripped after validation
   n.kind.expect(JString, argName)
   let hexStr = n.getStr()
   if not hexStr.hexQuantityStr.validate:
     raise newException(ValueError, "Parameter \"" & argName & "\" value is not valid as an Ethereum hex quantity \"" & hexStr & "\"")
   result = hexStr[2..hexStr.high].hexQuantityStr
-

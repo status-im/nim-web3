@@ -1,10 +1,10 @@
 import
-  macros, strutils, options, math, json, tables, uri, strformat
+  std/[macros, strutils, options, math, json, tables, uri, strformat]
 
 from os import DirSep, AltSep
 
 import
-  nimcrypto, stint, httputils, chronicles, chronos,
+  stint, httputils, chronicles, chronos, nimcrypto/keccak,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
   web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding]
 
@@ -487,7 +487,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         procTyWithRawData[1] = pragmas
 
         result.add quote do:
-          type `cbident` = object
+          type `cbident`* = object
 
           template eventTopic*(T: type `cbident`): string =
             "0x" & toLowerAscii($keccak256.digest(`signature`))

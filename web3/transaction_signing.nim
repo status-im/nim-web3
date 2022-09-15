@@ -3,7 +3,7 @@ import
   ethtypes, stew/byteutils, stint,
   eth/[common, keys, rlp], eth/common/transaction
 
-proc signTransaction(tr: var Transaction, pk: PrivateKey) =
+func signTransaction(tr: var Transaction, pk: PrivateKey) =
   let h = tr.txHashNoSignature
   let s = sign(pk, SkMessage(h.data))
 
@@ -15,7 +15,7 @@ proc signTransaction(tr: var Transaction, pk: PrivateKey) =
 
   tr.V = int64(v) + 27 # TODO! Complete this
 
-proc encodeTransaction*(s: EthSend, pk: PrivateKey): string =
+func encodeTransaction*(s: EthSend, pk: PrivateKey): string =
   var tr = Transaction(txType: TxLegacy)
   tr.gasLimit = GasInt(s.gas.get.uint64)
   tr.gasPrice = s.gasPrice.get
