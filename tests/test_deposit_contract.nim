@@ -58,4 +58,8 @@ suite "Deposit contract":
       echo "hash_tree_root: ", await ns.get_deposit_root().call()
       await web3.close()
 
-    waitFor test()
+    try:
+      waitFor test()
+    except CatchableError as err:
+      echo "Failed to process deposit contract", err.msg
+      fail()
