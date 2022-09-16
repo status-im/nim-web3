@@ -16,6 +16,10 @@ template should_be_value_error(input: string, value: untyped): void =
 
 suite "Null conversion":
   test "passing nully values to normal convertors":
+
+    ## Covers the converters which can be found in web3/conversions.nim
+    ## Ensure that when passing a nully value they respond with a ValueError
+
     var resAddress: Address
     var resDynamicBytes: DynamicBytes[32]
     var resFixedBytes: FixedBytes[5]
@@ -56,6 +60,12 @@ suite "Null conversion":
     should_be_value_error("0x", resUInt256Ref)
 
   test "passing nully values to specific convertors":
+
+    ## Covering the web3/engine_api_types
+    ##
+    ## NOTE: These will be transformed by the fromJson imported from
+    ##       nim-json-rpc/json_rpc/jsonmarshal
+
     let payloadAttributesV1 = """{ "timestamp": null, "prevRandao": null, "suggestedFeeRecipient": null }"""
     let forkchoiceStateV1 = """{ "status": null, "safeBlockHash": null, "finalizedBlockHash": null }"""
     let forkchoiceUpdatedResponse = """{ "payloadStatus": null, "payloadId": null }"""
@@ -72,6 +82,10 @@ suite "Null conversion":
     should_be_value_error(transitionConfigurationV1, resTransitionConfigurationV1)
 
   test "passing nully values to specific status types":
+
+    ## If different status types can have branching logic
+    ## we should cover each status type with different null ops
+
     var resPayloadStatusV1: PayloadStatusV1
 
     for status_type in PayloadExecutionStatus:
