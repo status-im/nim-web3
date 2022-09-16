@@ -21,6 +21,21 @@ You should first run `./simulator.sh` which runs `ganache-cli`
 
 This creates a local simulated Ethereum network on your local machine and the tests will use this for their E2E processing
 
+### Interaction with nimbus-eth2
+
+This repo relies heavily on parts of the `nimbus-eth2` repo.
+In order to work properly here you need to `source /nimbus-eth2/env.sh`
+
+#### Example
+
+Need to log the output of the `websocketclient.nim` responses:
+
+1. Make modifications in `/nimbus-eth2/vendor/nim-json-rpc/json-rpc/clients/websocketclient.nim`
+2. `source /nimbus-eth2/env.sh`
+3. Run tests (`nimble test`) in the web3-repo
+
+We should now see our output logged correctly to the console.
+
 ## License
 
 Licensed and distributed under either of
