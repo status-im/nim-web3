@@ -6,16 +6,10 @@ import stint
 import ../web3
 import ../web3/[conversions, ethtypes]
 
-proc `==`(x, y: Address): bool {.borrow, noSideEffect.}
-proc `==`(x, y: Quantity): bool {.borrow, noSideEffect.}
-
-suite "Deposit contract":
-  test "deposits with nully values":
-    for jsonExample in parseFile(getAppDir() & "/test_deposits.json"):
-      discard $jsonExample
-
+suite "Null conversion":
   test "passing nully values to normal convertors":
     var resAddress: Address
+    var resDynamicBytes: DynamicBytes[32]
     var resFixedBytes: FixedBytes[5]
     var resQuantity: Quantity
     var resRlpEncodedBytes: RlpEncodedBytes
@@ -23,17 +17,13 @@ suite "Deposit contract":
     var resUInt256: UInt256
     var resUInt256Ref: ref UInt256
 
-    # TODO: @tavurth
-    # var resDynamicBytes: DynamicBytes
-    # check_type("null", resDynamicBytes)
-
     template should_be_value_error(input: string, value: untyped): void =
       expect ValueError:
         fromJson(%input, "", value)
 
       # Nully values
     should_be_value_error("null", resAddress)
-    should_be_value_error("null", resAddress)
+    should_be_value_error("null", resDynamicBytes)
     should_be_value_error("null", resFixedBytes)
     should_be_value_error("null", resQuantity)
     should_be_value_error("null", resRlpEncodedBytes)
@@ -43,6 +33,7 @@ suite "Deposit contract":
 
       # Empty values
     should_be_value_error("", resAddress)
+    should_be_value_error("", resDynamicBytes)
     should_be_value_error("", resFixedBytes)
     should_be_value_error("", resQuantity)
     should_be_value_error("", resRlpEncodedBytes)
@@ -52,6 +43,7 @@ suite "Deposit contract":
 
       # Empty hex values
     should_be_value_error("0x", resAddress)
+    should_be_value_error("0x", resDynamicBytes)
     should_be_value_error("0x", resFixedBytes)
     should_be_value_error("0x", resQuantity)
     should_be_value_error("0x", resRlpEncodedBytes)

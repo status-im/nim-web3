@@ -9,6 +9,7 @@
 
 import
   test,
+  test_null_conversion,
   test_deposit_contract,
   test_ethhexstrings,
   test_logs,
