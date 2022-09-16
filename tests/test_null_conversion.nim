@@ -29,7 +29,7 @@ suite "Null conversion":
     var resUInt256: UInt256
     var resUInt256Ref: ref UInt256
 
-      # Nully values
+    # Nully values
     should_be_value_error("null", resAddress)
     should_be_value_error("null", resDynamicBytes)
     should_be_value_error("null", resFixedBytes)
@@ -39,7 +39,7 @@ suite "Null conversion":
     should_be_value_error("null", resUInt256)
     should_be_value_error("null", resUInt256Ref)
 
-      # Empty values
+    # Empty values
     should_be_value_error("", resAddress)
     should_be_value_error("", resDynamicBytes)
     should_be_value_error("", resFixedBytes)
@@ -49,7 +49,7 @@ suite "Null conversion":
     should_be_value_error("", resUInt256)
     should_be_value_error("", resUInt256Ref)
 
-      # Empty hex values
+    # Empty hex values
     should_be_value_error("0x", resAddress)
     should_be_value_error("0x", resDynamicBytes)
     should_be_value_error("0x", resFixedBytes)
