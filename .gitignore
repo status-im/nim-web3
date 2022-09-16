@@ -14,3 +14,4 @@ node_modules
 nohup.out
 hardhat.config.js
 package-lock.json
+test_deposit_nulls

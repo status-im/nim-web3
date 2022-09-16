@@ -612,6 +612,7 @@ proc call*[T](c: ContractCall[T],
   if response.len > 0:
     var res: T
     discard decode(response, 0, res)
+    echo $typeof(T), "RESPONSE:", $res
     return res
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
