@@ -3,8 +3,15 @@ import macros
 import std/json
 import pkg/unittest2
 import stint
+
+import json_rpc/jsonmarshal
+
 import ../web3
-import ../web3/[conversions, ethtypes]
+import ../web3/[conversions, ethtypes, engine_api_types]
+
+template should_be_value_error(input: string, value: untyped): void =
+  expect ValueError:
+    fromJson(%input, "", value)
 
 suite "Null conversion":
   test "passing nully values to normal convertors":
@@ -16,10 +23,6 @@ suite "Null conversion":
     var resTypedTransaction: TypedTransaction
     var resUInt256: UInt256
     var resUInt256Ref: ref UInt256
-
-    template should_be_value_error(input: string, value: untyped): void =
-      expect ValueError:
-        fromJson(%input, "", value)
 
       # Nully values
     should_be_value_error("null", resAddress)
@@ -50,3 +53,22 @@ suite "Null conversion":
     should_be_value_error("0x", resTypedTransaction)
     should_be_value_error("0x", resUInt256)
     should_be_value_error("0x", resUInt256Ref)
+
+  test "passing nully values to specific convertors":
+    let payloadAttributesV1 = """{ "timestamp": null, "prevRandao": null, "suggestedFeeRecipient": null }"""
+    let payloadStatusV1 = """{ "status": null, "latestValidHash"*: null, "validationError": null } """
+    let forkchoiceStateV1 = """{ "status": null, "safeBlockHash": null, "finalizedBlockHash": null }"""
+    let forkchoiceUpdatedResponse = """{ "payloadStatus": null, "payloadId": null }"""
+    let transitionConfigurationV1 = """{ "terminalTotalDifficulty": null, "terminalBlockHash": null, "terminalBlockNumber": hull }"""
+
+    var resPayloadAttributesV1: PayloadAttributesV1
+    var resPayloadStatusV1: PayloadStatusV1
+    var resForkchoiceStateV1: ForkchoiceStateV1
+    var resForkchoiceUpdatedResponse: ForkchoiceUpdatedResponse
+    var resTransitionConfigurationV1: TransitionConfigurationV1
+
+    should_be_value_error(payloadAttributesV1, resPayloadAttributesV1)
+    should_be_value_error(payloadStatusV1, resPayloadStatusV1)
+    should_be_value_error(forkchoiceStateV1, resForkchoiceStateV1)
+    should_be_value_error(forkchoiceUpdatedResponse, resForkchoiceUpdatedResponse)
+    should_be_value_error(transitionConfigurationV1, resTransitionConfigurationV1)
