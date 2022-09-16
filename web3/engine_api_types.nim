@@ -47,11 +47,11 @@ type
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#errors
-  engineApiParseError* = - 32700
-  engineApiInvalidRequest* = -32600
-  engineApiMethodNotFound* = -32601
-  engineApiInvalidParams* = -32602
-  engineApiInternalError* = -32603
-  engineApiServerError* = -32000
-  engineApiUnknownPayload* = -38001
-  engineApiInvalidPayloadAttributes* = -38002
+  engineApiParseError*                = -32700
+  engineApiInvalidRequest*            = -32600
+  engineApiMethodNotFound*            = -32601
+  engineApiInvalidParams*             = -32602
+  engineApiInternalError*             = -32603
+  engineApiServerError*               = -32000
+  engineApiUnknownPayload*            = -38001
+  engineApiInvalidPayloadAttributes*  = -38002

@@ -1,6 +1,7 @@
 import os
 import macros
 import std/json
+import std/strutils
 import pkg/unittest2
 import stint
 
@@ -56,19 +57,28 @@ suite "Null conversion":
 
   test "passing nully values to specific convertors":
     let payloadAttributesV1 = """{ "timestamp": null, "prevRandao": null, "suggestedFeeRecipient": null }"""
-    let payloadStatusV1 = """{ "status": null, "latestValidHash"*: null, "validationError": null } """
     let forkchoiceStateV1 = """{ "status": null, "safeBlockHash": null, "finalizedBlockHash": null }"""
     let forkchoiceUpdatedResponse = """{ "payloadStatus": null, "payloadId": null }"""
     let transitionConfigurationV1 = """{ "terminalTotalDifficulty": null, "terminalBlockHash": null, "terminalBlockNumber": hull }"""
 
     var resPayloadAttributesV1: PayloadAttributesV1
-    var resPayloadStatusV1: PayloadStatusV1
     var resForkchoiceStateV1: ForkchoiceStateV1
     var resForkchoiceUpdatedResponse: ForkchoiceUpdatedResponse
     var resTransitionConfigurationV1: TransitionConfigurationV1
 
     should_be_value_error(payloadAttributesV1, resPayloadAttributesV1)
-    should_be_value_error(payloadStatusV1, resPayloadStatusV1)
     should_be_value_error(forkchoiceStateV1, resForkchoiceStateV1)
     should_be_value_error(forkchoiceUpdatedResponse, resForkchoiceUpdatedResponse)
     should_be_value_error(transitionConfigurationV1, resTransitionConfigurationV1)
+
+  test "passing nully values to specific status types":
+    var resPayloadStatusV1: PayloadStatusV1
+
+    for status_type in PayloadExecutionStatus:
+      let payloadStatusV1 = """{
+            "status": "status_name",
+            "latestValidHash": null,
+            "validationError": null
+        }""".replace("status_name", $status_type)
+
+      should_be_value_error(payloadStatusV1, resPayloadStatusV1)
