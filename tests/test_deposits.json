@@ -1,19 +1,8 @@
 [
   {
-    "id": 1,
-    "jsonrpc": "2.0",
-    "result": [
-      "0xb1f60e27f9f24b88f51a68c625da335b859dbfbc",
-      "0x45f15be452de3a32649c72f8b4c573a687285a39",
-      "0x8fda651fee3c4bc1f66e5ec9902e385247df5fdf",
-      "0x376084bf24d2a8e4a7f9371804cb19c31c411af6",
-      "0xa0093d176df92b117a7ce0255f209a11813db1e4",
-      "0x911feb852d494e6ee400f1063539a90654c5a173",
-      "0xd70b220c376e5e576164b1e09a1ba3edf0e8ad73",
-      "0x33d19494cb45062c3c30b1ec5770fcfbeca225dc",
-      "0x9be80659b056f127fe19876b06c68d3f50b809b7",
-      "0xaf34bcaf18841038654cd382f6209ec654622944"
-    ]
+    "id": null,
+    "jsonrpc": null,
+    "result": null
   },
   {
     "id": 5,
