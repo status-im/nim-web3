@@ -1,0 +1,48 @@
+[
+  {
+    "id": 1,
+    "jsonrpc": "2.0",
+    "result": [
+      "0xb1f60e27f9f24b88f51a68c625da335b859dbfbc",
+      "0x45f15be452de3a32649c72f8b4c573a687285a39",
+      "0x8fda651fee3c4bc1f66e5ec9902e385247df5fdf",
+      "0x376084bf24d2a8e4a7f9371804cb19c31c411af6",
+      "0xa0093d176df92b117a7ce0255f209a11813db1e4",
+      "0x911feb852d494e6ee400f1063539a90654c5a173",
+      "0xd70b220c376e5e576164b1e09a1ba3edf0e8ad73",
+      "0x33d19494cb45062c3c30b1ec5770fcfbeca225dc",
+      "0x9be80659b056f127fe19876b06c68d3f50b809b7",
+      "0xaf34bcaf18841038654cd382f6209ec654622944"
+    ]
+  },
+  {
+    "id": 5,
+    "jsonrpc": "2.0",
+    "result": {
+      "transactionHash": "0x514f4ae54ec35438f38e5573416e0b7f69349cd7168d50a0b5666cef4b70641f",
+      "transactionIndex": "0x0",
+      "blockHash": "0xa4c5c9d1906b0758ac490e63e1f8fa4415d0afca85cc1084a1b79d43254e7cae",
+      "blockNumber": "0x38",
+      "from": "0xb1f60e27f9f24b88f51a68c625da335b859dbfbc",
+      "to": null,
+      "gasUsed": "0x20acc4",
+      "cumulativeGasUsed": "0x20acc4",
+      "contractAddress": "0xa4d4495c337f13c1a1334709e2dd29381d91542c",
+      "logs": [],
+      "status": "0x1",
+      "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  {
+    "id": 8,
+    "jsonrpc": "2.0",
+    "error": {
+      "message": "sender doesn't have enough funds to send tx. The upfront cost is: 32060000000000000000 and the sender's account only has: 25821553620000000000",
+      "code": -32000,
+      "data": {
+        "stack": "Error: sender doesn't have enough funds to send tx. The upfront cost is: 32060000000000000000 and the sender's account only has: 25821553620000000000\n    at t.<anonymous> (/Users/will/.nvm/versions/node/v12.22.7/lib/node_modules/ganache-cli/build/ganache-core.node.cli.js:55:2008456)\n    at /Users/will/.nvm/versions/node/v12.22.7/lib/node_modules/ganache-cli/build/ganache-core.node.cli.js:55:2007756\n    at Object.next (/Users/will/.nvm/versions/node/v12.22.7/lib/node_modules/ganache-cli/build/ganache-core.node.cli.js:55:2007861)\n    at c (/Users/will/.nvm/versions/node/v12.22.7/lib/node_modules/ganache-cli/build/ganache-core.node.cli.js:55:2006575)\n    at runMicrotasks (<anonymous>)\n    at processTicksAndRejections (internal/process/task_queues.js:97:5)",
+        "name": "Error"
+      }
+    }
+  }
+]
