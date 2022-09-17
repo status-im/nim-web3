@@ -15,20 +15,19 @@ template should_be_value_error(input: string, value: untyped): void =
     fromJson(%input, "", value)
 
 suite "Null conversion":
-  test "passing nully values to normal convertors":
+  var resAddress: Address
+  var resDynamicBytes: DynamicBytes[32]
+  var resFixedBytes: FixedBytes[5]
+  var resQuantity: Quantity
+  var resRlpEncodedBytes: RlpEncodedBytes
+  var resTypedTransaction: TypedTransaction
+  var resUInt256: UInt256
+  var resUInt256Ref: ref UInt256
+
+  test "passing null values to normal convertors":
 
     ## Covers the converters which can be found in web3/conversions.nim
     ## Ensure that when passing a nully value they respond with a ValueError
-
-    var resAddress: Address
-    var resDynamicBytes: DynamicBytes[32]
-    var resFixedBytes: FixedBytes[5]
-    var resQuantity: Quantity
-    var resRlpEncodedBytes: RlpEncodedBytes
-    var resTypedTransaction: TypedTransaction
-    var resUInt256: UInt256
-    var resUInt256Ref: ref UInt256
-
     # Nully values
     should_be_value_error("null", resAddress)
     should_be_value_error("null", resDynamicBytes)
@@ -39,6 +38,7 @@ suite "Null conversion":
     should_be_value_error("null", resUInt256)
     should_be_value_error("null", resUInt256Ref)
 
+  test "passing empty values to normal convertors":
     # Empty values
     should_be_value_error("", resAddress)
     should_be_value_error("", resDynamicBytes)
@@ -49,6 +49,7 @@ suite "Null conversion":
     should_be_value_error("", resUInt256)
     should_be_value_error("", resUInt256Ref)
 
+  test "passing invalid hex (0x) values to normal convertors":
     # Empty hex values
     should_be_value_error("0x", resAddress)
     should_be_value_error("0x", resDynamicBytes)
@@ -59,6 +60,17 @@ suite "Null conversion":
     should_be_value_error("0x", resUInt256)
     should_be_value_error("0x", resUInt256Ref)
 
+  test "passing invalid hex (0x_) values to normal convertors":
+    # Empty hex values
+    should_be_value_error("0x_", resAddress)
+    should_be_value_error("0x_", resDynamicBytes)
+    should_be_value_error("0x_", resFixedBytes)
+    should_be_value_error("0x_", resQuantity)
+    should_be_value_error("0x_", resRlpEncodedBytes)
+    should_be_value_error("0x_", resTypedTransaction)
+    should_be_value_error("0x_", resUInt256)
+    should_be_value_error("0x_", resUInt256Ref)
+
   test "passing nully values to specific convertors":
 
     ## Covering the web3/engine_api_types
@@ -66,20 +78,24 @@ suite "Null conversion":
     ## NOTE: These will be transformed by the fromJson imported from
     ##       nim-json-rpc/json_rpc/jsonmarshal
 
-    let payloadAttributesV1 = """{ "timestamp": null, "prevRandao": null, "suggestedFeeRecipient": null }"""
-    let forkchoiceStateV1 = """{ "status": null, "safeBlockHash": null, "finalizedBlockHash": null }"""
-    let forkchoiceUpdatedResponse = """{ "payloadStatus": null, "payloadId": null }"""
-    let transitionConfigurationV1 = """{ "terminalTotalDifficulty": null, "terminalBlockHash": null, "terminalBlockNumber": hull }"""
+    let payloadAttributesV1 = """{ "timestamp": {item}, "prevRandao": {item}, "suggestedFeeRecipient": {item} }"""
+    let forkchoiceStateV1 = """{ "status": {item}, "safeBlockHash": {item}, "finalizedBlockHash": {item} }"""
+    let forkchoiceUpdatedResponse = """{ "payloadStatus": {item}, "payloadId": {item} }"""
+    let transitionConfigurationV1 = """{ "terminalTotalDifficulty": {item}, "terminalBlockHash": {item}, "terminalBlockNumber": {item} }"""
 
     var resPayloadAttributesV1: PayloadAttributesV1
     var resForkchoiceStateV1: ForkchoiceStateV1
     var resForkchoiceUpdatedResponse: ForkchoiceUpdatedResponse
     var resTransitionConfigurationV1: TransitionConfigurationV1
 
-    should_be_value_error(payloadAttributesV1, resPayloadAttributesV1)
-    should_be_value_error(forkchoiceStateV1, resForkchoiceStateV1)
-    should_be_value_error(forkchoiceUpdatedResponse, resForkchoiceUpdatedResponse)
-    should_be_value_error(transitionConfigurationV1, resTransitionConfigurationV1)
+    for item in @["null", "\"\"", "\"0x\"", "\"0x_\"", ""]:
+      template format(str: string): string =
+        str.replace("{item}", item)
+
+      should_be_value_error(payloadAttributesV1.format(), resPayloadAttributesV1)
+      should_be_value_error(forkchoiceStateV1.format(), resForkchoiceStateV1)
+      should_be_value_error(forkchoiceUpdatedResponse.format(), resForkchoiceUpdatedResponse)
+      should_be_value_error(transitionConfigurationV1.format(), resTransitionConfigurationV1)
 
   test "passing nully values to specific status types":
 
