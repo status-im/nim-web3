@@ -31,5 +31,4 @@ func encodeTransaction*(s: EthSend, pk: PrivateKey): string =
     tr.payload = hexToSeqByte(s.data)
   signTransaction(tr, pk)
   result = rlp.encode(tr).toHex
-  echo result
   return result
