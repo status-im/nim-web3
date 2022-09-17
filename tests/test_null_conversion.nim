@@ -24,11 +24,9 @@ suite "Null conversion":
   var resUInt256: UInt256
   var resUInt256Ref: ref UInt256
 
+  ## Covers the converters which can be found in web3/conversions.nim
+  ## Ensure that when passing a nully value they respond with a ValueError
   test "passing null values to normal convertors":
-
-    ## Covers the converters which can be found in web3/conversions.nim
-    ## Ensure that when passing a nully value they respond with a ValueError
-    # Nully values
     should_be_value_error("null", resAddress)
     should_be_value_error("null", resDynamicBytes)
     should_be_value_error("null", resFixedBytes)
@@ -39,7 +37,6 @@ suite "Null conversion":
     should_be_value_error("null", resUInt256Ref)
 
   test "passing empty values to normal convertors":
-    # Empty values
     should_be_value_error("", resAddress)
     should_be_value_error("", resDynamicBytes)
     should_be_value_error("", resFixedBytes)
@@ -50,7 +47,6 @@ suite "Null conversion":
     should_be_value_error("", resUInt256Ref)
 
   test "passing invalid hex (0x) values to normal convertors":
-    # Empty hex values
     should_be_value_error("0x", resAddress)
     should_be_value_error("0x", resDynamicBytes)
     should_be_value_error("0x", resFixedBytes)
@@ -60,8 +56,7 @@ suite "Null conversion":
     should_be_value_error("0x", resUInt256)
     should_be_value_error("0x", resUInt256Ref)
 
-  test "passing invalid hex (0x_) values to normal convertors":
-    # Empty hex values
+  test "passing malformed hex (0x_) values to normal convertors":
     should_be_value_error("0x_", resAddress)
     should_be_value_error("0x_", resDynamicBytes)
     should_be_value_error("0x_", resFixedBytes)
@@ -71,12 +66,11 @@ suite "Null conversion":
     should_be_value_error("0x_", resUInt256)
     should_be_value_error("0x_", resUInt256Ref)
 
+  ## Covering the web3/engine_api_types
+  ##
+  ## NOTE: These will be transformed by the fromJson imported from
+  ##       nim-json-rpc/json_rpc/jsonmarshal
   test "passing nully values to specific convertors":
-
-    ## Covering the web3/engine_api_types
-    ##
-    ## NOTE: These will be transformed by the fromJson imported from
-    ##       nim-json-rpc/json_rpc/jsonmarshal
 
     let payloadAttributesV1 = """{ "timestamp": {item}, "prevRandao": {item}, "suggestedFeeRecipient": {item} }"""
     let forkchoiceStateV1 = """{ "status": {item}, "safeBlockHash": {item}, "finalizedBlockHash": {item} }"""
@@ -97,10 +91,10 @@ suite "Null conversion":
       should_be_value_error(forkchoiceUpdatedResponse.format(), resForkchoiceUpdatedResponse)
       should_be_value_error(transitionConfigurationV1.format(), resTransitionConfigurationV1)
 
-  test "passing nully values to specific status types":
 
-    ## If different status types can have branching logic
-    ## we should cover each status type with different null ops
+  ## If different status types can have branching logic
+  ## we should cover each status type with different null ops
+  test "passing nully values to specific status types":
 
     var resPayloadStatusV1: PayloadStatusV1
 
