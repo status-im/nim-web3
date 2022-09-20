@@ -1,9 +1,17 @@
 suite("Missing APIs")
-  test("eth_blockNumber/simple-test"):
+  test("eth_feeHistory/fee-history"):
     let json = """{
-        "id": 1,
+        "id": 31,
         "jsonrpc": "2.0",
-        "method": "eth_blockNumber"
+        "method": "eth_feeHistory",
+        "params": [
+            "0x1",
+            "0x2",
+            [
+                95,
+                99
+            ]
+        ]
     }"""
 
   test("eth_createAccessList/create-al-simple-contract"):
@@ -145,20 +153,5 @@ suite("Missing APIs")
         "method": "debug_getRawReceipts",
         "params": [
             "2"
-        ]
-    }"""
-
-  test("eth_feeHistory/fee-history"):
-    let json = """{
-        "id": 31,
-        "jsonrpc": "2.0",
-        "method": "eth_feeHistory",
-        "params": [
-            "0x1",
-            "0x2",
-            [
-                95,
-                99
-            ]
         ]
     }"""

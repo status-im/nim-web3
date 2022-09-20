@@ -1,4 +1,11 @@
 suite "Test all Ethereum execution APIs":
+  test("eth_blockNumber/simple-test"):
+    let json = """{
+        "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_blockNumber"
+    }"""
+
   test("eth_getTransactionReceipt/get-legacy-receipt"):
     let json = """{
         "id": 26,
