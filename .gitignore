@@ -14,4 +14,7 @@ node_modules
 nohup.out
 hardhat.config.js
 package-lock.json
+
+# Individual test executables
 test_null_conversion
+test_execution_apis

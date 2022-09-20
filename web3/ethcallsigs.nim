@@ -19,8 +19,8 @@ proc eth_blockNumber(): Quantity
 proc eth_getBalance(data: Address, blockId: BlockIdentifier): UInt256
 proc eth_getStorageAt(data: Address, quantity: int, blockId: BlockIdentifier): seq[byte]
 proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
-proc eth_getBlockTransactionCountByHash(data: BlockHash)
-proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier)
+proc eth_getBlockTransactionCountByHash(data: BlockHash): Quantity
+proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
 proc eth_getUncleCountByBlockHash(data: BlockHash)
 proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier)
 proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
