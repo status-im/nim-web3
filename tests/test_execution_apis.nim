@@ -180,14 +180,6 @@ suite "Test all Ethereum execution APIs":
         ]
     }""")
 
-  # TODO: @tavurth
-  # test("eth_syncing/check-syncing"):
-  #   should_pass[JsonNode]("""{
-  #       "id": 30,
-  #       "jsonrpc": "2.0",
-  #       "method": "eth_syncing"
-  #   }""")
-
   test("eth_getBlockTransactionCountByNumber/get-genesis"):
     should_pass[Quantity]("""{
         "id": 18,
@@ -286,3 +278,68 @@ suite "Test all Ethereum execution APIs":
         ]
     }""")
 
+  # TODO: @tavurth
+  # test("eth_syncing/check-syncing"):
+  #   should_pass[JsonNode]("""{
+  #       "id": 30,
+  #       "jsonrpc": "2.0",
+  #       "method": "eth_syncing"
+  #   }""")
+
+# suite("Currently missing APIs")
+#   test("eth_feeHistory/fee-history"):
+#     let json = """{
+#         "id": 31,
+#         "jsonrpc": "2.0",
+#         "method": "eth_feeHistory",
+#         "params": [
+#             "0x1",
+#             "0x2",
+#             [
+#                 95,
+#                 99
+#             ]
+#         ]
+#     }"""
+
+#   test("eth_createAccessList/create-al-simple-contract"):
+#     let json = """{
+#         "id": 16,
+#         "jsonrpc": "2.0",
+#         "method": "eth_createAccessList",
+#         "params": [
+#             {
+#                 "from": "0x658bdf435d810c91414ec09147daa6db62406379",
+#                 "to": "0xaa00000000000000000000000000000000000000"
+#             },
+#             "latest"
+#         ]
+#     }"""
+
+#   test("eth_createAccessList/create-al-simple-transfer"):
+#     let json = """{
+#         "id": 15,
+#         "jsonrpc": "2.0",
+#         "method": "eth_createAccessList",
+#         "params": [
+#             {
+#                 "from": "0x658bdf435d810c91414ec09147daa6db62406379",
+#                 "to": "0x0100000000000000000000000000000000000000"
+#             },
+#             "latest"
+#         ]
+#     }"""
+
+#   test("eth_createAccessList/create-al-multiple-reads"):
+#     let json = """{
+#         "id": 17,
+#         "jsonrpc": "2.0",
+#         "method": "eth_createAccessList",
+#         "params": [
+#             {
+#                 "from": "0x658bdf435d810c91414ec09147daa6db62406379",
+#                 "to": "0xbb00000000000000000000000000000000000000"
+#             },
+#             "latest"
+#         ]
+#     }"""

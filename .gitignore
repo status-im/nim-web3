@@ -18,3 +18,4 @@ package-lock.json
 # Individual test executables
 test_null_conversion
 test_execution_apis
+test_execution_debug_apis
