@@ -108,8 +108,7 @@ type
     gasLimit*: Quantity           # the maximum gas allowed in this block.
     gasUsed*: Quantity            # the total used gas by all transactions in this block.
     timestamp*: Quantity          # the unix timestamp for when the block was collated.
-    when not defined(gnosisChainBinary):
-      nonce*: Option[FixedBytes[8]] # hash of the generated proof-of-work. null when its pending block.
+    nonce*: Option[FixedBytes[8]] # hash of the generated proof-of-work. null when its pending block.
     size*: Quantity               # integer the size of this block in bytes.
     totalDifficulty*: UInt256     # integer of the total difficulty of the chain until this block.
     transactions*: seq[TxHash]    # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
