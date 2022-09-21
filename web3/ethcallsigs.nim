@@ -49,7 +49,6 @@ proc eth_getFilterChanges(filterId: string): JsonNode
 proc eth_getFilterLogs(filterId: string): JsonNode
 proc eth_getLogs(filterOptions: FilterOptions): seq[LogObject]
 proc eth_getLogs(filterOptions: JsonNode): JsonNode
-proc eth_chainId(): Quantity
 
 proc eth_getWork(): seq[UInt256]
 proc eth_submitWork(nonce: int64, powHash: Uint256, mixDigest: Uint256): bool
@@ -57,11 +56,6 @@ proc eth_submitHashrate(hashRate: UInt256, id: Uint256): bool
 proc eth_subscribe(name: string, options: JsonNode): string
 proc eth_subscribe(name: string): string
 proc eth_unsubscribe(id: string)
-
-proc eth_getProof(
-  address: Address,
-  slots: seq[UInt256],
-  blockId: BlockIdentifier): ProofResponse
 
 proc shh_post(): string
 proc shh_version(message: WhisperPost): bool

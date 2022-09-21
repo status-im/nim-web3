@@ -1,9 +1,6 @@
 import
-  std/[options, hashes, typetraits],
+  options, json, hashes, typetraits,
   stint, stew/byteutils
-
-export
-  hashes, options
 
 type
   SyncObject* = object
@@ -22,8 +19,6 @@ type
   BlockNumber* = uint64
   BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
   Nonce* = int
-  CodeHash* = FixedBytes[32]
-  StorageHash* = FixedBytes[32]
 
   BlockIdentifierKind* = enum
     bidNumber
@@ -46,6 +41,7 @@ type
     value*: Option[UInt256]          # (optional) integer of the value sent with this transaction.
     data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
     nonce*: Option[Nonce]        # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
+    chainId*: int
 
   #EthSend* = object
   #  source*: Address     # the address the transaction is send from.
@@ -208,7 +204,7 @@ type
 
   TypedTransaction* = distinct seq[byte]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#executionpayloadv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.8/src/engine/specification.md#executionpayloadv1
   ExecutionPayloadV1* = object
     parentHash*: BlockHash
     feeRecipient*: Address
@@ -225,29 +221,13 @@ type
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
 
-  RlpEncodedBytes* = distinct seq[byte]
-
-  StorageProof* = object
-    key*: UInt256
-    value*: UInt256
-    proof*: seq[RlpEncodedBytes]
-
-  ProofResponse* = object
-    address*: Address
-    accountProof*: seq[RlpEncodedBytes]
-    balance*: UInt256
-    codeHash*: CodeHash
-    nonce*: Quantity
-    storageHash*: StorageHash
-    storageProof*: seq[StorageProof]
-
 template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
 
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
   distinctBase(a) == distinctBase(b)
 
-func `==`*(a, b: Address): bool {.inline.} =
+proc `==`*(a, b: Address): bool {.inline.} =
   array[20, byte](a) == array[20, byte](b)
 
 func blockId*(n: BlockNumber): RtBlockIdentifier =
@@ -280,7 +260,7 @@ template skip0xPrefix(hexStr: string): int =
   if hexStr.len > 1 and hexStr[0] == '0' and hexStr[1] in {'x', 'X'}: 2
   else: 0
 
-func strip0xPrefix*(s: string): string =
+proc strip0xPrefix*(s: string): string =
   let prefixLen = skip0xPrefix(s)
   if prefixLen != 0:
     s[prefixLen .. ^1]
@@ -302,7 +282,7 @@ func fromHex*[minLen, maxLen](T: type DynamicBytes[minLen, maxLen], hexStr: stri
 template fromHex*[N](T: type FixedBytes[N], hexStr: string): T =
   T fromHex(distinctBase(T), hexStr)
 
-func toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
+proc toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
   copyMem(addr result[0], unsafeAddr distinctBase(data)[0], N)
 
 template bytes*(data: DynamicBytes): seq[byte] =

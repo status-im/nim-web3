@@ -173,7 +173,7 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
 
 proc unknownType() = discard # Used for informative errors
 
-template typeSignature(T: typedesc): string =
+proc typeSignature(T: typedesc): string =
   when T is string:
     "string"
   elif T is DynamicBytes:
@@ -185,9 +185,18 @@ template typeSignature(T: typedesc): string =
   elif T is Address:
     "address"
   elif T is Bool:
-    "bool" 
+    "bool"
   elif T is openArray[Address]:
     "address[]"
+  elif T is object or T is tuple:
+    var res = "("
+    for v in fields(default(T)):
+      res.add(typeSignature(typeof(v)))
+      res.add ","
+    res[^1] = ')'
+    res
+  elif T is seq:
+    typeSignature(typeof(block: (for ai in default(T): ai))) & "[]"
   else:
     unknownType(T)
 

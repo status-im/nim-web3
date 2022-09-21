@@ -23,10 +23,6 @@ func encode*[bits: static[int]](x: StInt[bits]): EncodeResult =
       '0'.repeat((256 - bits) div 4) & x.dumpHex
   )
 
-func decode*(input: string, offset: int, to: var string): int =
-  to = input
-  to.len
-
 func decode*(input: string, offset: int, to: var StUint): int =
   let meaningfulLen = to.bits div 8 * 2
   to = type(to).fromHex(input[offset .. offset + meaningfulLen - 1])
@@ -156,11 +152,11 @@ macro makeTypeEnum(): untyped =
 
 makeTypeEnum()
 
-func parse*(T: type Bool, val: bool): T =
+proc parse*(T: type Bool, val: bool): T =
   let i = if val: 1 else: 0
   T i.i256
 
-func `==`*(a: Bool, b: Bool): bool =
+proc `==`*(a: Bool, b: Bool): bool =
   Int256(a) == Int256(b)
 
 func encode*(x: Bool): EncodeResult = encode(Int256(x))
@@ -177,6 +173,18 @@ func decode*(input: string, offset: int, obj: var object): int =
 type
   Encodable = concept x
     encode(x) is EncodeResult
+
+func encode*(x: tuple): EncodeResult =
+  result.dynamic = false
+  for i in x.fields:
+    let encoded = encode(i)
+    result.data &= encoded.data
+
+func encode*(x: object): EncodeResult =
+  result.dynamic = false
+  for i in x.fields:
+    let encoded = encode(i)
+    result.data &= encoded.data
 
 func encode*(x: seq[Encodable]): EncodeResult =
   result.dynamic = true
@@ -198,13 +206,11 @@ func decode*[T](input: string, offset: int, to: var seq[T]): int =
   var x = input[64..127]
   var count: StUint[256] 
   discard decode(x, 0, count)
-  const size = sizeOf(T)
   for i in 0..count.toInt-1:
     var t:T
     x = input[128+i*64 .. 128+(i+1)*64-1]
     discard decode(x,0, t)
     to.add t
-
 
 func encode*(x: openArray[Encodable]): EncodeResult =
   result.dynamic = false

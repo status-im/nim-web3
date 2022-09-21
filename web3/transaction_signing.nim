@@ -3,7 +3,7 @@ import
   ethtypes, stew/byteutils, stint,
   eth/[common, keys, rlp], eth/common/transaction
 
-func signTransaction(tr: var Transaction, pk: PrivateKey) =
+proc signTransaction(tr: var Transaction, pk: PrivateKey) =
   let h = tr.txHashNoSignature
   let s = sign(pk, SkMessage(h.data))
 
@@ -13,9 +13,9 @@ func signTransaction(tr: var Transaction, pk: PrivateKey) =
   tr.R = fromBytesBE(UInt256, r.toOpenArray(0, 31))
   tr.S = fromBytesBE(UInt256, r.toOpenArray(32, 63))
 
-  tr.V = int64(v) + 27 # TODO! Complete this
+  tr.V = int64(v) + 27 # TODO! Complete this +
 
-func encodeTransaction*(s: EthSend, pk: PrivateKey): string =
+proc encodeTransaction*(s: EthSend, pk: PrivateKey): string =
   var tr = Transaction(txType: TxLegacy)
   tr.gasLimit = GasInt(s.gas.get.uint64)
   tr.gasPrice = s.gasPrice.get
@@ -29,6 +29,9 @@ func encodeTransaction*(s: EthSend, pk: PrivateKey): string =
   # All the encodings should be done into seq[byte], not a hex string.
   if s.data.len != 0:
     tr.payload = hexToSeqByte(s.data)
+  tr.chainId = ChainId(56)
   signTransaction(tr, pk)
+
   result = rlp.encode(tr).toHex
+
   return result
