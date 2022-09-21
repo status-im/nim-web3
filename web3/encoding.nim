@@ -23,6 +23,10 @@ func encode*[bits: static[int]](x: StInt[bits]): EncodeResult =
       '0'.repeat((256 - bits) div 4) & x.dumpHex
   )
 
+func decode*(input: string, offset: int, to: var string): int =
+  to = input
+  to.len
+  
 func decode*(input: string, offset: int, to: var StUint): int =
   let meaningfulLen = to.bits div 8 * 2
   to = type(to).fromHex(input[offset .. offset + meaningfulLen - 1])
