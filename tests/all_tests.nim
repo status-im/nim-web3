@@ -13,4 +13,5 @@ import
   test_ethhexstrings,
   test_logs,
   test_quantity,
-  test_signed_tx
+  test_signed_tx,
+  test_abi

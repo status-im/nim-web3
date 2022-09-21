@@ -65,6 +65,9 @@ func encodeDynamic(v: openArray[byte]): EncodeResult =
 func encode*(x: DynamicBytes): EncodeResult {.inline.} =
   encodeDynamic(distinctBase x)
 
+func encode*(x: string): EncodeResult {.inline.} =
+  encodeDynamic(toOpenArrayByte(x, 0, x.high))
+
 func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline.} =
   var dataOffset, dataLen: UInt256
   result = decode(input, offset, dataOffset)
