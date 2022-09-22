@@ -1,5 +1,5 @@
 import
-  std/[typetraits, strutils, macros, math]
+  std/[typetraits, strutils, macros, math, sequtils]
 
 import
   stint, stew/byteutils, ./ethtypes
@@ -171,8 +171,9 @@ func decode*(input: string, offset: int, to: var Bool): int =
 
 func decode*(input: string, offset: int, obj: var object): int =
   var offset = offset
-  for field in fields(obj):
-    offset += decode(input, offset, field)
+  for v in fields(obj):
+    offset += decode(input, offset, v)
+  debugEcho " offset: ",offset, " obj: ", obj
 
 type
   Encodable = concept x
@@ -207,13 +208,15 @@ func encode*(x: seq[Encodable]): EncodeResult =
   result.data &= data
 
 func decode*[T](input: string, offset: int, to: var seq[T]): int =
-  var x = input[64..127]
-  var count: StUint[256] 
-  discard decode(x, 0, count)
+  var count = Uint256.fromHex(input[64..127])
+  var fields = 0
+  when T is object:
+    for v in default(T).fields: fields.inc
+  else:
+    fields = 1
   for i in 0..count.toInt-1:
     var t:T
-    x = input[128+i*64 .. 128+(i+1)*64-1]
-    discard decode(x,0, t)
+    discard decode(input[128+i*fields*64 .. 127+(i+1)*fields*64],0, t)
     to.add t
 
 func encode*(x: openArray[Encodable]): EncodeResult =
