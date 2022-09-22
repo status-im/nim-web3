@@ -173,7 +173,6 @@ func decode*(input: string, offset: int, obj: var object): int =
   var offset = offset
   for v in fields(obj):
     offset += decode(input, offset, v)
-  debugEcho " offset: ",offset, " obj: ", obj
 
 type
   Encodable = concept x
