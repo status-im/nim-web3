@@ -65,10 +65,7 @@ func bytesFromJson(n: JsonNode, argName: string, result: var openArray[byte]) =
   if hexStr.len != result.len * 2 + 2: # including "0x"
     raise newException(ValueError, "Parameter \"" & argName & "\" value wrong length: " & $hexStr.len)
 
-  try:
-    hexToByteArray(hexStr, result)
-  except AssertionError as e:
-    raise newException(ValueError, "Parameter \"" & argName & "\" failed conversion")
+  hexToByteArray(hexStr, result)
 
 func fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N])
     {.inline.} =
