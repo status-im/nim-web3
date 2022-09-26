@@ -97,8 +97,9 @@ func fromJson*(n: JsonNode, argName: string, result: var TypedTransaction)
 func fromJson*(n: JsonNode, argName: string, result: var RlpEncodedBytes)
     {.inline.} =
   let hexStrLen = n.getStr().len
+
+  # "0x" prefix
   if hexStrLen < 2:
-    # "0x" prefix
     raise newException(ValueError, "Parameter \"" & argName & "\" value too short:" & $hexStrLen)
   if hexStrLen mod 2 != 0:
     # Spare nibble
