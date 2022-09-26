@@ -78,7 +78,7 @@ proc shh_getMessages(id: int): seq[WhisperMessage]
 proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): UInt256
 proc eth_feeHistory(paramA: string, paramB: string, paramC: seq[string]): UInt256
 
-proc debug_getRawBlock(paramA: string)
-proc debug_getRawHeader(paramA: string)
-proc debug_getRawReceipts(paramA: string)
-proc debug_getRawTransaction(paramA: string)
+proc debug_getRawBlock(address: string)
+proc debug_getRawHeader(address: string)
+proc debug_getRawReceipts(address: string)
+proc debug_getRawTransaction(address: string)

@@ -21,6 +21,7 @@ depositcontract
 test
 test_deposit_contract
 test_ethhexstrings
+test_execution_api
 test_logs
 test_null
 test_null_conversion
