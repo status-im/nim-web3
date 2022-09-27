@@ -1,14 +1,17 @@
-import os
 import macros
-import system/io
-import strutils
+import os
 import pkg/unittest2
-import ../web3
-import json_rpc/rpcclient
-import chronos, options, json, stint
-import test_utils
-
 import random
+import strutils
+import system/io
+import test_utils
+import chronos, options, json, stint
+
+import json_rpc/rpcclient
+
+import ../web3
+import ../web3/ethtypes
+
 
 type TestData = tuple
   file: string
@@ -30,32 +33,35 @@ proc extract_test(filename: string): TestData =
 proc extract_tests(): seq[TestData] =
   var to_return: seq[TestData] = @[]
 
-  for filename in walkDirRec("./execution-apis/tests"):
+  for filename in walkDirRec(getCurrentDir() & "/tests/execution-apis/tests"):
     if filename.endsWith(".io"):
       to_return.add(extract_test(filename))
 
   return to_return
 
-func getInputStr(item: TestData, index: int): string =
-  return item.input["params"][index].getStr()
+func getParam(item: TestData, index: int): JsonNode =
+  return item.input["params"][index]
+
+func getParamStr(item: TestData, index: int): string =
+  return item.getParam(index).getStr()
 
 ##
 ## Start of our test callers
 ##
 proc test_debug_getRawBlock(web3: Web3, item: TestData): Future[bool] {.async.} =
-  let result = await web3.provider.debug_getRawBlock(item.getInputStr(0))
+  let result = await web3.provider.debug_getRawBlock(item.getParamStr(0))
   return false
 
 proc test_debug_getRawHeader(web3: Web3, item: TestData): Future[bool] {.async.} =
-  let result = await web3.provider.debug_getRawHeader(item.getInputStr(0))
+  let result = await web3.provider.debug_getRawHeader(item.getParamStr(0))
   return false
 
 proc test_debug_getRawReceipts(web3: Web3, item: TestData): Future[bool] {.async.} =
-  let result = await web3.provider.debug_getRawReceipts(item.getInputStr(0))
+  let result = await web3.provider.debug_getRawReceipts(item.getParamStr(0))
   return true
 
 proc test_debug_getRawTransaction(web3: Web3, item: TestData): Future[bool] {.async.} =
-  let result = await web3.provider.debug_getRawTransaction(item.getInputStr(0))
+  let result = await web3.provider.debug_getRawTransaction(item.getParamStr(0))
   return true
 
 proc test_eth_accounts(web3: Web3, item: TestData): Future[bool] {.async.} =
@@ -67,7 +73,12 @@ proc test_eth_blockNumber(web3: Web3, item: TestData): Future[bool] {.async.} =
   return true
 
 proc test_eth_call(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  echo item.getParam(0)
+  let result = await web3.provider.eth_call(
+      to(item.getParam(0), EthCall),
+      BlockIdentifier(item.getParamStr(1))
+  )
+  return true
 
 proc test_eth_chainId(web3: Web3, item: TestData): Future[bool] {.async.} =
   return false
@@ -98,8 +109,8 @@ proc test_eth_gasPrice(web3: Web3, item: TestData): Future[bool] {.async.} =
 
 proc test_eth_getBalance(web3: Web3, item: TestData): Future[bool] {.async.} =
   let balance = await web3.provider.eth_getBalance(
-    Address.fromHex(item.getInputStr(0)),
-    BlockIdentifier(item.getInputStr(1))
+    Address.fromHex(item.getParamStr(0)),
+    BlockIdentifier(item.getParamStr(1))
   )
 
   check(balance >= 0)
@@ -342,8 +353,12 @@ const excluded_tests = [
   "debug_getRawTransaction",
 ]
 
+let all_tests = extract_tests()
+if all_tests.len < 1:
+  raise newException(ValueError, "execution_api tests not found, did you clone?")
+
 suite "Ethereum execution api":
-  for item in extract_tests():
+  for item in all_tests:
     let input = item.input
     let method_name = input["method"].get_str()
 
