@@ -83,13 +83,13 @@ type
     stateRoot*: BlockHash
     receiptsRoot*: BlockHash
     miner*: Address
-    difficulty*: Quantity
+    difficulty*: UInt256
     extraData*: string
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     when not defined(gnosisChainBinary):
-      nonce*: Quantity
+      nonce*: FixedBytes[8]
       mixHash*: BlockHash
 
   ## A block object, or null when no block was found
@@ -97,23 +97,23 @@ type
     number*: Quantity             # the block number. null when its pending block.
     hash*: BlockHash              # hash of the block. null when its pending block.
     parentHash*: BlockHash        # hash of the parent block.
-    sha3Uncles*: UInt256          # SHA3 of the uncles data in the block.
+    sha3Uncles*: BlockHash        # SHA3 of the uncles data in the block.
     logsBloom*: FixedBytes[256]   # the bloom filter for the logs of the block. null when its pending block.
-    transactionsRoot*: UInt256    # the root of the transaction trie of the block.
-    stateRoot*: UInt256           # the root of the final state trie of the block.
-    receiptsRoot*: UInt256        # the root of the receipts trie of the block.
+    transactionsRoot*: BlockHash  # the root of the transaction trie of the block.
+    stateRoot*: BlockHash         # the root of the final state trie of the block.
+    receiptsRoot*: BlockHash      # the root of the receipts trie of the block.
     miner*: Address               # the address of the beneficiary to whom the mining rewards were given.
-    difficulty*: Quantity         # integer of the difficulty for this block.
+    difficulty*: UInt256          # integer of the difficulty for this block.
     extraData*: string            # the "extra data" field of this block.
     gasLimit*: Quantity           # the maximum gas allowed in this block.
     gasUsed*: Quantity            # the total used gas by all transactions in this block.
     timestamp*: Quantity          # the unix timestamp for when the block was collated.
-    when not defined(gnosisChainBinary):
-      nonce*: Option[Quantity]    # hash of the generated proof-of-work. null when its pending block.
+    nonce*: Option[FixedBytes[8]] # hash of the generated proof-of-work. null when its pending block.
     size*: Quantity               # integer the size of this block in bytes.
     totalDifficulty*: UInt256     # integer of the total difficulty of the chain until this block.
     transactions*: seq[TxHash]    # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[BlockHash]       # list of uncle hashes.
+    baseFeePerGas*: Option[UInt256]
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:
     hash*: TxHash                 # hash of the transaction.
