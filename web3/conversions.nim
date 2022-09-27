@@ -208,7 +208,7 @@ func `$`*(v: DynamicBytes): string {.inline.} =
 
 func `%`*(x: EthSend): JsonNode =
   result = newJObject()
-  result["from"] = %x.source
+  result["from"] = %x.`from`
   if x.to.isSome:
     result["to"] = %x.to.unsafeGet
   if x.gas.isSome:
@@ -225,8 +225,8 @@ func `%`*(x: EthSend): JsonNode =
 func `%`*(x: EthCall): JsonNode =
   result = newJObject()
   result["to"] = %x.to
-  if x.source.isSome:
-    result["source"] = %x.source.unsafeGet
+  if x.`from`.isSome:
+    result["from"] = %x.`from`.unsafeGet
   if x.gas.isSome:
     result["gas"] = %x.gas.unsafeGet
   if x.gasPrice.isSome:

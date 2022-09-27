@@ -584,7 +584,7 @@ proc send*(c: ContractCallBase,
 
     cc = EthSend(
       data: "0x" & c.data,
-      source: web3.defaultAccount,
+      `from`: web3.defaultAccount,
       to: some(c.to),
       gas: some(Quantity(gas)),
       value: some(value),
@@ -599,7 +599,7 @@ proc call*[T](c: ContractCall[T],
               blockNumber = high(uint64)): Future[T] {.async.} =
   var cc: EthCall
   cc.data = some("0x" & c.data)
-  cc.source = some(c.web3.defaultAccount)
+  cc.`from` = some(c.web3.defaultAccount)
   cc.to = c.to
   cc.gas = some(Quantity(gas))
   cc.value = some(value)

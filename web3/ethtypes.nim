@@ -39,7 +39,7 @@ type
   Quantity* = distinct uint64
 
   EthSend* = object
-    source*: Address             # the address the transaction is send from.
+    `from`*: Address             # the address the transaction is send from.
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
     gas*: Option[Quantity]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
     gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
@@ -48,7 +48,7 @@ type
     nonce*: Option[Nonce]        # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
   #EthSend* = object
-  #  source*: Address     # the address the transaction is send from.
+  #  `from`*: Address     # the address the transaction is send from.
   #  to*: Address         # (optional when creating new contract) the address the transaction is directed to.
   #  gas*: int            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
   #  gasPrice*: int       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
@@ -57,7 +57,7 @@ type
   #  nonce*: int          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
   EthCall* = object
-    source*: Option[Address]  # (optional) The address the transaction is send from.
+    `from`*: Option[Address]  # (optional) The address the transaction is send from.
     to*: Address      # The address the transaction is directed to.
     gas*: Option[Quantity]                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
     gasPrice*: Option[int]            # (optional) Integer of the gasPrice used for each paid gas.
@@ -65,7 +65,7 @@ type
     data*: Option[string]                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
 
   #EthCall* = object
-  #  source*: Address  # (optional) The address the transaction is send from.
+  #  `from`*: Address  # (optional) The address the transaction is send from.
   #  to*: Address      # The address the transaction is directed to.
   #  gas*: int                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
   #  gasPrice*: int            # (optional) Integer of the gasPrice used for each paid gas.
@@ -121,7 +121,7 @@ type
     blockHash*: BlockHash         # hash of the block where this transaction was in. null when its pending.
     blockNumber*: int64           # block number where this transaction was in. null when its pending.
     transactionIndex*: int64      # integer of the transactions index position in the block. null when its pending.
-    source*: Address              # address of the sender.
+    `from`*: Address              # address of the sender.
     to*: Address                  # address of the receiver. null when its a contract creation transaction.
     value*: int64                 # value transferred in Wei.
     gasPrice*: int64              # gas price provided by the sender in Wei.
@@ -174,8 +174,29 @@ type
                                 # (In solidity: The first topic is the hash of the signature of the event.
                                 # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
+  WhisperPost* = object
+    # The whisper post object:
+    `from`*: array[60, byte]    # (optional) the identity of the sender.
+    to*: array[60, byte]        # (optional) the identity of the receiver. When present whisper will encrypt the message so that only the receiver can decrypt it.
+    topics*: seq[UInt256]       # TODO: Correct type? list of DATA topics, for the receiver to identify messages.
+    payload*: UInt256           # TODO: Correct type - maybe string? the payload of the message.
+    priority*: int              # integer of the priority in a rang from ... (?).
+    ttl*: int                   # integer of the time to live in seconds.
+
+  WhisperMessage* = object
+    # (?) are from the RPC Wiki, indicating uncertainty in type format.
+    hash*: UInt256              # (?) the hash of the message.
+    `from`*: array[60, byte]    # the sender of the message, if a sender was specified.
+    to*: array[60, byte]        # the receiver of the message, if a receiver was specified.
+    expiry*: int                # integer of the time in seconds when this message should expire (?).
+    ttl*: int                   # integer of the time the message should float in the system in seconds (?).
+    sent*: int                  # integer of the unix timestamp when the message was sent.
+    topics*: seq[UInt256]       # list of DATA topics the message contained.
+    payload*: string            # TODO: Correct type? the payload of the message.
+    workProved*: int            # integer of the work this message required before it was send (?).
+
 #  EthSend* = object
-#    source*: Address     # the address the transaction is send from.
+#    `from`*: Address     # the address the transaction is send from.
 #    to*: Option[Address] # (optional when creating new contract) the address the transaction is directed to.
 #    gas*: Option[int]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
 #    gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.

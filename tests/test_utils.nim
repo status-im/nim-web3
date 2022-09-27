@@ -8,7 +8,7 @@ proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[ReceiptObje
   if code[1] notin {'x', 'X'}:
     code = "0x" & code
   var tr: EthSend
-  tr.source = web3.defaultAccount
+  tr.`from` = web3.defaultAccount
   tr.data = code
   tr.gas = Quantity(3000000).some
   if gasPrice != 0:
