@@ -256,8 +256,7 @@ template fromHex*(T: type Address, hexStr: string): T =
 template skip0xPrefix(hexStr: string): int =
   ## Returns the index of the first meaningful char in `hexStr` by skipping
   ## "0x" prefix
-  ## Should not skip the 0x prefix if the first 2 meaningful characters are 0b. Context: https://github.com/status-im/nim-web3/issues/63
-  if (hexStr.len > 1 and hexStr[0] == '0' and hexStr[1] in {'x', 'X'}) and not (hexStr.len > 3 and hexStr[2] == '0' and hexStr[3] in {'b', 'B'}) : 2
+  if hexStr.len > 1 and hexStr[0] == '0' and hexStr[1] in {'x', 'X'}: 2
   else: 0
 
 func strip0xPrefix*(s: string): string =

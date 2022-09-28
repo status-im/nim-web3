@@ -440,7 +440,11 @@ macro contract*(cname: untyped, body: untyped): untyped =
           if input.indexed:
             argParseBody.add quote do:
               var `argument`: `kind`
-              discard decode(strip0xPrefix(`jsonIdent`["topics"][`i`].getStr), 0, `argument`)
+              var strippedData = strip0xPrefix(`jsonIdent`["topics"][`i`].getStr)
+              # Prepending 0x since decode parses any string that starts with 0b to be binary
+              if strippedData.startsWith("0b"):
+                strippedData = "0x" & strippedData
+              discard decode(strippedData, 0, `argument`)
             i += 1
           else:
             if not offsetInited:
