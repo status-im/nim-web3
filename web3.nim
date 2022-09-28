@@ -440,7 +440,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
           if input.indexed:
             argParseBody.add quote do:
               var `argument`: `kind`
-              discard decode(strip0xPrefix(`jsonIdent`["topics"][`i`].getStr), 0, `argument`)
+              discard decode(`jsonIdent`["topics"][`i`].getStr, 0, `argument`)
             i += 1
           else:
             if not offsetInited:
