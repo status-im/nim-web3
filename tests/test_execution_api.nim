@@ -45,6 +45,25 @@ func getParam(item: TestData, index: int): JsonNode =
 func getParamStr(item: TestData, index: int): string =
   return item.getParam(index).getStr()
 
+func getParamArray(item: TestData, index: int): seq[JsonNode] =
+  return item.getParam(index).getElems()
+
+func toString(itemlist: seq[JsonNode]): seq[string] =
+  var to_return: seq[string]
+
+  for item in itemlist:
+    to_return.add(item.getStr())
+
+  return to_return
+
+func toUInt256(itemlist: seq[JsonNode]): seq[UInt256] =
+  var to_return: seq[UInt256]
+
+  for item in itemlist:
+    to_return.add(UInt256(item.getInt()))
+
+  return to_return
+
 ##
 ## Start of our test callers
 ##
@@ -73,36 +92,48 @@ proc test_eth_blockNumber(web3: Web3, item: TestData): Future[bool] {.async.} =
   return true
 
 proc test_eth_call(web3: Web3, item: TestData): Future[bool] {.async.} =
-  echo item.getParam(0)
-  let result = await web3.provider.eth_call(
-      to(item.getParam(0), EthCall),
-      BlockIdentifier(item.getParamStr(1))
-  )
-  return true
+  # echo item.getParam(0)
+  # let result = await web3.provider.eth_call(
+  #     to(item.getParam(0), EthCall),
+  #     BlockIdentifier(item.getParamStr(1))
+  # )
+  return false
 
 proc test_eth_chainId(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_chainId()
+  return true
 
 proc test_eth_coinbase(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_coinbase()
+  return true
 
 proc test_eth_compileLLL(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_compileLLL()
+  return true
 
 proc test_eth_compileSerpent(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_compileSerpent()
+  return true
 
 proc test_eth_compileSolidity(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_compileSolidarity()
+  return true
 
 proc test_eth_createAccessList(web3: Web3, item: TestData): Future[bool] {.async.} =
+  # let result = await web3.provider.eth_createAccessList()
   return false
 
 proc test_eth_estimateGas(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_compileSolidarity()
+  return true
 
 proc test_eth_feeHistory(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_feeHistory(
+    item.getParamStr(),
+    item.getParamStr(),
+    item.getParamArray().toString()
+  )
+  return true
 
 proc test_eth_gasPrice(web3: Web3, item: TestData): Future[bool] {.async.} =
   return false
@@ -128,22 +159,39 @@ proc test_eth_getBlockTransactionCountByNumber(web3: Web3, item: TestData): Futu
   return false
 
 proc test_eth_getCode(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getCode(
+      Address.fromHex(item.getParamStr(0)),
+      item.getParamArray(1).toUInt256()
+      BlockIdentifier(item.getParamStr(2))
+  )
+  return true
 
 proc test_eth_getCompilers(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getCompilers()
+  return true
 
 proc test_eth_getFilterChanges(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getCode(
+      item.getParamStr(0)
+  )
+  return true
 
 proc test_eth_getFilterLogs(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getCode(
+      item.getParamStr(0)
+  )
+  return true
 
-proc test_eth_getLogs(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+# proc test_eth_getLogs(web3: Web3, item: TestData): Future[bool] {.async.} =
+#   let result = await web3.provider.eth_getLogs()
+#   return true
 
 proc test_eth_getProof(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getCode(
+    Address.fromHex(item.getParamStr(0)),
+    BlockIdentifier(item.getParamArray(1).toString())
+  )
+  return true
 
 proc test_eth_getStorageAt(web3: Web3, item: TestData): Future[bool] {.async.} =
   return false
@@ -298,7 +346,6 @@ proc call_api(web3: Web3, item: TestData): Future[bool] {.async.} =
     of "eth_getCompilers": return await test_eth_getCompilers(web3, item)
     of "eth_getFilterChanges": return await test_eth_getFilterChanges(web3, item)
     of "eth_getFilterLogs": return await test_eth_getFilterLogs(web3, item)
-    of "eth_getLogs": return await test_eth_getLogs(web3, item)
     of "eth_getProof": return await test_eth_getProof(web3, item)
     of "eth_getStorageAt": return await test_eth_getStorageAt(web3, item)
     of "eth_getTransactionByBlockHashAndIndex": return await test_eth_getTransactionByBlockHashAndIndex(web3, item)
@@ -341,6 +388,9 @@ proc call_api(web3: Web3, item: TestData): Future[bool] {.async.} =
     of "shh_version": return await test_shh_version(web3, item)
     of "web3_clientVersion": return await test_web3_clientVersion(web3, item)
     of "web3_sha3": return await test_web3_sha3(web3, item)
+
+    # NOTE: Unused
+    # of "eth_getLogs": return await test_eth_getLogs(web3, item)
     else:
       raise newException(ValueError, "Invalid API call")
 
