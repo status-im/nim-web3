@@ -168,14 +168,16 @@ proc test_eth_getBlockByNumber(web3: Web3, item: TestData): Future[bool] {.async
   return true
 
 proc test_eth_getBlockTransactionCountByHash(web3: Web3, item: TestData): Future[bool] {.async.} =
-  let result = await web3.provider.eth_getBlockTransactionCountByHash(
-    BlockHash.fromHex(item.getParamStr(0))
-  )
+  # TODO: Add block hash
+  expect(ValueError):
+    discard await web3.provider.eth_getBlockTransactionCountByHash(
+      BlockHash.fromHex(item.getParamStr(0))
+    )
   return true
 
 proc test_eth_getBlockTransactionCountByNumber(web3: Web3, item: TestData): Future[bool] {.async.} =
   let result = await web3.provider.eth_getBlockTransactionCountByNumber(
-      BlockIdentifier(item.getParamStr(1))
+      BlockIdentifier(item.getParamStr(0))
   )
   return true
 
@@ -251,49 +253,83 @@ proc test_eth_getTransactionCount(web3: Web3, item: TestData): Future[bool] {.as
   return true
 
 proc test_eth_getTransactionReceipt(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getTransactionReceipt(
+    TxHash.fromHex(item.getParamStr(0))
+  )
+  return true
 
 proc test_eth_getUncleByBlockHashAndIndex(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getUncleByBlockHashAndIndex(
+    item.getParamInt(0).u256,
+    item.getParamInt(1),
+  )
+  return true
 
 proc test_eth_getUncleByBlockNumberAndIndex(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getUncleByBlockNumberAndIndex(
+    BlockIdentifier(item.getParamStr(0)),
+    item.getParamInt(1),
+  )
+  return true
 
 proc test_eth_getUncleCountByBlockHash(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getUncleCountByBlockHash(
+    BlockHash.fromHex(item.getParamStr(0))
+  )
+  return true
 
 proc test_eth_getUncleCountByBlockNumber(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getUncleCountByBlockNumber(
+    BlockIdentifier(item.getParamStr(0))
+  )
+  return true
 
 proc test_eth_getWork(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_getWork()
+  return true
 
 proc test_eth_hashrate(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_hashrate()
+  return true
 
 proc test_eth_mining(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_mining()
+  return true
 
 proc test_eth_newBlockFilter(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_newBlockFilter()
+  return true
 
 proc test_eth_newFilter(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_newFilter(to(item.getParam(0), FilterOptions))
+  return true
 
 proc test_eth_newPendingTransactionFilter(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_newPendingTransactionFilter()
+  return true
 
 proc test_eth_protocolVersion(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_protocolVersion()
+  return true
 
 proc test_eth_sendRawTransaction(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_sendRawTransaction(
+    item.getParamStr(0)
+  )
+  return true
 
 proc test_eth_sendTransaction(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_sendTransaction(
+    to(item.getParam(0), EthSend)
+  )
+  return true
 
 proc test_eth_sign(web3: Web3, item: TestData): Future[bool] {.async.} =
-  return false
+  let result = await web3.provider.eth_sign(
+    Address.fromHex(item.getParamStr(0)),
+    item.getParamStr(1)
+  )
+  return true
 
 proc test_eth_submitHashrate(web3: Web3, item: TestData): Future[bool] {.async.} =
   return false
