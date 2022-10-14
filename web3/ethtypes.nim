@@ -1,6 +1,9 @@
 import
-  options, json, hashes, typetraits,
+  std/[options, hashes, typetraits],
   stint, stew/byteutils
+
+export
+  hashes, options
 
 type
   SyncObject* = object
@@ -19,6 +22,8 @@ type
   BlockNumber* = uint64
   BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
   Nonce* = int
+  CodeHash* = FixedBytes[32]
+  StorageHash* = FixedBytes[32]
 
   BlockIdentifierKind* = enum
     bidNumber
@@ -41,7 +46,6 @@ type
     value*: Option[UInt256]          # (optional) integer of the value sent with this transaction.
     data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
     nonce*: Option[Nonce]        # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
-    chainId*: int
 
   #EthSend* = object
   #  source*: Address     # the address the transaction is send from.
@@ -79,13 +83,13 @@ type
     stateRoot*: BlockHash
     receiptsRoot*: BlockHash
     miner*: Address
-    difficulty*: Quantity
+    difficulty*: UInt256
     extraData*: string
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     when not defined(gnosisChainBinary):
-      nonce*: Quantity
+      nonce*: FixedBytes[8]
       mixHash*: BlockHash
 
   ## A block object, or null when no block was found
@@ -93,23 +97,23 @@ type
     number*: Quantity             # the block number. null when its pending block.
     hash*: BlockHash              # hash of the block. null when its pending block.
     parentHash*: BlockHash        # hash of the parent block.
-    sha3Uncles*: UInt256          # SHA3 of the uncles data in the block.
+    sha3Uncles*: BlockHash        # SHA3 of the uncles data in the block.
     logsBloom*: FixedBytes[256]   # the bloom filter for the logs of the block. null when its pending block.
-    transactionsRoot*: UInt256    # the root of the transaction trie of the block.
-    stateRoot*: UInt256           # the root of the final state trie of the block.
-    receiptsRoot*: UInt256        # the root of the receipts trie of the block.
+    transactionsRoot*: BlockHash  # the root of the transaction trie of the block.
+    stateRoot*: BlockHash         # the root of the final state trie of the block.
+    receiptsRoot*: BlockHash      # the root of the receipts trie of the block.
     miner*: Address               # the address of the beneficiary to whom the mining rewards were given.
-    difficulty*: Quantity         # integer of the difficulty for this block.
+    difficulty*: UInt256          # integer of the difficulty for this block.
     extraData*: string            # the "extra data" field of this block.
     gasLimit*: Quantity           # the maximum gas allowed in this block.
     gasUsed*: Quantity            # the total used gas by all transactions in this block.
     timestamp*: Quantity          # the unix timestamp for when the block was collated.
-    when not defined(gnosisChainBinary):
-      nonce*: Option[Quantity]    # hash of the generated proof-of-work. null when its pending block.
+    nonce*: Option[FixedBytes[8]] # hash of the generated proof-of-work. null when its pending block.
     size*: Quantity               # integer the size of this block in bytes.
     totalDifficulty*: UInt256     # integer of the total difficulty of the chain until this block.
     transactions*: seq[TxHash]    # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[BlockHash]       # list of uncle hashes.
+    baseFeePerGas*: Option[UInt256]
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:
     hash*: TxHash                 # hash of the transaction.
@@ -170,27 +174,6 @@ type
                                 # (In solidity: The first topic is the hash of the signature of the event.
                                 # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
-  WhisperPost* = object
-    # The whisper post object:
-    source*: array[60, byte]    # (optional) the identity of the sender.
-    to*: array[60, byte]        # (optional) the identity of the receiver. When present whisper will encrypt the message so that only the receiver can decrypt it.
-    topics*: seq[UInt256]       # TODO: Correct type? list of DATA topics, for the receiver to identify messages.
-    payload*: UInt256           # TODO: Correct type - maybe string? the payload of the message.
-    priority*: int              # integer of the priority in a rang from ... (?).
-    ttl*: int                   # integer of the time to live in seconds.
-
-  WhisperMessage* = object
-    # (?) are from the RPC Wiki, indicating uncertainty in type format.
-    hash*: UInt256              # (?) the hash of the message.
-    source*: array[60, byte]    # the sender of the message, if a sender was specified.
-    to*: array[60, byte]        # the receiver of the message, if a receiver was specified.
-    expiry*: int                # integer of the time in seconds when this message should expire (?).
-    ttl*: int                   # integer of the time the message should float in the system in seconds (?).
-    sent*: int                  # integer of the unix timestamp when the message was sent.
-    topics*: seq[UInt256]       # list of DATA topics the message contained.
-    payload*: string            # TODO: Correct type? the payload of the message.
-    workProved*: int            # integer of the work this message required before it was send (?).
-
 #  EthSend* = object
 #    source*: Address     # the address the transaction is send from.
 #    to*: Option[Address] # (optional when creating new contract) the address the transaction is directed to.
@@ -204,7 +187,7 @@ type
 
   TypedTransaction* = distinct seq[byte]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.8/src/engine/specification.md#executionpayloadv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#executionpayloadv1
   ExecutionPayloadV1* = object
     parentHash*: BlockHash
     feeRecipient*: Address
@@ -221,13 +204,29 @@ type
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
 
+  RlpEncodedBytes* = distinct seq[byte]
+
+  StorageProof* = object
+    key*: UInt256
+    value*: UInt256
+    proof*: seq[RlpEncodedBytes]
+
+  ProofResponse* = object
+    address*: Address
+    accountProof*: seq[RlpEncodedBytes]
+    balance*: UInt256
+    codeHash*: CodeHash
+    nonce*: Quantity
+    storageHash*: StorageHash
+    storageProof*: seq[StorageProof]
+
 template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
 
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
   distinctBase(a) == distinctBase(b)
 
-proc `==`*(a, b: Address): bool {.inline.} =
+func `==`*(a, b: Address): bool {.inline.} =
   array[20, byte](a) == array[20, byte](b)
 
 func blockId*(n: BlockNumber): RtBlockIdentifier =
@@ -260,7 +259,7 @@ template skip0xPrefix(hexStr: string): int =
   if hexStr.len > 1 and hexStr[0] == '0' and hexStr[1] in {'x', 'X'}: 2
   else: 0
 
-proc strip0xPrefix*(s: string): string =
+func strip0xPrefix*(s: string): string =
   let prefixLen = skip0xPrefix(s)
   if prefixLen != 0:
     s[prefixLen .. ^1]
@@ -282,7 +281,7 @@ func fromHex*[minLen, maxLen](T: type DynamicBytes[minLen, maxLen], hexStr: stri
 template fromHex*[N](T: type FixedBytes[N], hexStr: string): T =
   T fromHex(distinctBase(T), hexStr)
 
-proc toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
+func toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
   copyMem(addr result[0], unsafeAddr distinctBase(data)[0], N)
 
 template bytes*(data: DynamicBytes): seq[byte] =

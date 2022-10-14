@@ -69,17 +69,17 @@ proc newWeb3*(provider: RpcClient): Web3 =
     r.handleSubscriptionNotification(j)
 
 proc newWeb3*(
-    uri: string):
+    uri: string, getHeaders: GetJsonRpcRequestHeaders = nil):
     Future[Web3] {.async.} =
   let u = parseUri(uri)
   var provider: RpcClient
   case u.scheme
   of "http", "https":
-    let p = newRpcHttpClient()
+    let p = newRpcHttpClient(getHeaders = getHeaders)
     await p.connect(uri)
     provider = p
   of "ws", "wss":
-    let p = newRpcWebSocketClient()
+    let p = newRpcWebSocketClient(getHeaders = getHeaders)
     await p.connect(uri)
     provider = p
   else:
