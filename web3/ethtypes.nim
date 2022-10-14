@@ -24,6 +24,10 @@ type
   Nonce* = int
   CodeHash* = FixedBytes[32]
   StorageHash* = FixedBytes[32]
+  Uint* = UInt256
+  Int* = Int256
+  Bool* = distinct Int256
+
 
   BlockIdentifierKind* = enum
     bidNumber
