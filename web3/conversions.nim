@@ -31,7 +31,7 @@ template invalidQuantityPrefix(s: string): bool =
 
 func `%`*(n: Int256|UInt256): JsonNode = %("0x" & n.toHex)
 
-proc `%`*(b: Bool): JsonNode = %(parseBool($b))
+proc `%`*(b: Bool): JsonNode = %($(StInt[256](b)))
 
 # allows UInt256 to be passed as a json string
 func fromJson*(n: JsonNode, argName: string, result: var UInt256) =

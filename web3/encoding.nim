@@ -95,15 +95,6 @@ macro makeTypeEnum(): untyped =
         type
           `identUint`* = StUint[`lastpow2`]
           `identInt`* = StInt[`lastpow2`]
-  let
-    identUint = ident("Uint")
-    identInt = ident("Int")
-    identBool = ident("Bool")
-  result.add quote do:
-    type
-      `identUint`* = UInt256
-      `identInt`* = Int256
-      `identBool`* = distinct Int256
 
   for m in countup(8, 256, 8):
     let
