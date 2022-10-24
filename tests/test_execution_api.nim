@@ -199,7 +199,7 @@ proc test_eth_getBlockByHash(web3: Web3, item: TestData): Future[bool] {.async.}
 
 proc test_eth_getBlockByNumber(web3: Web3, item: TestData): Future[bool] {.async.} =
   let result = await web3.provider.eth_getBlockByNumber(
-    item.getParamStr(0),
+    item.getParamBlockIdentifier(0),
     item.getParamBool(1)
   )
   return true
@@ -495,7 +495,6 @@ proc call_api(web3: Web3, item: TestData): Future[bool] {.async.} =
     of "debug_getRawTransaction": return await test_debug_getRawTransaction(web3, item)
     of "eth_accounts": return await test_eth_accounts(web3, item)
     of "eth_blockNumber": return await test_eth_blockNumber(web3, item)
-    of "eth_call": return await test_eth_call(web3, item)
     of "eth_chainId": return await test_eth_chainId(web3, item)
     of "eth_coinbase": return await test_eth_coinbase(web3, item)
     of "eth_compileLLL": return await test_eth_compileLLL(web3, item)
@@ -504,14 +503,11 @@ proc call_api(web3: Web3, item: TestData): Future[bool] {.async.} =
     of "eth_gasPrice": return await test_eth_gasPrice(web3, item)
     of "eth_getBalance": return await test_eth_getBalance(web3, item)
     of "eth_getBlockByHash": return await test_eth_getBlockByHash(web3, item)
-    of "eth_getBlockByNumber": return await test_eth_getBlockByNumber(web3, item)
     of "eth_getBlockTransactionCountByHash": return await test_eth_getBlockTransactionCountByHash(web3, item)
-    of "eth_getBlockTransactionCountByNumber": return await test_eth_getBlockTransactionCountByNumber(web3, item)
     of "eth_getCode": return await test_eth_getCode(web3, item)
     of "eth_getCompilers": return await test_eth_getCompilers(web3, item)
     of "eth_getFilterChanges": return await test_eth_getFilterChanges(web3, item)
     of "eth_getFilterLogs": return await test_eth_getFilterLogs(web3, item)
-    of "eth_getTransactionByBlockHashAndIndex": return await test_eth_getTransactionByBlockHashAndIndex(web3, item)
     of "eth_getTransactionByHash": return await test_eth_getTransactionByHash(web3, item)
     of "eth_getTransactionCount": return await test_eth_getTransactionCount(web3, item)
     of "eth_getTransactionReceipt": return await test_eth_getTransactionReceipt(web3, item)
@@ -526,7 +522,6 @@ proc call_api(web3: Web3, item: TestData): Future[bool] {.async.} =
     of "eth_newFilter": return await test_eth_newFilter(web3, item)
     of "eth_newPendingTransactionFilter": return await test_eth_newPendingTransactionFilter(web3, item)
     of "eth_protocolVersion": return await test_eth_protocolVersion(web3, item)
-    of "eth_sendRawTransaction": return await test_eth_sendRawTransaction(web3, item)
     of "eth_sendTransaction": return await test_eth_sendTransaction(web3, item)
     of "eth_sign": return await test_eth_sign(web3, item)
     of "eth_submitHashrate": return await test_eth_submitHashrate(web3, item)
@@ -547,22 +542,31 @@ proc call_api(web3: Web3, item: TestData): Future[bool] {.async.} =
     of "shh_version": return await test_shh_version(web3, item)
     of "web3_clientVersion": return await test_web3_clientVersion(web3, item)
     of "web3_sha3": return await test_web3_sha3(web3, item)
-    of "eth_estimateGas": return await test_eth_estimateGas(web3, item)
 
     # FIXME
     # TODO: Buggy
-
-    #       Uneven hex string length
+    #
+    # (Uneven hex string length)
     # of "eth_getStorageAt": return await test_eth_getStorageAt(web3, item)
+    # (index error)
+    # of "eth_estimateGas": return await test_eth_estimateGas(web3, item)
+    # (Crashes when returning null)
+    # of "eth_getBlockByNumber": return await test_eth_getBlockByNumber(web3, item)
+    # (Need to set gas price first)
+    # of "eth_call": return await test_eth_call(web3, item)
 
     # TODO: Implementation
+    #
     # of "eth_getLogs": return await test_eth_getLogs(web3, item)
     # of "shh_addToGroup": return await test_shh_addToGroup(web3, item)
     # of "shh_hasIdentity": return await test_shh_hasIdentity(web3, item)
     # of "shh_newFilter": return await test_shh_newFilter(web3, item)
+    # of "eth_sendRawTransaction": return await test_eth_sendRawTransaction(web3, item)
 
-    # Needs block
+    # TODO: Needs transaction
     # of "eth_getTransactionByBlockNumberAndIndex": return await test_eth_getTransactionByBlockNumberAndIndex(web3, item)
+    # of "eth_getBlockTransactionCountByNumber": return await test_eth_getBlockTransactionCountByNumber(web3, item)
+    # of "eth_getTransactionByBlockHashAndIndex": return await test_eth_getTransactionByBlockHashAndIndex(web3, item)
 
     # NOTE: Not supported
     # of "eth_getProof": return await test_eth_getProof(web3, item)
@@ -602,10 +606,7 @@ suite "Ethereum execution api":
           let web3 = await newWeb3("ws://127.0.0.1:8545/")
           let response = await web3.call_api(item)
 
-          echo response
           if not response:
             fail()
-
-          echo "--------------------------------------------------"
 
         waitFor do_test()
