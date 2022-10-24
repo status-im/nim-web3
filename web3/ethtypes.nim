@@ -174,27 +174,6 @@ type
                                 # (In solidity: The first topic is the hash of the signature of the event.
                                 # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
-  WhisperPost* = object
-    # The whisper post object:
-    source*: array[60, byte]    # (optional) the identity of the sender.
-    to*: array[60, byte]        # (optional) the identity of the receiver. When present whisper will encrypt the message so that only the receiver can decrypt it.
-    topics*: seq[UInt256]       # TODO: Correct type? list of DATA topics, for the receiver to identify messages.
-    payload*: UInt256           # TODO: Correct type - maybe string? the payload of the message.
-    priority*: int              # integer of the priority in a rang from ... (?).
-    ttl*: int                   # integer of the time to live in seconds.
-
-  WhisperMessage* = object
-    # (?) are from the RPC Wiki, indicating uncertainty in type format.
-    hash*: UInt256              # (?) the hash of the message.
-    source*: array[60, byte]    # the sender of the message, if a sender was specified.
-    to*: array[60, byte]        # the receiver of the message, if a receiver was specified.
-    expiry*: int                # integer of the time in seconds when this message should expire (?).
-    ttl*: int                   # integer of the time the message should float in the system in seconds (?).
-    sent*: int                  # integer of the unix timestamp when the message was sent.
-    topics*: seq[UInt256]       # list of DATA topics the message contained.
-    payload*: string            # TODO: Correct type? the payload of the message.
-    workProved*: int            # integer of the work this message required before it was send (?).
-
 #  EthSend* = object
 #    source*: Address     # the address the transaction is send from.
 #    to*: Option[Address] # (optional when creating new contract) the address the transaction is directed to.
