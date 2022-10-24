@@ -568,7 +568,7 @@ proc call_api(web3: Web3, item: TestData): Future[bool] {.async.} =
     # of "eth_getBlockTransactionCountByNumber": return await test_eth_getBlockTransactionCountByNumber(web3, item)
     # of "eth_getTransactionByBlockHashAndIndex": return await test_eth_getTransactionByBlockHashAndIndex(web3, item)
 
-    # NOTE: Not supported
+    # NOTE: Ganache not supported
     # of "eth_getProof": return await test_eth_getProof(web3, item)
     # of "eth_feeHistory": return await test_eth_feeHistory(web3, item)
     # of "eth_createAccessList": return await test_eth_createAccessList(web3, item)
