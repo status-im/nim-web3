@@ -47,6 +47,11 @@ suite "Hex data":
       source = "0x1234"
       x = hexDataStr source
     check %x == %source
+  test "Empty data":
+    let
+      source = "0x"
+      x = hexDataStr source
+    check %x == %source
   test "Odd length":
     expect ValueError:
       let
