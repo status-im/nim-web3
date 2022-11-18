@@ -23,8 +23,7 @@ func encodeQuantity*(value: SomeUnsignedInt): string =
   result = "0x" & hValue
 
 func hasHexHeader*(value: string): bool =
-  if value != "" and value[0] == '0' and value[1] in {'x', 'X'} and value.len > 2: true
-  else: false
+  value.len >= 2 and value[0] == '0' and value[1] in {'x', 'X'}
 
 template hasHexHeader*(value: HexDataStr|HexQuantityStr): bool =
   value.string.hasHexHeader
