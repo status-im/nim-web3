@@ -13,6 +13,13 @@ type
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
 
+  # https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#payloadattributesv2
+  PayloadAttributesV2* = object
+    timestamp*: Quantity
+    prevRandao*: FixedBytes[32]
+    suggestedFeeRecipient*: Address
+    withdrawals*: seq[WithdrawalV1]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
     syncing            = "SYNCING"

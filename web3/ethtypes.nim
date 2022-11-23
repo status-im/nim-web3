@@ -187,6 +187,13 @@ type
 
   TypedTransaction* = distinct seq[byte]
 
+  # https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#withdrawalv1
+  WithdrawalV1* = object
+    index*: Quantity
+    validatorIndex*: Quantity
+    address*: Address
+    amount*: UInt256
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#executionpayloadv1
   ExecutionPayloadV1* = object
     parentHash*: BlockHash
@@ -203,6 +210,24 @@ type
     baseFeePerGas*: UInt256
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
+
+  # https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#executionpayloadv2
+  ExecutionPayloadV2* = object
+    parentHash*: BlockHash
+    feeRecipient*: Address
+    stateRoot*: BlockHash
+    receiptsRoot*: BlockHash
+    logsBloom*: FixedBytes[256]
+    prevRandao*: FixedBytes[32]
+    blockNumber*: Quantity
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    timestamp*: Quantity
+    extraData*: DynamicBytes[0, 32]
+    baseFeePerGas*: UInt256
+    blockHash*: BlockHash
+    transactions*: seq[TypedTransaction]
+    withdrawals*: seq[WithdrawalV1]
 
   RlpEncodedBytes* = distinct seq[byte]
 
