@@ -28,7 +28,7 @@ suite "Signed transactions":
 
   test "contract creation and method invocation":
     proc test() {.async.} =
-      let theRNG = newRng()
+      let theRNG = HmacDrbgContext.new()
 
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
       let accounts = await web3.provider.eth_accounts()
