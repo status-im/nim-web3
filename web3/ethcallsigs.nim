@@ -29,6 +29,7 @@ proc eth_sendTransaction(obj: EthSend): TxHash
 proc eth_sendRawTransaction(data: string): TxHash
 proc eth_call(call: EthCall, blockId: BlockIdentifier): string #UInt256
 proc eth_estimateGas(call: EthCall, blockId: BlockIdentifier): UInt256
+proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): AccessListResult
 proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
 proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
 proc eth_getTransactionByHash(data: TxHash): TransactionObject
