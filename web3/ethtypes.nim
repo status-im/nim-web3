@@ -56,6 +56,10 @@ type
   #  data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
   #  nonce*: int          # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
+
+  # TODO: Both `EthSend` and `EthCall` are super outdated, according to new spec
+  # those should be merged into one type `GenericTransaction` with a lot more fields
+  # see: https://github.com/ethereum/execution-apis/blob/main/src/schemas/transaction.yaml#L244
   EthCall* = object
     source*: Option[Address]  # (optional) The address the transaction is send from.
     to*: Address      # The address the transaction is directed to.
@@ -244,6 +248,17 @@ type
     nonce*: Quantity
     storageHash*: StorageHash
     storageProof*: seq[StorageProof]
+
+  AccessListEntry* = object
+    address*: Address
+    storageKeys*: seq[FixedBytes[32]]
+
+  AccessList* = seq[AccessListEntry]
+
+  AccessListResult* = object
+    accessList*: AccessList
+    error*: string
+    gasUsed: Quantity
 
 template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
