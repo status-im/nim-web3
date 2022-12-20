@@ -233,6 +233,10 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
+  SomeEngineApiExecutionPayload* =
+    ExecutionPayloadV1 |
+    ExecutionPayloadV2
+
   RlpEncodedBytes* = distinct seq[byte]
 
   StorageProof* = object
