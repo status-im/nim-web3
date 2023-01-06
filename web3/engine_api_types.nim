@@ -52,6 +52,14 @@ type
     terminalBlockHash*: BlockHash
     terminalBlockNumber*: Quantity
 
+  GetPayloadV2Response* = object
+    executionPayload*: ExecutionPayloadV2
+    blockValue*: Quantity
+
+  SomeGetPayloadResponse* =
+    ExecutionPayloadV1 |
+    GetPayloadV2Response
+
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#errors
   engineApiParseError* = - 32700

@@ -7,5 +7,5 @@ proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
 proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV1]): ForkchoiceUpdatedResponse
 proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV2]): ForkchoiceUpdatedResponse
 proc engine_getPayloadV1(payloadId: PayloadID): ExecutionPayloadV1
-proc engine_getPayloadV2(payloadId: PayloadID): ExecutionPayloadV2
+proc engine_getPayloadV2(payloadId: PayloadID): GetPayloadV2Response
 proc engine_exchangeTransitionConfigurationV1(transitionConfiguration: TransitionConfigurationV1): TransitionConfigurationV1

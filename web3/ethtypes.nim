@@ -233,7 +233,7 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
-  SomeEngineApiExecutionPayload* =
+  SomeExecutionPayload* =
     ExecutionPayloadV1 |
     ExecutionPayloadV2
 
@@ -265,6 +265,9 @@ type
     gasUsed: Quantity
 
 template `==`*[N](a, b: FixedBytes[N]): bool =
+  distinctBase(a) == distinctBase(b)
+
+template `==`*(a, b: Quantity): bool =
   distinctBase(a) == distinctBase(b)
 
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
@@ -329,6 +332,9 @@ func toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
   copyMem(addr result[0], unsafeAddr distinctBase(data)[0], N)
 
 template bytes*(data: DynamicBytes): seq[byte] =
+  distinctBase data
+
+template bytes*(data: FixedBytes): auto =
   distinctBase data
 
 template len*(data: DynamicBytes): int =
