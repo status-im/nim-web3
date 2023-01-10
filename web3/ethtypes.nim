@@ -38,6 +38,9 @@ type
 
   Quantity* = distinct uint64
 
+  KZGCommitment* = FixedBytes[48]
+  Blob* = FixedBytes[4096 * 32]
+
   EthSend* = object
     source*: Address             # the address the transaction is send from.
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
@@ -233,9 +236,35 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
+  # https://github.com/ethereum/execution-apis/blob/d072d080b92d26a1087337c7e2da4147a0ed0347/src/engine/experimental/blob-extension.md#executionpayloadv3
+  ExecutionPayloadV3* = object
+    parentHash*: BlockHash
+    feeRecipient*: Address
+    stateRoot*: BlockHash
+    receiptsRoot*: BlockHash
+    logsBloom*: FixedBytes[256]
+    prevRandao*: FixedBytes[32]
+    blockNumber*: Quantity
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    timestamp*: Quantity
+    extraData*: DynamicBytes[0, 32]
+    baseFeePerGas*: UInt256
+    excessDataGas*: UInt256
+    blockHash*: BlockHash
+    transactions*: seq[TypedTransaction]
+    withdrawals*: seq[WithdrawalV1]
+
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
-    ExecutionPayloadV2
+    ExecutionPayloadV2 |
+    ExecutionPayloadV3
+
+  # https://github.com/ethereum/execution-apis/blob/d072d080b92d26a1087337c7e2da4147a0ed0347/src/engine/experimental/blob-extension.md#BlobsBundleV1
+  BlobsBundleV1* = object
+    blockHash*: BlockHash
+    kzgs*: seq[KZGCommitment]
+    blobs*: seq[Blob]
 
   RlpEncodedBytes* = distinct seq[byte]
 

@@ -56,9 +56,14 @@ type
     executionPayload*: ExecutionPayloadV2
     blockValue*: Quantity
 
+  GetPayloadV3Response* = object
+    executionPayload*: ExecutionPayloadV3
+    blockValue*: Quantity
+
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
-    GetPayloadV2Response
+    GetPayloadV2Response |
+    GetPayloadV3Response
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#errors
