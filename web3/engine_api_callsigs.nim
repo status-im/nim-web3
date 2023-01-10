@@ -11,4 +11,4 @@ proc engine_getPayloadV1(payloadId: PayloadID): ExecutionPayloadV1
 proc engine_getPayloadV2(payloadId: PayloadID): GetPayloadV2Response
 proc engine_getPayloadV3(payloadId: PayloadID): GetPayloadV3Response
 proc engine_exchangeTransitionConfigurationV1(transitionConfiguration: TransitionConfigurationV1): TransitionConfigurationV1
-proc engine_getPayloadV3(payloadId: PayloadID): BlobsBundleV1
+proc engine_getBlobsBundleV1(payloadId: PayloadID): BlobsBundleV1
