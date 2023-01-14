@@ -199,7 +199,7 @@ type
     index*: Quantity
     validatorIndex*: Quantity
     address*: Address
-    amount*: UInt256
+    amount*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#executionpayloadv1
   ExecutionPayloadV1* = object
