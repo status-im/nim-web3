@@ -95,9 +95,8 @@ type
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
-    when not defined(gnosisChainBinary):
-      nonce*: FixedBytes[8]
-      mixHash*: BlockHash
+    nonce*: FixedBytes[8]
+    mixHash*: BlockHash
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
