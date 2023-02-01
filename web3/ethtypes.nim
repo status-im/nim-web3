@@ -201,14 +201,14 @@ type
 
   TypedTransaction* = distinct seq[byte]
 
-  # https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#withdrawalv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
     validatorIndex*: Quantity
     address*: Address
     amount*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#executionpayloadv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#executionpayloadv1
   ExecutionPayloadV1* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -225,7 +225,7 @@ type
     blockHash*: Hash256
     transactions*: seq[TypedTransaction]
 
-  # https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#executionpayloadv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#executionpayloadv2
   ExecutionPayloadV2* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -243,7 +243,7 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
-  # https://github.com/ethereum/execution-apis/blob/d072d080b92d26a1087337c7e2da4147a0ed0347/src/engine/experimental/blob-extension.md#executionpayloadv3
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#executionpayloadv3
   ExecutionPayloadV3* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -267,7 +267,7 @@ type
     ExecutionPayloadV2 |
     ExecutionPayloadV3
 
-  # https://github.com/ethereum/execution-apis/blob/d072d080b92d26a1087337c7e2da4147a0ed0347/src/engine/experimental/blob-extension.md#BlobsBundleV1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#BlobsBundleV1
   BlobsBundleV1* = object
     blockHash*: Hash256
     kzgs*: seq[KZGCommitment]
