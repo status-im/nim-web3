@@ -166,6 +166,12 @@ proc writeValue*(w: var JsonWriter, v: TypedTransaction) =
 proc writeValue*(w: var JsonWriter, v: RlpEncodedBytes) =
   writeHexValue w, distinctBase(v)
 
+proc writeValue*(w: var JsonWriter, v: Quantity) =
+  # TODO It's possible to avoid the memory in `encodeQuantity`
+  # here by writing a function that will write the hex output
+  # directly to the stream:
+  w.writeValue encodeQuantity(distinctBase v)
+
 proc readValue*(r: var JsonReader, T: type DynamicBytes): T =
   fromHex(T, r.readValue(string))
 
@@ -180,6 +186,12 @@ proc readValue*(r: var JsonReader, T: type TypedTransaction): T =
 
 proc readValue*(r: var JsonReader, T: type RlpEncodedBytes): T =
   T fromHex(seq[byte], r.readValue(string))
+
+proc readValue*(r: var JsonReader, T: type Quantity): T =
+  let hexStr = r.readValue(string)
+  if hexStr.invalidQuantityPrefix:
+    r.raiseUnexpectedValue("Quantity value has invalid leading 0")
+  T parseHexInt(hexStr)
 
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(v.uint64)
