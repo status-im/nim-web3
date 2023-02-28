@@ -1,6 +1,6 @@
 import
   std/[options, hashes, typetraits],
-  stint, stew/byteutils
+  stint, stew/[byteutils, results]
 
 export
   hashes, options
@@ -408,3 +408,94 @@ template len*(data: DynamicBytes): int =
 
 func `$`*[minLen, maxLen](data: DynamicBytes[minLen, maxLen]): string =
   "0x" & byteutils.toHex(distinctBase(data))
+
+
+# These conversion functions are very ugly, but at least
+# they're very straightforward and simple. If anyone has
+# a better idea, I'm all ears. (See the above comment on
+# ExecutionPayloadV1OrV2.) --Adam
+
+func toExecutionPayloadV1OrExecutionPayloadV2*(p: ExecutionPayloadV1OrV2): Result[ExecutionPayloadV1, ExecutionPayloadV2] =
+  if p.withdrawals.isNone:
+    ok(
+      ExecutionPayloadV1(
+        parentHash: p.parentHash,
+        feeRecipient: p.feeRecipient,
+        stateRoot: p.stateRoot,
+        receiptsRoot: p.receiptsRoot,
+        logsBloom: p.logsBloom,
+        prevRandao: p.prevRandao,
+        blockNumber: p.blockNumber,
+        gasLimit: p.gasLimit,
+        gasUsed: p.gasUsed,
+        timestamp: p.timestamp,
+        extraData: p.extraData,
+        baseFeePerGas: p.baseFeePerGas,
+        blockHash: p.blockHash,
+        transactions: p.transactions
+      )
+    )
+  else:
+    err(
+      ExecutionPayloadV2(
+        parentHash: p.parentHash,
+        feeRecipient: p.feeRecipient,
+        stateRoot: p.stateRoot,
+        receiptsRoot: p.receiptsRoot,
+        logsBloom: p.logsBloom,
+        prevRandao: p.prevRandao,
+        blockNumber: p.blockNumber,
+        gasLimit: p.gasLimit,
+        gasUsed: p.gasUsed,
+        timestamp: p.timestamp,
+        extraData: p.extraData,
+        baseFeePerGas: p.baseFeePerGas,
+        blockHash: p.blockHash,
+        transactions: p.transactions,
+        withdrawals: p.withdrawals.get
+      )
+    )
+
+func toExecutionPayloadV1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
+  p.toExecutionPayloadV1OrExecutionPayloadV2.get
+
+func toExecutionPayloadV2*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV2 =
+  p.toExecutionPayloadV1OrExecutionPayloadV2.error
+
+func toExecutionPayloadV1OrV2*(p: ExecutionPayloadV1): ExecutionPayloadV1OrV2 =
+  ExecutionPayloadV1OrV2(
+    parentHash: p.parentHash,
+    feeRecipient: p.feeRecipient,
+    stateRoot: p.stateRoot,
+    receiptsRoot: p.receiptsRoot,
+    logsBloom: p.logsBloom,
+    prevRandao: p.prevRandao,
+    blockNumber: p.blockNumber,
+    gasLimit: p.gasLimit,
+    gasUsed: p.gasUsed,
+    timestamp: p.timestamp,
+    extraData: p.extraData,
+    baseFeePerGas: p.baseFeePerGas,
+    blockHash: p.blockHash,
+    transactions: p.transactions,
+    withdrawals: none[seq[WithdrawalV1]]()
+  )
+
+func toExecutionPayloadV1OrV2*(p: ExecutionPayloadV2): ExecutionPayloadV1OrV2 =
+  ExecutionPayloadV1OrV2(
+    parentHash: p.parentHash,
+    feeRecipient: p.feeRecipient,
+    stateRoot: p.stateRoot,
+    receiptsRoot: p.receiptsRoot,
+    logsBloom: p.logsBloom,
+    prevRandao: p.prevRandao,
+    blockNumber: p.blockNumber,
+    gasLimit: p.gasLimit,
+    gasUsed: p.gasUsed,
+    timestamp: p.timestamp,
+    extraData: p.extraData,
+    baseFeePerGas: p.baseFeePerGas,
+    blockHash: p.blockHash,
+    transactions: p.transactions,
+    withdrawals: some(p.withdrawals)
+  )
