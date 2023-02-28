@@ -235,6 +235,36 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
+  # This is ugly, but I don't think the RPC library will handle
+  # ExecutionPayloadV1 | ExecutionPayloadV2. (Am I wrong?)
+  # Note that the spec currently says that various V2 methods
+  # (e.g. engine_newPayloadV2) need to accept *either* V1 or V2
+  # of the data structure (e.g. either ExecutionPayloadV1 or
+  # ExecutionPayloadV2); it's not like V2 of the method only
+  # needs to accept V2 of the structure. Anyway, the best way
+  # I've found to handle this is to make this structure with an
+  # Option for the withdrawals field. If you've got a better idea,
+  # please fix this. (Maybe the RPC library does handle sum types?
+  # Or maybe we can enhance it to do so?) --Adam
+  #
+  # https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md
+  ExecutionPayloadV1OrV2* = object
+    parentHash*: BlockHash
+    feeRecipient*: Address
+    stateRoot*: BlockHash
+    receiptsRoot*: BlockHash
+    logsBloom*: FixedBytes[256]
+    prevRandao*: FixedBytes[32]
+    blockNumber*: Quantity
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    timestamp*: Quantity
+    extraData*: DynamicBytes[0, 32]
+    baseFeePerGas*: UInt256
+    blockHash*: BlockHash
+    transactions*: seq[TypedTransaction]
+    withdrawals*: Option[seq[WithdrawalV1]]
+
   # https://github.com/ethereum/execution-apis/blob/d072d080b92d26a1087337c7e2da4147a0ed0347/src/engine/experimental/blob-extension.md#executionpayloadv3
   ExecutionPayloadV3* = object
     parentHash*: BlockHash
