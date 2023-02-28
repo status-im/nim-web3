@@ -7,6 +7,11 @@ export
   options, stint, ethtypes
 
 type
+  # https://github.com/ethereum/execution-apis/blob/d03c193dc317538e2a1a098030c21bacc2fd1333/src/engine/shanghai.md#executionpayloadbodyv1
+  ExecutionPayloadBodyV1* = object
+    transactions*: seq[TypedTransaction]
+    withdrawals*: seq[WithdrawalV1]
+  
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
@@ -19,6 +24,13 @@ type
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
+
+  # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
+  PayloadAttributesV1OrV2* = object
+    timestamp*: Quantity
+    prevRandao*: FixedBytes[32]
+    suggestedFeeRecipient*: Address
+    withdrawals*: Option[seq[WithdrawalV1]]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
@@ -52,8 +64,9 @@ type
     terminalBlockHash*: BlockHash
     terminalBlockNumber*: Quantity
 
+  # https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadv2
   GetPayloadV2Response* = object
-    executionPayload*: ExecutionPayloadV2
+    executionPayload*: ExecutionPayloadV1OrV2
     blockValue*: Quantity
 
   GetPayloadV3Response* = object
