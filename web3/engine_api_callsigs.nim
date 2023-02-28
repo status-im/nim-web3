@@ -1,4 +1,5 @@
-# https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#core
+# https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#methods
+# https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#methods
 
 import ethtypes, engine_api_types
 

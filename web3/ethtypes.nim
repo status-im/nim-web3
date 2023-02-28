@@ -18,7 +18,8 @@ type
 
   Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
-  BlockHash* = FixedBytes[32]
+  Hash256* = FixedBytes[32]
+  BlockHash* = Hash256
   BlockNumber* = uint64
   BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
   Nonce* = int
@@ -44,10 +45,11 @@ type
   EthSend* = object
     source*: Address             # the address the transaction is send from.
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
-    gas*: Option[Quantity]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
+    gas*: Option[Quantity]       # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
     gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
-    value*: Option[UInt256]          # (optional) integer of the value sent with this transaction.
-    data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters. For details see Ethereum Contract ABI.
+    value*: Option[UInt256]      # (optional) integer of the value sent with this transaction.
+    data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters.
+                                 # For details see Ethereum Contract ABI.
     nonce*: Option[Nonce]        # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
   #EthSend* = object
@@ -82,44 +84,49 @@ type
   ## A block header object
   BlockHeader* = ref object
     number*: Quantity
-    hash*: BlockHash
-    parentHash*: BlockHash
-    sha3Uncles*: BlockHash
+    hash*: Hash256
+    parentHash*: Hash256
+    sha3Uncles*: Hash256
     logsBloom*: FixedBytes[256]
-    transactionsRoot*: BlockHash
-    stateRoot*: BlockHash
-    receiptsRoot*: BlockHash
+    transactionsRoot*: Hash256
+    stateRoot*: Hash256
+    receiptsRoot*: Hash256
     miner*: Address
     difficulty*: UInt256
-    extraData*: string
+    extraData*: DynamicBytes[0, 32]
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     nonce*: FixedBytes[8]
-    mixHash*: BlockHash
+    mixHash*: Hash256
+    baseFeePerGas*: Option[UInt256]   # EIP-1559
+    withdrawalsRoot*: Option[Hash256] # EIP-4895
+    excessDataGas*: Option[UInt256]   # EIP-4844
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
-    number*: Quantity             # the block number. null when its pending block.
-    hash*: BlockHash              # hash of the block. null when its pending block.
-    parentHash*: BlockHash        # hash of the parent block.
-    sha3Uncles*: BlockHash        # SHA3 of the uncles data in the block.
-    logsBloom*: FixedBytes[256]   # the bloom filter for the logs of the block. null when its pending block.
-    transactionsRoot*: BlockHash  # the root of the transaction trie of the block.
-    stateRoot*: BlockHash         # the root of the final state trie of the block.
-    receiptsRoot*: BlockHash      # the root of the receipts trie of the block.
-    miner*: Address               # the address of the beneficiary to whom the mining rewards were given.
-    difficulty*: UInt256          # integer of the difficulty for this block.
-    extraData*: string            # the "extra data" field of this block.
-    gasLimit*: Quantity           # the maximum gas allowed in this block.
-    gasUsed*: Quantity            # the total used gas by all transactions in this block.
-    timestamp*: Quantity          # the unix timestamp for when the block was collated.
-    nonce*: Option[FixedBytes[8]] # hash of the generated proof-of-work. null when its pending block.
-    size*: Quantity               # integer the size of this block in bytes.
-    totalDifficulty*: UInt256     # integer of the total difficulty of the chain until this block.
-    transactions*: seq[TxHash]    # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
-    uncles*: seq[BlockHash]       # list of uncle hashes.
-    baseFeePerGas*: Option[UInt256]
+    number*: Quantity                 # the block number. null when its pending block.
+    hash*: Hash256                    # hash of the block. null when its pending block.
+    parentHash*: Hash256              # hash of the parent block.
+    sha3Uncles*: Hash256              # SHA3 of the uncles data in the block.
+    logsBloom*: FixedBytes[256]       # the bloom filter for the logs of the block. null when its pending block.
+    transactionsRoot*: Hash256        # the root of the transaction trie of the block.
+    stateRoot*: Hash256               # the root of the final state trie of the block.
+    receiptsRoot*: Hash256            # the root of the receipts trie of the block.
+    miner*: Address                   # the address of the beneficiary to whom the mining rewards were given.
+    difficulty*: UInt256              # integer of the difficulty for this block.
+    extraData*: DynamicBytes[0, 32]   # the "extra data" field of this block.
+    gasLimit*: Quantity               # the maximum gas allowed in this block.
+    gasUsed*: Quantity                # the total used gas by all transactions in this block.
+    timestamp*: Quantity              # the unix timestamp for when the block was collated.
+    nonce*: Option[FixedBytes[8]]     # hash of the generated proof-of-work. null when its pending block.
+    size*: Quantity                   # integer the size of this block in bytes.
+    totalDifficulty*: UInt256         # integer of the total difficulty of the chain until this block.
+    transactions*: seq[TxHash]        # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
+    uncles*: seq[Hash256]             # list of uncle hashes.
+    baseFeePerGas*: Option[UInt256]   # EIP-1559
+    withdrawalsRoot*: Option[Hash256] # EIP-4895
+    excessDataGas*:   Option[UInt256] # EIP-4844
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:
     hash*: TxHash                 # hash of the transaction.
@@ -137,15 +144,15 @@ type
   ReceiptKind* = enum rkRoot, rkStatus
   ReceiptObject* = object
     # A transaction receipt object, or null when no receipt was found:
-    transactionHash*: TxHash          # hash of the transaction.
-    transactionIndex*: string#int            # integer of the transactions index position in the block.
-    blockHash*: BlockHash             # hash of the block where this transaction was in.
-    blockNumber*: string#int                 # block number where this transaction was in.
-    cumulativeGasUsed*: string#int           # the total amount of gas used when this transaction was executed in the block.
-    gasUsed*: string#int                     # the amount of gas used by this specific transaction alone.
-    contractAddress*: Option[Address] # the contract address created, if the transaction was a contract creation, otherwise null.
-    logs*: seq[LogObject]                # TODO: See Wiki for details. list of log objects, which this transaction generated.
-    logsBloom*: Option[FixedBytes[256]]      # bloom filter for light clients to quickly retrieve related logs.
+    transactionHash*: TxHash            # hash of the transaction.
+    transactionIndex*: string#int       # integer of the transactions index position in the block.
+    blockHash*: BlockHash               # hash of the block where this transaction was in.
+    blockNumber*: string#int            # block number where this transaction was in.
+    cumulativeGasUsed*: string#int      # the total amount of gas used when this transaction was executed in the block.
+    gasUsed*: string#int                # the amount of gas used by this specific transaction alone.
+    contractAddress*: Option[Address]   # the contract address created, if the transaction was a contract creation, otherwise null.
+    logs*: seq[LogObject]               # TODO: See Wiki for details. list of log objects, which this transaction generated.
+    logsBloom*: Option[FixedBytes[256]] # bloom filter for light clients to quickly retrieve related logs.
     # TODO:
     #case kind*: ReceiptKind
     #of rkRoot: root*: UInt256         # post-transaction stateroot (pre Byzantium).
@@ -167,18 +174,19 @@ type
     topics*: Option[seq[string]]#Option[seq[FilterData]]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
     blockhash*: Option[BlockHash]
 
-  LogObject* = object
-    #removed*: bool              # true when the log was removed, due to a chain reorganization. false if its a valid log.
-    logIndex*: string#int              # integer of the log index position in the block. null when its pending log.
-    transactionIndex*: string#ref int  # integer of the transactions index position log was created from. null when its pending log.
-    transactionHash*: TxHash    # hash of the transactions this log was created from. null when its pending log.
-    blockHash*: BlockHash       # hash of the block where this log was in. null when its pending. null when its pending log.
-    blockNumber*: string#int64     # the block number where this log was in. null when its pending. null when its pending log.
-    address*: Address           # address from which this log originated.
-    data*: string#seq[UInt256]         # contains one or more 32 Bytes non-indexed arguments of the log.
-    topics*: seq[string]#array[4, UInt256]  # array of 0 to 4 32 Bytes DATA of indexed log arguments.
-                                # (In solidity: The first topic is the hash of the signature of the event.
-                                # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
+  LogObject* = object              # TODO: This type needs to be reviewed
+                                   #       It uses very unnatural fields types (e.g. strings for numerical properties)
+    #removed*: bool                # true when the log was removed, due to a chain reorganization. false if its a valid log.
+    logIndex*: string              # integer of the log index position in the block. null when its pending log.
+    transactionIndex*: string      # integer of the transactions index position log was created from. null when its pending log.
+    transactionHash*: TxHash       # hash of the transactions this log was created from. null when its pending log.
+    blockHash*: BlockHash          # hash of the block where this log was in. null when its pending. null when its pending log.
+    blockNumber*: string           # the block number where this log was in. null when its pending. null when its pending log.
+    address*: Address              # address from which this log originated.
+    data*: string                  # contains one or more 32 Bytes non-indexed arguments of the log.
+    topics*: seq[string]           # array of 0 to 4 32 Bytes DATA of indexed log arguments.
+                                   # (In solidity: The first topic is the hash of the signature of the event.
+                                   # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
 #  EthSend* = object
 #    source*: Address     # the address the transaction is send from.
@@ -193,19 +201,19 @@ type
 
   TypedTransaction* = distinct seq[byte]
 
-  # https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#withdrawalv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
     validatorIndex*: Quantity
     address*: Address
     amount*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#executionpayloadv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#executionpayloadv1
   ExecutionPayloadV1* = object
-    parentHash*: BlockHash
+    parentHash*: Hash256
     feeRecipient*: Address
-    stateRoot*: BlockHash
-    receiptsRoot*: BlockHash
+    stateRoot*: Hash256
+    receiptsRoot*: Hash256
     logsBloom*: FixedBytes[256]
     prevRandao*: FixedBytes[32]
     blockNumber*: Quantity
@@ -214,15 +222,15 @@ type
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: BlockHash
+    blockHash*: Hash256
     transactions*: seq[TypedTransaction]
 
-  # https://github.com/ethereum/execution-apis/blob/f33432b3a3f3d6de6ff5e7977f580376df9b57d9/src/engine/specification.md#executionpayloadv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#executionpayloadv2
   ExecutionPayloadV2* = object
-    parentHash*: BlockHash
+    parentHash*: Hash256
     feeRecipient*: Address
-    stateRoot*: BlockHash
-    receiptsRoot*: BlockHash
+    stateRoot*: Hash256
+    receiptsRoot*: Hash256
     logsBloom*: FixedBytes[256]
     prevRandao*: FixedBytes[32]
     blockNumber*: Quantity
@@ -231,7 +239,7 @@ type
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: BlockHash
+    blockHash*: Hash256
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
@@ -247,7 +255,7 @@ type
   # please fix this. (Maybe the RPC library does handle sum types?
   # Or maybe we can enhance it to do so?) --Adam
   #
-  # https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md
   ExecutionPayloadV1OrV2* = object
     parentHash*: BlockHash
     feeRecipient*: Address
@@ -265,12 +273,12 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Option[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/blob/d072d080b92d26a1087337c7e2da4147a0ed0347/src/engine/experimental/blob-extension.md#executionpayloadv3
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#executionpayloadv3
   ExecutionPayloadV3* = object
-    parentHash*: BlockHash
+    parentHash*: Hash256
     feeRecipient*: Address
-    stateRoot*: BlockHash
-    receiptsRoot*: BlockHash
+    stateRoot*: Hash256
+    receiptsRoot*: Hash256
     logsBloom*: FixedBytes[256]
     prevRandao*: FixedBytes[32]
     blockNumber*: Quantity
@@ -280,7 +288,7 @@ type
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
     excessDataGas*: UInt256
-    blockHash*: BlockHash
+    blockHash*: Hash256
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
@@ -289,9 +297,9 @@ type
     ExecutionPayloadV2 |
     ExecutionPayloadV3
 
-  # https://github.com/ethereum/execution-apis/blob/d072d080b92d26a1087337c7e2da4147a0ed0347/src/engine/experimental/blob-extension.md#BlobsBundleV1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#BlobsBundleV1
   BlobsBundleV1* = object
-    blockHash*: BlockHash
+    blockHash*: Hash256
     kzgs*: seq[KZGCommitment]
     blobs*: seq[Blob]
 

@@ -1,5 +1,6 @@
 import
-  unittest, std/json,
+  std/typetraits,
+  unittest, std/json, json_serialization,
   stint,
   ../web3/[conversions, ethtypes]
 
@@ -8,9 +9,10 @@ proc `==`(x, y: Quantity): bool {.borrow, noSideEffect.}
 suite "JSON-RPC Quantity":
   test "Valid":
     for (validQuantityStr, validQuantity) in [
-        ("0x0", 0),
-        ("0x123", 291),
-        ("0x1234", 4660)]:
+        ("0x0", Quantity 0),
+        ("0x123", Quantity 291),
+        ("0x1234", Quantity 4660)]:
+      let validQuantityJson = $(%validQuantityStr)
       var resQuantity: Quantity
       var resUInt256: UInt256
       var resUInt256Ref: ref UInt256
@@ -18,9 +20,11 @@ suite "JSON-RPC Quantity":
       fromJson(%validQuantityStr, "", resUInt256)
       fromJson(%validQuantityStr, "", resUInt256Ref)
       check:
-        resQuantity == validQuantity.Quantity
-        resUInt256 == validQuantity.u256
-        resUInt256Ref[] == validQuantity.u256
+        Json.decode(validQuantityJson, Quantity) == validQuantity
+        Json.encode(validQuantity) == validQuantityJson
+        resQuantity == validQuantity
+        resUInt256 == validQuantity.distinctBase.u256
+        resUInt256Ref[] == validQuantity.distinctBase.u256
 
   test "Invalid Quantity/UInt256/ref UInt256":
     # TODO once https://github.com/status-im/nimbus-eth2/pull/3850 addressed,
