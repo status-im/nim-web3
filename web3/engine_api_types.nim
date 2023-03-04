@@ -11,7 +11,7 @@ type
   ExecutionPayloadBodyV1* = object
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
-  
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
@@ -64,14 +64,16 @@ type
     terminalBlockHash*: BlockHash
     terminalBlockNumber*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#response-2
   GetPayloadV2Response* = object
     executionPayload*: ExecutionPayloadV1OrV2
     blockValue*: Quantity
+    blockValue*: UInt256
 
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#response-1
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
-    blockValue*: Quantity
+    blockValue*: UInt256
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
