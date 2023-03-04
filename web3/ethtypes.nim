@@ -5,6 +5,14 @@ import
 export
   hashes, options
 
+const
+  web3_consensus_const_preset* {.strdefine.} = "mainnet"
+
+  # TODO This is not very elegant. Can we make this a run-time choice?
+  fieldElementsPerBlob = when web3_consensus_const_preset == "minimal": 4
+                         elif web3_consensus_const_preset == "mainnet": 4096
+                         else: {.error: "please set 'web3_consensus_const_preset' to either 'mainnet' or 'minimal'".}
+
 type
   SyncObject* = object
     startingBlock*: int
@@ -40,7 +48,7 @@ type
   Quantity* = distinct uint64
 
   KZGCommitment* = FixedBytes[48]
-  Blob* = FixedBytes[4096 * 32]
+  Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
   EthSend* = object
     source*: Address             # the address the transaction is send from.
