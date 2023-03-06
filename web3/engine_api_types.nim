@@ -69,6 +69,10 @@ type
     executionPayload*: ExecutionPayloadV1OrV2
     blockValue*: UInt256
 
+  GetPayloadV2ResponseExact* = object
+    executionPayload*: ExecutionPayloadV2
+    blockValue*: UInt256
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#response-1
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
@@ -81,7 +85,7 @@ type
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/common.md#errors
-  engineApiParseError* = - 32700
+  engineApiParseError* = -32700
   engineApiInvalidRequest* = -32600
   engineApiMethodNotFound* = -32601
   engineApiInvalidParams* = -32602
