@@ -24,6 +24,13 @@ type
     minLen: static[int] = 0,
     maxLen: static[int] = high(int)] = distinct seq[byte]
 
+  HistoricExtraData = DynamicBytes[0, 4096]
+    ## In the current specs, the maximum is 32, but historically this value was
+    ## used as Clique metadata which is dynamic in lenght and exceeds 32 bytes.
+    ## Since we still need to support syncing old blocks, we use this more relaxed
+    ## setting. Downstream libraries that want to enforce the up-to-date limit are
+    ## expected to do this on their own.
+
   Address* = distinct array[20, byte]
   TxHash* = FixedBytes[32]
   Hash256* = FixedBytes[32]
@@ -101,7 +108,7 @@ type
     receiptsRoot*: Hash256
     miner*: Address
     difficulty*: UInt256
-    extraData*: DynamicBytes[0, 32]
+    extraData*: HistoricExtraData
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
@@ -123,7 +130,7 @@ type
     receiptsRoot*: Hash256            # the root of the receipts trie of the block.
     miner*: Address                   # the address of the beneficiary to whom the mining rewards were given.
     difficulty*: UInt256              # integer of the difficulty for this block.
-    extraData*: DynamicBytes[0, 32]   # the "extra data" field of this block.
+    extraData*: HistoricExtraData     # the "extra data" field of this block.
     gasLimit*: Quantity               # the maximum gas allowed in this block.
     gasUsed*: Quantity                # the total used gas by all transactions in this block.
     timestamp*: Quantity              # the unix timestamp for when the block was collated.
