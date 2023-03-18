@@ -38,6 +38,12 @@ template getPayload*(
 
 template getPayload*(
     rpcClient: RpcClient,
+    T: type GetPayloadV2ResponseExact,
+    payloadId: PayloadID): Future[GetPayloadV2ResponseExact] =
+  engine_getPayloadV2_exact(rpcClient, payloadId)
+
+template getPayload*(
+    rpcClient: RpcClient,
     T: type GetPayloadV3Response,
     payloadId: PayloadID): Future[GetPayloadV3Response] =
   engine_getPayloadV3(rpcClient, payloadId)

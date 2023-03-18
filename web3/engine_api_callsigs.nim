@@ -10,6 +10,7 @@ proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttri
 proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV2]): ForkchoiceUpdatedResponse
 proc engine_getPayloadV1(payloadId: PayloadID): ExecutionPayloadV1
 proc engine_getPayloadV2(payloadId: PayloadID): GetPayloadV2Response
+proc engine_getPayloadV2_exact(payloadId: PayloadID): GetPayloadV2ResponseExact
 proc engine_getPayloadV3(payloadId: PayloadID): GetPayloadV3Response
 proc engine_exchangeTransitionConfigurationV1(transitionConfiguration: TransitionConfigurationV1): TransitionConfigurationV1
 proc engine_getBlobsBundleV1(payloadId: PayloadID): BlobsBundleV1
