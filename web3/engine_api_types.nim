@@ -12,13 +12,13 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#payloadattributesv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#payloadattributesv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#payloadattributesv2
   PayloadAttributesV2* = object
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
@@ -32,7 +32,7 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: Option[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#payloadstatusv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
     syncing            = "SYNCING"
     valid              = "VALID"
@@ -45,26 +45,26 @@ type
     latestValidHash*: Option[BlockHash]
     validationError*: Option[string]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#forkchoicestatev1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
     headBlockHash*: BlockHash
     safeBlockHash*: BlockHash
     finalizedBlockHash*: BlockHash
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#response-1
   PayloadID* = FixedBytes[8]
 
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatusV1
     payloadId*: Option[PayloadID]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#transitionconfigurationv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#transitionconfigurationv1
   TransitionConfigurationV1* = object
     terminalTotalDifficulty*: UInt256
     terminalBlockHash*: BlockHash
     terminalBlockNumber*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#response-2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#response-2
   GetPayloadV2Response* = object
     executionPayload*: ExecutionPayloadV1OrV2
     blockValue*: UInt256
@@ -73,7 +73,7 @@ type
     executionPayload*: ExecutionPayloadV2
     blockValue*: UInt256
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/experimental/blob-extension.md#response-1
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
@@ -84,7 +84,7 @@ type
     GetPayloadV3Response
 
 const
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/common.md#errors
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/common.md#errors
   engineApiParseError* = -32700
   engineApiInvalidRequest* = -32600
   engineApiMethodNotFound* = -32601

@@ -216,14 +216,14 @@ type
 
   TypedTransaction* = distinct seq[byte]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#withdrawalv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
     validatorIndex*: Quantity
     address*: Address
     amount*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/paris.md#executionpayloadv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#executionpayloadv1
   ExecutionPayloadV1* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -240,7 +240,7 @@ type
     blockHash*: Hash256
     transactions*: seq[TypedTransaction]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md#executionpayloadv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#executionpayloadv2
   ExecutionPayloadV2* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -270,7 +270,7 @@ type
   # please fix this. (Maybe the RPC library does handle sum types?
   # Or maybe we can enhance it to do so?) --Adam
   #
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/shanghai.md
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md
   ExecutionPayloadV1OrV2* = object
     parentHash*: BlockHash
     feeRecipient*: Address
@@ -288,7 +288,7 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Option[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#executionpayloadv3
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/experimental/blob-extension.md#executionpayloadv3
   ExecutionPayloadV3* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -302,17 +302,17 @@ type
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    excessDataGas*: UInt256
     blockHash*: Hash256
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
+    excessDataGas*: UInt256
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
     ExecutionPayloadV2 |
     ExecutionPayloadV3
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.2/src/engine/experimental/blob-extension.md#BlobsBundleV1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/experimental/blob-extension.md#BlobsBundleV1
   BlobsBundleV1* = object
     blockHash*: Hash256
     kzgs*: seq[KZGCommitment]
