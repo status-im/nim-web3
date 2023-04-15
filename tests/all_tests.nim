@@ -12,5 +12,5 @@ import
   test_deposit_contract,
   test_ethhexstrings,
   test_logs,
-  test_quantity,
+  test_json_marshalling,
   test_signed_tx

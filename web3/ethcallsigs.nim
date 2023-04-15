@@ -29,6 +29,7 @@ proc eth_sendTransaction(obj: EthSend): TxHash
 proc eth_sendRawTransaction(data: string): TxHash
 proc eth_call(call: EthCall, blockId: BlockIdentifier): string #UInt256
 proc eth_estimateGas(call: EthCall, blockId: BlockIdentifier): UInt256
+proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): AccessListResult
 proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
 proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
 proc eth_getTransactionByHash(data: TxHash): TransactionObject
@@ -57,13 +58,8 @@ proc eth_subscribe(name: string, options: JsonNode): string
 proc eth_subscribe(name: string): string
 proc eth_unsubscribe(id: string)
 
-proc shh_post(): string
-# proc shh_version(message: WhisperPost): bool
-proc shh_newIdentity(): array[60, byte]
-proc shh_hasIdentity(identity: array[60, byte]): bool
-proc shh_newGroup(): array[60, byte]
-proc shh_addToGroup(identity: array[60, byte]): bool
-proc shh_newFilter(filterOptions: FilterOptions, to: array[60, byte], topics: seq[UInt256]): int
-proc shh_uninstallFilter(id: int): bool
-# proc shh_getFilterChanges(id: int): seq[WhisperMessage]
-# proc shh_getMessages(id: int): seq[WhisperMessage]
+proc eth_getProof(
+  address: Address,
+  slots: seq[UInt256],
+  blockId: BlockIdentifier): ProofResponse
+
