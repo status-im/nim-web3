@@ -1,5 +1,5 @@
 import
-  std/[macros, strutils, options, math, json, tables, uri, strformat]
+  std/[macros, strutils, options, math, json, tables, uri, strformat, re]
 
 from os import DirSep, AltSep
 
@@ -13,7 +13,7 @@ template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 ## Generate client convenience marshalling wrappers from forward declarations
 createRpcSigs(RpcClient, sourceDir & "/web3/ethcallsigs.nim")
 
-export UInt256, Int256, Uint128, Int128
+export UInt256, Int256, UInt128, Int128
 export ethtypes, conversions, encoding
 
 type
@@ -174,14 +174,23 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
 proc unknownType() = discard # Used for informative errors
 
 proc typeSignature(T: typedesc): string =
+  const typ = T.repr
   when T is string:
     "string"
+  elif T is uint64:
+    "uint64"
   elif T is DynamicBytes:
     "bytes"
   elif T is FixedBytes:
     "bytes" & $T.N
+  elif typ.startsWith"Int":
+    "int" & typ[3 .. ^1]
+  elif typ.startsWith"Uint":
+    "uint" & typ[4 .. ^1]
   elif T is StUint:
     "uint" & $T.bits
+  elif T is StInt:
+    "int" & $T.bits
   elif T is Address:
     "address"
   elif T is Bool:
@@ -471,7 +480,6 @@ macro contract*(cname: untyped, body: untyped): untyped =
           cbident = ident eventName
           procTy = nnkProcTy.newTree(params, newEmptyNode())
           signature = getSignature(obj.eventObject)
-
         # generated with dumpAstGen - produces "{.raises: [Defect], gcsafe.}"
         let pragmas = nnkPragma.newTree(
           nnkExprColonExpr.newTree(
@@ -501,6 +509,8 @@ macro contract*(cname: untyped, body: untyped): untyped =
           template eventTopic*(T: type `cbident`): string =
             "0x" & toLowerAscii($keccak256.digest(`signature`))
 
+          echo `eventName`,":",`signature`,":",eventTopic(`cbident`)
+
           proc subscribe(s: Sender[`cname`],
                          t: type `cbident`,
                          options: JsonNode,
@@ -508,8 +518,9 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          errorHandler: SubscriptionErrorHandler,
                          withHistoricEvents = true): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
-
+            debugEcho options
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+              echo `argParseBody`.repr
               try:
                 `argParseBody`
                 `call`
@@ -525,8 +536,10 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          errorHandler: SubscriptionErrorHandler,
                          withHistoricEvents = true): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
-
+              
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+              echo `procTyWithRawData`
+              echo `argParseBody`
               try:
                 `argParseBody`
                 `callWithRawData`
