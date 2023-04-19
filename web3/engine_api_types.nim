@@ -17,9 +17,6 @@ type
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
-
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#payloadattributesv2
-    suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
 
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
