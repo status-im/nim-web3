@@ -520,7 +520,6 @@ macro contract*(cname: untyped, body: untyped): untyped =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
             debugEcho options
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
-              echo `argParseBody`.repr
               try:
                 `argParseBody`
                 `call`
@@ -538,8 +537,6 @@ macro contract*(cname: untyped, body: untyped): untyped =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
               
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
-              echo `procTyWithRawData`
-              echo `argParseBody`
               try:
                 `argParseBody`
                 `callWithRawData`
