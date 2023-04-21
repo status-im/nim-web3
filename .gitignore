@@ -9,6 +9,9 @@ build/
 *.la
 *.exe
 *.dll
+pmls.*
+nw.*
+ido.*
 
 node_modules
 nohup.out

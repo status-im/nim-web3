@@ -4,7 +4,7 @@ import
   ethtypes
 
 export
-  options, stint, ethtypes
+  ethtypes
 
 type
   # https://github.com/ethereum/execution-apis/blob/d03c193dc317538e2a1a098030c21bacc2fd1333/src/engine/shanghai.md#executionpayloadbodyv1
@@ -14,12 +14,6 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
-    timestamp*: Quantity
-    prevRandao*: FixedBytes[32]
-    suggestedFeeRecipient*: Address
-
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#payloadattributesv2
-  PayloadAttributesV2* = object
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
@@ -34,11 +28,11 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
-    syncing            = "SYNCING"
-    valid              = "VALID"
-    invalid            = "INVALID"
-    accepted           = "ACCEPTED"
-    invalid_block_hash = "INVALID_BLOCK_HASH"
+    valid                  = "VALID"
+    invalid                = "INVALID"
+    accepted               = "ACCEPTED"
+    invalid_block_hash     = "INVALID_BLOCK_HASH"
+    invalid_terminal_block = "INVALID_TERMINAL_BLOCK"
 
   PayloadStatusV1* = object
     status*: PayloadExecutionStatus
