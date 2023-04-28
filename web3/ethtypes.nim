@@ -55,6 +55,7 @@ type
   Quantity* = distinct uint64
 
   KZGCommitment* = FixedBytes[48]
+  KZGProof* = FixedBytes[48]
   Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
   EthSend* = object
@@ -314,8 +315,8 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/experimental/blob-extension.md#BlobsBundleV1
   BlobsBundleV1* = object
-    blockHash*: Hash256
-    kzgs*: seq[KZGCommitment]
+    commitments*: seq[KZGCommitment]
+    proofs*: seq[KZGProof]
     blobs*: seq[Blob]
 
   RlpEncodedBytes* = distinct seq[byte]

@@ -77,6 +77,7 @@ type
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
+    blobsBundle*: BlobsBundleV1
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
