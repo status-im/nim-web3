@@ -14,7 +14,7 @@ template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 createRpcSigs(RpcClient, sourceDir & "/web3/ethcallsigs.nim")
 
 export UInt256, Int256, Uint128, Int128
-export ethtypes, conversions, encoding
+export ethtypes, conversions, encoding, HttpClientFlag, HttpClientFlags
 
 type
   Web3* = ref object
@@ -69,13 +69,16 @@ proc newWeb3*(provider: RpcClient): Web3 =
     r.handleSubscriptionNotification(j)
 
 proc newWeb3*(
-    uri: string, getHeaders: GetJsonRpcRequestHeaders = nil):
+    uri: string,
+    getHeaders: GetJsonRpcRequestHeaders = nil,
+    httpFlags: HttpClientFlags = {}):
     Future[Web3] {.async.} =
   let u = parseUri(uri)
   var provider: RpcClient
   case u.scheme
   of "http", "https":
-    let p = newRpcHttpClient(getHeaders = getHeaders)
+    let p = newRpcHttpClient(getHeaders = getHeaders,
+                             flags = httpFlags)
     await p.connect(uri)
     provider = p
   of "ws", "wss":
