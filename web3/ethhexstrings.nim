@@ -1,7 +1,7 @@
 import
   std/[json, strutils]
 
-from json_rpc/rpcserver import expect
+from json_rpc/jsonmarshal import expect
 
 export json
 

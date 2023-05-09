@@ -10,7 +10,7 @@ import
   ethtypes, ethhexstrings,
   ./engine_api_types
 
-from json_rpc/rpcserver import expect
+from json_rpc/jsonmarshal import expect
 
 template invalidQuantityPrefix(s: string): bool =
   # https://ethereum.org/en/developers/docs/apis/json-rpc/#hex-value-encoding
