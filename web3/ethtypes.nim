@@ -59,7 +59,7 @@ type
   Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
   EthSend* = object
-    source*: Address             # the address the transaction is send from.
+    source*: Address             # the address the transaction is sent from.
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
     gas*: Option[Quantity]       # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
     gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
@@ -69,7 +69,7 @@ type
     nonce*: Option[Nonce]        # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
   #EthSend* = object
-  #  source*: Address     # the address the transaction is send from.
+  #  source*: Address     # the address the transaction is sent from.
   #  to*: Address         # (optional when creating new contract) the address the transaction is directed to.
   #  gas*: int            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
   #  gasPrice*: int       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
@@ -82,7 +82,7 @@ type
   # those should be merged into one type `GenericTransaction` with a lot more fields
   # see: https://github.com/ethereum/execution-apis/blob/main/src/schemas/transaction.yaml#L244
   EthCall* = object
-    source*: Option[Address]  # (optional) The address the transaction is send from.
+    source*: Option[Address]  # (optional) The address the transaction is sent from.
     to*: Address      # The address the transaction is directed to.
     gas*: Option[Quantity]                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
     gasPrice*: Option[int]            # (optional) Integer of the gasPrice used for each paid gas.
@@ -90,7 +90,7 @@ type
     data*: Option[string]                # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
 
   #EthCall* = object
-  #  source*: Address  # (optional) The address the transaction is send from.
+  #  source*: Address  # (optional) The address the transaction is sent from.
   #  to*: Address      # The address the transaction is directed to.
   #  gas*: int                 # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
   #  gasPrice*: int            # (optional) Integer of the gasPrice used for each paid gas.
@@ -117,7 +117,8 @@ type
     mixHash*: Hash256
     baseFeePerGas*: Option[UInt256]   # EIP-1559
     withdrawalsRoot*: Option[Hash256] # EIP-4895
-    excessDataGas*: Option[UInt256]   # EIP-4844
+    dataGasUsed*: Option[Quantity]    # EIP-4844
+    excessDataGas*: Option[Quantity]  # EIP-4844
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
@@ -142,7 +143,8 @@ type
     uncles*: seq[Hash256]             # list of uncle hashes.
     baseFeePerGas*: Option[UInt256]   # EIP-1559
     withdrawalsRoot*: Option[Hash256] # EIP-4895
-    excessDataGas*:   Option[UInt256] # EIP-4844
+    dataGasUsed*: Option[Quantity]    # EIP-4844
+    excessDataGas*: Option[Quantity]  # EIP-4844
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:
     hash*: TxHash                 # hash of the transaction.
@@ -205,7 +207,7 @@ type
                                    # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
 #  EthSend* = object
-#    source*: Address     # the address the transaction is send from.
+#    source*: Address     # the address the transaction is sent from.
 #    to*: Option[Address] # (optional when creating new contract) the address the transaction is directed to.
 #    gas*: Option[int]            # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
 #    gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
@@ -289,7 +291,7 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Option[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/experimental/blob-extension.md#executionpayloadv3
+  # https://github.com/ethereum/execution-apis/pull/417
   ExecutionPayloadV3* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -306,7 +308,8 @@ type
     blockHash*: Hash256
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
-    excessDataGas*: UInt256
+    dataGasUsed*: Quantity
+    excessDataGas*: Quantity
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
