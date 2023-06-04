@@ -6,6 +6,7 @@ from os import DirSep, AltSep
 import
   stint, httputils, chronicles, chronos, nimcrypto/keccak,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
+  chronos/apps/http/httpclient,
   web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding]
 
 template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
