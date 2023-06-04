@@ -86,7 +86,7 @@ macro makeTypeEnum(): untyped =
       identInt = newIdentNode("Int" & $i)
     if ceil(log2(i.float)) == floor(log2(i.float)):
       lastpow2 = i
-    if i notin {256, 125}: # Int/UInt256/128 are already defined in stint. No need to repeat.
+    if i notin [256, 125]: # Int/UInt256/128 are already defined in stint. No need to repeat.
       result.add quote do:
         type
           `identUint`* = StUint[`lastpow2`]
