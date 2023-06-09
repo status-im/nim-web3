@@ -60,5 +60,6 @@ template newPayload*(
 
 template newPayload*(
     rpcClient: RpcClient,
-    payload: ExecutionPayloadV3): Future[PayloadStatusV1] =
-  engine_newPayloadV3(rpcClient, payload)
+    payload: ExecutionPayloadV3,
+    versioned_hashes: seq[VersionedHash]): Future[PayloadStatusV1] =
+  engine_newPayloadV3(rpcClient, payload, versioned_hashes)
