@@ -6,7 +6,7 @@ import ethtypes, engine_api_types
 
 proc engine_newPayloadV1(payload: ExecutionPayloadV1): PayloadStatusV1
 proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
-proc engine_newPayloadV3(payload: ExecutionPayloadV3, versioned_hashes: seq[VersionedHash]): PayloadStatusV1
+proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: FixedBytes[32]): PayloadStatusV1
 proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV1]): ForkchoiceUpdatedResponse
 proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV2]): ForkchoiceUpdatedResponse
 proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV3]): ForkchoiceUpdatedResponse
