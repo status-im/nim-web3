@@ -25,6 +25,14 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
 
+  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#payloadattributesv3
+  PayloadAttributesV3* = object
+    timestamp*: Quantity
+    prevRandao*: FixedBytes[32]
+    suggestedFeeRecipient*: Address
+    withdrawals*: seq[WithdrawalV1]
+    parentBeaconBlockRoot*: FixedBytes[32]
+
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
     timestamp*: Quantity
@@ -73,7 +81,7 @@ type
     executionPayload*: ExecutionPayloadV2
     blockValue*: UInt256
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/experimental/blob-extension.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#response-2
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256

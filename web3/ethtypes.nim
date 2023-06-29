@@ -293,7 +293,7 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Option[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/pull/417
+  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#executionpayloadv3
   ExecutionPayloadV3* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -318,7 +318,7 @@ type
     ExecutionPayloadV2 |
     ExecutionPayloadV3
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/experimental/blob-extension.md#BlobsBundleV1
+  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object
     commitments*: seq[KZGCommitment]
     proofs*: seq[KZGProof]

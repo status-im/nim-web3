@@ -24,6 +24,12 @@ template forkchoiceUpdated*(
     payloadAttributes: Option[PayloadAttributesV2]): Future[ForkchoiceUpdatedResponse] =
   engine_forkchoiceUpdatedV2(rpcClient, forkchoiceState, payloadAttributes)
 
+template forkchoiceUpdated*(
+    rpcClient: RpcClient,
+    forkchoiceState: ForkchoiceStateV1,
+    payloadAttributes: Option[PayloadAttributesV3]): Future[ForkchoiceUpdatedResponse] =
+  engine_forkchoiceUpdatedV3(rpcClient, forkchoiceState, payloadAttributes)
+
 template getPayload*(
     rpcClient: RpcClient,
     T: type ExecutionPayloadV1,
@@ -61,5 +67,7 @@ template newPayload*(
 template newPayload*(
     rpcClient: RpcClient,
     payload: ExecutionPayloadV3,
-    versioned_hashes: seq[VersionedHash]): Future[PayloadStatusV1] =
-  engine_newPayloadV3(rpcClient, payload, versioned_hashes)
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: FixedBytes[32]): Future[PayloadStatusV1] =
+  engine_newPayloadV3(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot)
