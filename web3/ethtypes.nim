@@ -122,31 +122,39 @@ type
     dataGasUsed*: Option[Quantity]    # EIP-4844
     excessDataGas*: Option[Quantity]  # EIP-4844
 
+  WithdrawalObject = object
+    index*: Quantity
+    validatorIndex*: Quantity
+    address*: Address
+    amount*: Quantity
+
   ## A block object, or null when no block was found
   BlockObject* = ref object
-    number*: Quantity                 # the block number. null when its pending block.
-    hash*: Hash256                    # hash of the block. null when its pending block.
-    parentHash*: Hash256              # hash of the parent block.
-    sha3Uncles*: Hash256              # SHA3 of the uncles data in the block.
-    logsBloom*: FixedBytes[256]       # the bloom filter for the logs of the block. null when its pending block.
-    transactionsRoot*: Hash256        # the root of the transaction trie of the block.
-    stateRoot*: Hash256               # the root of the final state trie of the block.
-    receiptsRoot*: Hash256            # the root of the receipts trie of the block.
-    miner*: Address                   # the address of the beneficiary to whom the mining rewards were given.
-    difficulty*: UInt256              # integer of the difficulty for this block.
-    extraData*: HistoricExtraData     # the "extra data" field of this block.
-    gasLimit*: Quantity               # the maximum gas allowed in this block.
-    gasUsed*: Quantity                # the total used gas by all transactions in this block.
-    timestamp*: Quantity              # the unix timestamp for when the block was collated.
-    nonce*: Option[FixedBytes[8]]     # hash of the generated proof-of-work. null when its pending block.
-    size*: Quantity                   # integer the size of this block in bytes.
-    totalDifficulty*: UInt256         # integer of the total difficulty of the chain until this block.
-    transactions*: seq[TxHash]        # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
-    uncles*: seq[Hash256]             # list of uncle hashes.
-    baseFeePerGas*: Option[UInt256]   # EIP-1559
-    withdrawalsRoot*: Option[Hash256] # EIP-4895
-    dataGasUsed*: Option[Quantity]    # EIP-4844
-    excessDataGas*: Option[Quantity]  # EIP-4844
+    number*: Quantity                           # the block number. null when its pending block.
+    hash*: Hash256                              # hash of the block. null when its pending block.
+    parentHash*: Hash256                        # hash of the parent block.
+    sha3Uncles*: Hash256                        # SHA3 of the uncles data in the block.
+    logsBloom*: FixedBytes[256]                 # the bloom filter for the logs of the block. null when its pending block.
+    transactionsRoot*: Hash256                  # the root of the transaction trie of the block.
+    stateRoot*: Hash256                         # the root of the final state trie of the block.
+    receiptsRoot*: Hash256                      # the root of the receipts trie of the block.
+    miner*: Address                             # the address of the beneficiary to whom the mining rewards were given.
+    difficulty*: UInt256                        # integer of the difficulty for this block.
+    extraData*: HistoricExtraData               # the "extra data" field of this block.
+    gasLimit*: Quantity                         # the maximum gas allowed in this block.
+    gasUsed*: Quantity                          # the total used gas by all transactions in this block.
+    timestamp*: Quantity                        # the unix timestamp for when the block was collated.
+    nonce*: Option[FixedBytes[8]]               # hash of the generated proof-of-work. null when its pending block.
+    mixHash*: Hash256
+    size*: Quantity                             # integer the size of this block in bytes.
+    totalDifficulty*: UInt256                   # integer of the total difficulty of the chain until this block.
+    transactions*: seq[TxHash]                  # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
+    uncles*: seq[Hash256]                       # list of uncle hashes.
+    baseFeePerGas*: Option[UInt256]             # EIP-1559
+    withdrawals*: Option[seq[WithdrawalObject]] # EIP-4895
+    withdrawalsRoot*: Option[Hash256]           # EIP-4895
+    dataGasUsed*: Option[Quantity]              # EIP-4844
+    excessDataGas*: Option[Quantity]            # EIP-4844
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:
     hash*: TxHash                 # hash of the transaction.
