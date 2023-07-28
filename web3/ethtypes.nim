@@ -119,8 +119,8 @@ type
     mixHash*: Hash256
     baseFeePerGas*: Option[UInt256]   # EIP-1559
     withdrawalsRoot*: Option[Hash256] # EIP-4895
-    dataGasUsed*: Option[Quantity]    # EIP-4844
-    excessDataGas*: Option[Quantity]  # EIP-4844
+    blobGasUsed*: Option[Quantity]    # EIP-4844
+    excessBlobGas*: Option[Quantity]  # EIP-4844
 
   WithdrawalObject = object
     index*: Quantity
@@ -153,8 +153,8 @@ type
     baseFeePerGas*: Option[UInt256]             # EIP-1559
     withdrawals*: Option[seq[WithdrawalObject]] # EIP-4895
     withdrawalsRoot*: Option[Hash256]           # EIP-4895
-    dataGasUsed*: Option[Quantity]              # EIP-4844
-    excessDataGas*: Option[Quantity]            # EIP-4844
+    blobGasUsed*: Option[Quantity]              # EIP-4844
+    excessBlobGas*: Option[Quantity]            # EIP-4844
 
   TransactionObject* = object     # A transaction object, or null when no transaction was found:
     hash*: TxHash                 # hash of the transaction.
@@ -318,8 +318,8 @@ type
     blockHash*: Hash256
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
-    dataGasUsed*: Quantity
-    excessDataGas*: Quantity
+    blobGasUsed*: Quantity
+    excessBlobGas*: Quantity
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
