@@ -178,6 +178,7 @@ type
     `type`*: Option[Quantity]               # EIP-2718, with 0x0 for Legacy
     chainId*: Option[UInt256]               # EIP-159
     accessList*: Option[seq[AccessTuple]]   # EIP-2930
+    maxFeePerGas*: Option[Quantity]         # EIP-1559
     maxPriorityFeePerGas*: Option[Quantity] # EIP-1559
 
   ReceiptKind* = enum rkRoot, rkStatus
