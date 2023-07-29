@@ -168,13 +168,13 @@ type
     transactionIndex*: Option[Quantity]     # integer of the transactions index position in the block. null when its pending.
     `from`*: Address                        # address of the sender.
     to*: Option[Address]                    # address of the receiver. null when its a contract creation transaction.
-    value*: Quantity                        # value transferred in Wei.
+    value*: UInt256                         # value transferred in Wei.
     gasPrice*: Quantity                     # gas price provided by the sender in Wei.
     gas*: Quantity                          # gas provided by the sender.
     input*: seq[byte]                       # the data send along with the transaction.
-    v*: Quantity                            # ECDSA recovery id
-    r*: Quantity                            # ECDSA signature r
-    s*: Quantity                            # ECDSA signature s
+    v*: UInt256                             # ECDSA recovery id
+    r*: UInt256                             # ECDSA signature r
+    s*: UInt256                             # ECDSA signature s
     `type`*: Option[Quantity]               # EIP-2718, with 0x0 for Legacy
     chainId*: Option[UInt256]               # EIP-159
     accessList*: Option[seq[AccessTuple]]   # EIP-2930
