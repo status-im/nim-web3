@@ -160,25 +160,25 @@ type
     address*: Address
     storageKeys*: seq[Hash256]
 
-  TransactionObject* = object              # A transaction object, or null when no transaction was found:
-    hash*: TxHash                          # hash of the transaction.
-    nonce*: Quantity                       # TODO: Is int? the number of transactions made by the sender prior to this one.
-    blockHash*: Option[BlockHash]          # hash of the block where this transaction was in. null when its pending.
-    blockNumber*: Option[Quantity]         # block number where this transaction was in. null when its pending.
-    transactionIndex*: Option[Quantity]    # integer of the transactions index position in the block. null when its pending.
-    `from`*: Address                       # address of the sender.
-    to*: Option[Address]                   # address of the receiver. null when its a contract creation transaction.
-    value*: Quantity                       # value transferred in Wei.
-    gasPrice*: Quantity                    # gas price provided by the sender in Wei.
-    gas*: Quantity                         # gas provided by the sender.
-    input*: seq[byte]                      # the data send along with the transaction.
-    v: Quantity                            # ECDSA recovery id
-    r: Quantity                            # ECDSA signature r
-    s: Quantity                            # ECDSA signature s
-    `type`*: Option[Quantity]              # EIP-2718, with 0x0 for Legacy
-    chainId: Option[UInt256]               # EIP-159
-    accessList: Option[seq[AccessTuple]]   # EIP-2930
-    maxPriorityFeePerGas: Option[Quantity] # EIP-1559
+  TransactionObject* = object               # A transaction object, or null when no transaction was found:
+    hash*: TxHash                           # hash of the transaction.
+    nonce*: Quantity                        # TODO: Is int? the number of transactions made by the sender prior to this one.
+    blockHash*: Option[BlockHash]           # hash of the block where this transaction was in. null when its pending.
+    blockNumber*: Option[Quantity]          # block number where this transaction was in. null when its pending.
+    transactionIndex*: Option[Quantity]     # integer of the transactions index position in the block. null when its pending.
+    `from`*: Address                        # address of the sender.
+    to*: Option[Address]                    # address of the receiver. null when its a contract creation transaction.
+    value*: Quantity                        # value transferred in Wei.
+    gasPrice*: Quantity                     # gas price provided by the sender in Wei.
+    gas*: Quantity                          # gas provided by the sender.
+    input*: seq[byte]                       # the data send along with the transaction.
+    v*: Quantity                            # ECDSA recovery id
+    r*: Quantity                            # ECDSA signature r
+    s*: Quantity                            # ECDSA signature s
+    `type`*: Option[Quantity]               # EIP-2718, with 0x0 for Legacy
+    chainId*: Option[UInt256]               # EIP-159
+    accessList*: Option[seq[AccessTuple]]   # EIP-2930
+    maxPriorityFeePerGas*: Option[Quantity] # EIP-1559
 
   ReceiptKind* = enum rkRoot, rkStatus
   ReceiptObject* = object
