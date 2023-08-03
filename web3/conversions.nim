@@ -106,7 +106,8 @@ func fromJson*(n: JsonNode, argName: string, result: var Quantity) {.inline.} =
   let hexStr = n.getStr
   if hexStr.invalidQuantityPrefix:
     raise newException(ValueError, "Parameter \"" & argName & "\" value has invalid leading 0")
-  result = Quantity(parseHexInt(hexStr))
+  static: doAssert sizeof(Quantity) == sizeof(uint64)
+  result = Quantity(fromHex[uint64](hexStr))
 
 func getEnumStringTable(enumType: typedesc): Table[string, enumType]
     {.compileTime.} =
