@@ -104,3 +104,4 @@ const
   engineApiInvalidForkchoiceState* = -38002
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
+  engineApiUnsupportedFork* = -38005
