@@ -16,3 +16,6 @@ proc engine_getPayloadV2_exact(payloadId: PayloadID): GetPayloadV2ResponseExact
 proc engine_getPayloadV3(payloadId: PayloadID): GetPayloadV3Response
 proc engine_exchangeTransitionConfigurationV1(transitionConfiguration: TransitionConfigurationV1): TransitionConfigurationV1
 proc engine_getPayloadBodiesByHashV1(hashes: seq[BlockHash]): seq[Option[ExecutionPayloadBodyV1]]
+
+# https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
+proc engine_exchangeCapabilities(methods: seq[string]): seq[string]

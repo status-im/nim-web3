@@ -71,3 +71,8 @@ template newPayload*(
     parentBeaconBlockRoot: FixedBytes[32]): Future[PayloadStatusV1] =
   engine_newPayloadV3(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot)
+
+template exchangeCapabilities*(
+    rpcClient: RpcClient,
+    methods: seq[string]): Future[seq[string]] =
+  engine_exchangeCapabilities(rpcClient, methods)
