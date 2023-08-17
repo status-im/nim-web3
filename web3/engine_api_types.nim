@@ -8,9 +8,12 @@ export
 
 type
   # https://github.com/ethereum/execution-apis/blob/d03c193dc317538e2a1a098030c21bacc2fd1333/src/engine/shanghai.md#executionpayloadbodyv1
+  # For optional withdrawals field, see:
+  #   https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadbodiesbyhashv1
+  #   https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadbodiesbyrangev1
   ExecutionPayloadBodyV1* = object
     transactions*: seq[TypedTransaction]
-    withdrawals*: seq[WithdrawalV1]
+    withdrawals*: Option[seq[WithdrawalV1]]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
