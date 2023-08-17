@@ -152,22 +152,22 @@ proc writeHexValue(w: JsonWriter, v: openArray[byte]) =
   w.stream.writeHex v
   w.stream.write "\""
 
-proc writeValue*(w: var JsonWriter, v: DynamicBytes) =
+proc writeValue*(w: var JsonWriter, v: DynamicBytes) {.raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[N](w: var JsonWriter, v: FixedBytes[N]) =
+proc writeValue*[N](w: var JsonWriter, v: FixedBytes[N]) {.raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter, v: Address) =
+proc writeValue*(w: var JsonWriter, v: Address) {.raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter, v: TypedTransaction) =
+proc writeValue*(w: var JsonWriter, v: TypedTransaction) {.raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter, v: RlpEncodedBytes) =
+proc writeValue*(w: var JsonWriter, v: RlpEncodedBytes) {.raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter, v: Quantity) =
+proc writeValue*(w: var JsonWriter, v: Quantity) {.raises: [IOError].} =
   # TODO It's possible to avoid the memory in `encodeQuantity`
   # here by writing a function that will write the hex output
   # directly to the stream:
