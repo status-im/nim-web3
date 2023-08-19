@@ -117,10 +117,11 @@ type
     timestamp*: Quantity
     nonce*: FixedBytes[8]
     mixHash*: Hash256
-    baseFeePerGas*: Option[UInt256]   # EIP-1559
-    withdrawalsRoot*: Option[Hash256] # EIP-4895
-    blobGasUsed*: Option[Quantity]    # EIP-4844
-    excessBlobGas*: Option[Quantity]  # EIP-4844
+    baseFeePerGas*: Option[UInt256]         # EIP-1559
+    withdrawalsRoot*: Option[Hash256]       # EIP-4895
+    blobGasUsed*: Option[Quantity]          # EIP-4844
+    excessBlobGas*: Option[Quantity]        # EIP-4844
+    parentBeaconBlockRoot*: Option[Hash256] # EIP-4788
 
   WithdrawalObject = object
     index*: Quantity
@@ -155,6 +156,7 @@ type
     withdrawalsRoot*: Option[Hash256]           # EIP-4895
     blobGasUsed*: Option[Quantity]              # EIP-4844
     excessBlobGas*: Option[Quantity]            # EIP-4844
+    parentBeaconBlockRoot*: Option[Hash256]     # EIP-4788
 
   AccessTuple* = object
     address*: Address
@@ -313,7 +315,7 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Option[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#executionpayloadv3
+  # https://github.com/ethereum/execution-apis/blob/fe8e13c288c592ec154ce25c534e26cb7ce0530d/src/engine/cancun.md#executionpayloadv3
   ExecutionPayloadV3* = object
     parentHash*: Hash256
     feeRecipient*: Address
