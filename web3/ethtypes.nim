@@ -59,8 +59,6 @@ type
   KZGProof* = FixedBytes[48]
   Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
-  VersionedHash* = FixedBytes[32]
-
   EthSend* = object
     source*: Address             # the address the transaction is sent from.
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
