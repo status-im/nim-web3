@@ -40,6 +40,7 @@ type
   Nonce* = int
   CodeHash* = FixedBytes[32]
   StorageHash* = FixedBytes[32]
+  VersionedHash* = FixedBytes[32]
 
   BlockIdentifierKind* = enum
     bidNumber
@@ -57,8 +58,6 @@ type
   KZGCommitment* = FixedBytes[48]
   KZGProof* = FixedBytes[48]
   Blob* = FixedBytes[fieldElementsPerBlob * 32]
-
-  VersionedHash* = FixedBytes[32]
 
   EthSend* = object
     source*: Address             # the address the transaction is sent from.
@@ -162,26 +161,28 @@ type
     address*: Address
     storageKeys*: seq[Hash256]
 
-  TransactionObject* = object               # A transaction object, or null when no transaction was found:
-    hash*: TxHash                           # hash of the transaction.
-    nonce*: Quantity                        # TODO: Is int? the number of transactions made by the sender prior to this one.
-    blockHash*: Option[BlockHash]           # hash of the block where this transaction was in. null when its pending.
-    blockNumber*: Option[Quantity]          # block number where this transaction was in. null when its pending.
-    transactionIndex*: Option[Quantity]     # integer of the transactions index position in the block. null when its pending.
-    `from`*: Address                        # address of the sender.
-    to*: Option[Address]                    # address of the receiver. null when its a contract creation transaction.
-    value*: UInt256                         # value transferred in Wei.
-    gasPrice*: Quantity                     # gas price provided by the sender in Wei.
-    gas*: Quantity                          # gas provided by the sender.
-    input*: seq[byte]                       # the data send along with the transaction.
-    v*: UInt256                             # ECDSA recovery id
-    r*: UInt256                             # ECDSA signature r
-    s*: UInt256                             # ECDSA signature s
-    `type`*: Option[Quantity]               # EIP-2718, with 0x0 for Legacy
-    chainId*: Option[UInt256]               # EIP-159
-    accessList*: Option[seq[AccessTuple]]   # EIP-2930
-    maxFeePerGas*: Option[Quantity]         # EIP-1559
-    maxPriorityFeePerGas*: Option[Quantity] # EIP-1559
+  TransactionObject* = object                        # A transaction object, or null when no transaction was found:
+    hash*: TxHash                                    # hash of the transaction.
+    nonce*: Quantity                                 # TODO: Is int? the number of transactions made by the sender prior to this one.
+    blockHash*: Option[BlockHash]                    # hash of the block where this transaction was in. null when its pending.
+    blockNumber*: Option[Quantity]                   # block number where this transaction was in. null when its pending.
+    transactionIndex*: Option[Quantity]              # integer of the transactions index position in the block. null when its pending.
+    `from`*: Address                                 # address of the sender.
+    to*: Option[Address]                             # address of the receiver. null when its a contract creation transaction.
+    value*: UInt256                                  # value transferred in Wei.
+    gasPrice*: Quantity                              # gas price provided by the sender in Wei.
+    gas*: Quantity                                   # gas provided by the sender.
+    input*: seq[byte]                                # the data send along with the transaction.
+    v*: UInt256                                      # ECDSA recovery id
+    r*: UInt256                                      # ECDSA signature r
+    s*: UInt256                                      # ECDSA signature s
+    `type`*: Option[Quantity]                        # EIP-2718, with 0x0 for Legacy
+    chainId*: Option[UInt256]                        # EIP-159
+    accessList*: Option[seq[AccessTuple]]            # EIP-2930
+    maxFeePerGas*: Option[Quantity]                  # EIP-1559
+    maxPriorityFeePerGas*: Option[Quantity]          # EIP-1559
+    maxFeePerBlobGas*: Option[Quantity]              # EIP-4844
+    blobVersionedHashes*: Option[seq[VersionedHash]] # EIP-4844
 
   ReceiptKind* = enum rkRoot, rkStatus
   ReceiptObject* = object
