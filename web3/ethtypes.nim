@@ -3,7 +3,7 @@ import
   stint, stew/[byteutils, results]
 
 export
-  hashes, options
+  hashes, options, typetraits
 
 const
   web3_consensus_const_preset* {.strdefine.} = "mainnet"
@@ -188,18 +188,20 @@ type
   ReceiptObject* = object
     # A transaction receipt object, or null when no receipt was found:
     transactionHash*: TxHash            # hash of the transaction.
-    transactionIndex*: string#int       # integer of the transactions index position in the block.
+    transactionIndex*: Quantity         # integer of the transactions index position in the block.
     blockHash*: BlockHash               # hash of the block where this transaction was in.
-    blockNumber*: string#int            # block number where this transaction was in.
-    cumulativeGasUsed*: string#int      # the total amount of gas used when this transaction was executed in the block.
-    gasUsed*: string#int                # the amount of gas used by this specific transaction alone.
+    blockNumber*: Quantity              # block number where this transaction was in.
+    `from`*: Address                    # address of the sender.
+    to*: Option[Address]                # address of the receiver. null when its a contract creation transaction.
+    cumulativeGasUsed*: Quantity        # the total amount of gas used when this transaction was executed in the block.
+    effectiveGasPrice*: Quantity        # The sum of the base fee and tip paid per unit of gas.
+    gasUsed*: Quantity                  # the amount of gas used by this specific transaction alone.
     contractAddress*: Option[Address]   # the contract address created, if the transaction was a contract creation, otherwise null.
     logs*: seq[LogObject]               # TODO: See Wiki for details. list of log objects, which this transaction generated.
-    logsBloom*: Option[FixedBytes[256]] # bloom filter for light clients to quickly retrieve related logs.
-    # TODO:
-    #case kind*: ReceiptKind
-    #of rkRoot: root*: UInt256         # post-transaction stateroot (pre Byzantium).
-    #of rkStatus: status*: int         # 1 = success, 0 = failure.
+    logsBloom*: FixedBytes[256]         # bloom filter for light clients to quickly retrieve related logs.
+    `type`*: Option[Quantity]           # integer of the transaction type, 0x0 for legacy transactions, 0x1 for access list types, 0x2 for dynamic fees.
+    root*: Option[Hash256]              # 32 bytes of post-transaction stateroot (pre Byzantium)
+    status*: Option[Quantity]           # either 1 (success) or 0 (failure)
 
   FilterDataKind* = enum fkItem, fkList
   FilterData* = object
@@ -217,17 +219,16 @@ type
     topics*: Option[seq[string]]#Option[seq[FilterData]]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
     blockhash*: Option[BlockHash]
 
-  LogObject* = object              # TODO: This type needs to be reviewed
-                                   #       It uses very unnatural fields types (e.g. strings for numerical properties)
-    #removed*: bool                # true when the log was removed, due to a chain reorganization. false if its a valid log.
-    logIndex*: string              # integer of the log index position in the block. null when its pending log.
-    transactionIndex*: string      # integer of the transactions index position log was created from. null when its pending log.
+  LogObject* = object
+    removed*: bool                 # true when the log was removed, due to a chain reorganization. false if its a valid log.
+    logIndex*: Quantity            # integer of the log index position in the block. null when its pending log.
+    transactionIndex*: Quantity    # integer of the transactions index position log was created from. null when its pending log.
     transactionHash*: TxHash       # hash of the transactions this log was created from. null when its pending log.
     blockHash*: BlockHash          # hash of the block where this log was in. null when its pending. null when its pending log.
-    blockNumber*: string           # the block number where this log was in. null when its pending. null when its pending log.
+    blockNumber*: Quantity         # the block number where this log was in. null when its pending. null when its pending log.
     address*: Address              # address from which this log originated.
-    data*: string                  # contains one or more 32 Bytes non-indexed arguments of the log.
-    topics*: seq[string]           # array of 0 to 4 32 Bytes DATA of indexed log arguments.
+    data*: seq[byte]               # contains one or more 32 Bytes non-indexed arguments of the log.
+    topics*: seq[FixedBytes[32]]   # array of 0 to 4 32 Bytes DATA of indexed log arguments.
                                    # (In solidity: The first topic is the hash of the signature of the event.
                                    # (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
 
