@@ -1,6 +1,6 @@
 import pkg/unittest2
 import ../web3
-import chronos, options, json, stint, parseutils
+import chronos, options, json, stint
 import test_utils
 
 
@@ -138,8 +138,7 @@ suite "Contracts":
         receipt = await web3.deployContract(MetaCoinCode)
         cc = receipt.contractAddress.get
 
-      var deployedAtBlock: uint64
-      discard parseHex(receipt.blockNumber, deployedAtBlock)
+      let deployedAtBlock = distinctBase(receipt.blockNumber)
       echo "Deployed MetaCoin contract: ", cc, " at block ", deployedAtBlock
 
       let ns = web3.contractSender(MetaCoin, cc)

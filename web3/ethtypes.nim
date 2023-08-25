@@ -3,7 +3,7 @@ import
   stint, stew/[byteutils, results]
 
 export
-  hashes, options
+  hashes, options, typetraits
 
 const
   web3_consensus_const_preset* {.strdefine.} = "mainnet"
@@ -219,7 +219,7 @@ type
     topics*: Option[seq[string]]#Option[seq[FilterData]]        # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
     blockhash*: Option[BlockHash]
 
-  LogObject* = object              
+  LogObject* = object
     removed*: bool                 # true when the log was removed, due to a chain reorganization. false if its a valid log.
     logIndex*: Quantity            # integer of the log index position in the block. null when its pending log.
     transactionIndex*: Quantity    # integer of the transactions index position log was created from. null when its pending log.
