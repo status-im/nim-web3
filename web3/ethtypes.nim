@@ -122,7 +122,7 @@ type
     excessBlobGas*: Option[Quantity]        # EIP-4844
     parentBeaconBlockRoot*: Option[Hash256] # EIP-4788
 
-  WithdrawalObject = object
+  WithdrawalObject* = object
     index*: Quantity
     validatorIndex*: Quantity
     address*: Address
