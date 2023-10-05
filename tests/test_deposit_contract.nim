@@ -36,7 +36,7 @@ suite "Deposit contract":
 
       let s = await ns.subscribe(DepositEvent, %*{"fromBlock": "0x0"}) do (
           pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8])
-          {.raises: [Defect], gcsafe.}:
+          {.raises: [], gcsafe.}:
         try:
           echo "onDeposit"
           echo "pubkey: ", pubkey

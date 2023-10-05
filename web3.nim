@@ -24,7 +24,7 @@ type
     defaultAccount*: Address
     privateKey*: Option[PrivateKey]
     lastKnownNonce*: Option[Nonce]
-    onDisconnect*: proc() {.gcsafe, raises: [Defect].}
+    onDisconnect*: proc() {.gcsafe, raises: [].}
 
   Sender*[T] = ref object
     web3*: Web3
@@ -32,10 +32,10 @@ type
 
   EncodeResult* = tuple[dynamic: bool, data: string]
 
-  SubscriptionEventHandler* = proc (j: JsonNode) {.gcsafe, raises: [Defect].}
-  SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [Defect].}
+  SubscriptionEventHandler* = proc (j: JsonNode) {.gcsafe, raises: [].}
+  SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [].}
 
-  BlockHeaderHandler* = proc (b: BlockHeader) {.gcsafe, raises: [Defect].}
+  BlockHeaderHandler* = proc (b: BlockHeader) {.gcsafe, raises: [].}
 
   Subscription* = ref object
     id*: string
@@ -154,10 +154,10 @@ proc subscribeForLogs*(w: Web3, options: JsonNode,
     result.historicalEventsProcessed = true
 
 proc subscribeForBlockHeaders*(w: Web3,
-                               blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [Defect].},
+                               blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [].},
                                errorHandler: SubscriptionErrorHandler): Future[Subscription]
                               {.async.} =
-  proc eventHandler(json: JsonNode) {.gcsafe, raises: [Defect].} =
+  proc eventHandler(json: JsonNode) {.gcsafe, raises: [].} =
     var blk: BlockHeader
     try:
       fromJson(json, "result", blk)
@@ -465,13 +465,11 @@ macro contract*(cname: untyped, body: untyped): untyped =
           procTy = nnkProcTy.newTree(params, newEmptyNode())
           signature = getSignature(obj.eventObject)
 
-        # generated with dumpAstGen - produces "{.raises: [Defect], gcsafe.}"
+        # generated with dumpAstGen - produces "{.raises: [], gcsafe.}"
         let pragmas = nnkPragma.newTree(
           nnkExprColonExpr.newTree(
             newIdentNode("raises"),
-            nnkBracket.newTree(
-              newIdentNode("Defect")
-            )
+            nnkBracket.newTree()
           ),
           newIdentNode("gcsafe")
         )
@@ -502,7 +500,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          withHistoricEvents = true): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
-            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [].} =
               try:
                 `argParseBody`
                 `call`
@@ -519,7 +517,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          withHistoricEvents = true): Future[Subscription] =
             let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
 
-            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
+            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [].} =
               try:
                 `argParseBody`
                 `callWithRawData`
