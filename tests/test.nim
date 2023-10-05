@@ -148,7 +148,7 @@ suite "Contracts":
 
       let s = await ns.subscribe(Transfer) do (
           fromAddr, toAddr: Address, value: UInt256)
-          {.raises: [Defect], gcsafe.}:
+          {.raises: [], gcsafe.}:
         try:
           echo "onTransfer: ", fromAddr, " transferred ", value, " to ", toAddr
           inc notificationsReceived

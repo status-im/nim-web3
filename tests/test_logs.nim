@@ -68,7 +68,7 @@ suite "Logs":
 
         let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do (
             sender: Address, value: UInt256)
-            {.raises: [Defect], gcsafe.}:
+            {.raises: [], gcsafe.}:
           try:
             echo "onEvent: ", sender, " value ", value
             inc notificationsReceived
