@@ -84,11 +84,12 @@ type
     executionPayload*: ExecutionPayloadV2
     blockValue*: UInt256
 
-  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#response-2
+  # https://github.com/ethereum/execution-apis/blob/584905270d8ad665718058060267061ecfd79ca5/src/engine/cancun.md#response-2
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
     blobsBundle*: BlobsBundleV1
+    shouldOverrideBuilder*: bool
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
