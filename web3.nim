@@ -2,10 +2,12 @@ import
   std/[macros, strutils, options, math, json, tables, uri, strformat]
 
 from os import DirSep, AltSep
+from eth/common/eth_types import ChainId
 
 import
   stint, httputils, chronicles, chronos, nimcrypto/keccak,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
+
   chronos/apps/http/httpclient,
   web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding]
 
@@ -14,7 +16,7 @@ template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 ## Generate client convenience marshalling wrappers from forward declarations
 createRpcSigs(RpcClient, sourceDir & "/web3/ethcallsigs.nim")
 
-export UInt256, Int256, Uint128, Int128
+export UInt256, Int256, Uint128, Int128, ChainId
 export ethtypes, conversions, encoding, HttpClientFlag, HttpClientFlags
 
 type
@@ -573,6 +575,14 @@ proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   else:
     return await web3.provider.eth_sendTransaction(c)
 
+proc send*(web3: Web3, c: EthSend, chainId: ChainId): Future[TxHash] {.async.} =
+  doAssert(web3.privateKey.isSome())
+  var cc = c
+  if cc.nonce.isNone:
+    cc.nonce = some(await web3.nextNonce())
+  let t = "0x" & encodeTransaction(cc, web3.privateKey.get(), chainId)
+  return await web3.provider.eth_sendRawTransaction(t)
+
 proc send*(c: ContractCallBase,
            value = 0.u256,
            gas = 3000000'u64,
@@ -594,6 +604,29 @@ proc send*(c: ContractCallBase,
       gasPrice: gasPrice)
 
   return await web3.send(cc)
+
+proc send*(c: ContractCallBase,
+           chainId: ChainId,
+           value = 0.u256,
+           gas = 3000000'u64,
+           gasPrice = 0): Future[TxHash] {.async.} =
+  let
+    web3 = c.web3
+    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice)
+               else: none(int)
+    nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
+            else: none(Nonce)
+
+    cc = EthSend(
+      data: "0x" & c.data,
+      source: web3.defaultAccount,
+      to: some(c.to),
+      gas: some(Quantity(gas)),
+      value: some(value),
+      nonce: nonce,
+      gasPrice: gasPrice)
+
+  return await web3.send(cc, chainId)
 
 proc call*[T](c: ContractCall[T],
               value = 0.u256,
