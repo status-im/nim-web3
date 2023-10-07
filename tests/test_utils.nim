@@ -1,6 +1,6 @@
 import ../web3, chronos, options, stint
 
-proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[ReceiptObject] {.async.} =
+proc deployContract*(web3: Web3, code: string, gasPrice = GasInt(0)): Future[ReceiptObject] {.async.} =
   let provider = web3.provider
   let accounts = await provider.eth_accounts()
 

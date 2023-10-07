@@ -2,6 +2,10 @@ import
   std/[options, hashes, typetraits],
   stint, stew/[byteutils, results]
 
+from eth/common/eth_types import GasInt
+
+export
+  GasInt
 export
   hashes, options, typetraits
 
@@ -63,7 +67,7 @@ type
     source*: Address             # the address the transaction is sent from.
     to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
     gas*: Option[Quantity]       # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
-    gasPrice*: Option[int]       # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
+    gasPrice*: Option[GasInt]    # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
     value*: Option[UInt256]      # (optional) integer of the value sent with this transaction.
     data*: string                # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters.
                                  # For details see Ethereum Contract ABI.

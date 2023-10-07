@@ -586,11 +586,11 @@ proc send*(web3: Web3, c: EthSend, chainId: ChainId): Future[TxHash] {.async.} =
 proc send*(c: ContractCallBase,
            value = 0.u256,
            gas = 3000000'u64,
-           gasPrice = 0): Future[TxHash] {.async.} =
+           gasPrice = GasInt(0)): Future[TxHash] {.async.} =
   let
     web3 = c.web3
     gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice)
-               else: none(int)
+               else: none(GasInt)
     nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
             else: none(Nonce)
 
@@ -609,11 +609,11 @@ proc send*(c: ContractCallBase,
            chainId: ChainId,
            value = 0.u256,
            gas = 3000000'u64,
-           gasPrice = 0): Future[TxHash] {.async.} =
+           gasPrice = GasInt(0)): Future[TxHash] {.async.} =
   let
     web3 = c.web3
     gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice)
-               else: none(int)
+               else: none(GasInt)
     nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
             else: none(Nonce)
 
