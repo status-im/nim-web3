@@ -181,7 +181,7 @@ type
     accessList*: Option[seq[AccessTuple]]            # EIP-2930
     maxFeePerGas*: Option[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Option[Quantity]          # EIP-1559
-    maxFeePerBlobGas*: Option[Quantity]              # EIP-4844
+    maxFeePerBlobGas*: Option[UInt256]               # EIP-4844
     blobVersionedHashes*: Option[seq[VersionedHash]] # EIP-4844
 
   ReceiptKind* = enum rkRoot, rkStatus
