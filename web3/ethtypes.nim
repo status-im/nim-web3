@@ -6,12 +6,8 @@ export
   hashes, options, typetraits
 
 const
-  web3_consensus_const_preset* {.strdefine.} = "mainnet"
-
-  # TODO This is not very elegant. Can we make this a run-time choice?
-  fieldElementsPerBlob = when web3_consensus_const_preset == "minimal": 4
-                         elif web3_consensus_const_preset == "mainnet": 4096
-                         else: {.error: "please set 'web3_consensus_const_preset' to either 'mainnet' or 'minimal'".}
+  # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/engine/cancun.md#blobsbundlev1
+  fieldElementsPerBlob = 4096
 
 type
   SyncObject* = object
