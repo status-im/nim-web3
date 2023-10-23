@@ -450,6 +450,8 @@ template len*(data: DynamicBytes): int =
 func `$`*[minLen, maxLen](data: DynamicBytes[minLen, maxLen]): string =
   "0x" & byteutils.toHex(distinctBase(data))
 
+func `$`*(address: Address): string =
+  "0x" & byteutils.toHex(distinctBase(address))
 
 # These conversion functions are very ugly, but at least
 # they're very straightforward and simple. If anyone has

@@ -200,9 +200,6 @@ func `$`*(v: Quantity): string {.inline.} =
 func `$`*[N](v: FixedBytes[N]): string {.inline.} =
   "0x" & array[N, byte](v).toHex
 
-func `$`*(v: Address): string {.inline.} =
-  "0x" & array[20, byte](v).toHex
-
 func `$`*(v: TypedTransaction): string {.inline.} =
   "0x" & distinctBase(v).toHex
 
