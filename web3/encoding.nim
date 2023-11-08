@@ -37,7 +37,7 @@ func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openAr
     padding = 32 - padding
   let offset = baseOffset + offset + padding
   if to.len != 0:
-    copyMem(addr to, addr input[offset], meaningfulLen)
+    copyMem(addr to, unsafeAddr input[offset], meaningfulLen)
   meaningfulLen + padding
 
 func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
