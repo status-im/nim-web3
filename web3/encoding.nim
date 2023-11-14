@@ -167,3 +167,8 @@ func encode*(x: tuple): seq[byte] =
       result[o .. o + 31] = encode(offset.u256)
       result &= encode(v)
     inc i
+
+# Obsolete
+from stew/byteutils import hexToSeqByte
+func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openarray[byte], ...) instead".} =
+  decode(hexToSeqByte(input), offset div 2, 0, to) * 2

@@ -26,9 +26,11 @@ type
     lastKnownNonce*: Option[Nonce]
     onDisconnect*: proc() {.gcsafe, raises: [].}
 
-  Sender* = ref object
+  Web3SenderImpl = ref object
     web3*: Web3
     contractAddress*: Address
+
+  Sender*[T] = ContractInstance[T, Web3SenderImpl]
 
   SubscriptionEventHandler* = proc (j: JsonNode) {.gcsafe, raises: [].}
   SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [].}
@@ -155,7 +157,7 @@ proc addAddressAndSignatureToOptions(options: JsonNode, address: Address, topic:
     result["topics"] = topics
   topics.elems.insert(%to0xHex(topic), 0)
 
-proc subscribeForLogs*(s: Sender, options: JsonNode,
+proc subscribeForLogs*(s: Web3SenderImpl, options: JsonNode,
                        topic: seq[byte],
                        logsHandler: SubscriptionEventHandler,
                        errorHandler: SubscriptionErrorHandler,
@@ -185,7 +187,7 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   s.removed = true
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
-proc getJsonLogs(s: Sender, topic: openarray[byte],
+proc getJsonLogs(s: Web3SenderImpl, topic: openarray[byte],
                   fromBlock, toBlock = none(RtBlockIdentifier),
                   blockHash = none(BlockHash)): Future[JsonNode] =
   var options = newJObject()
@@ -204,7 +206,7 @@ proc getJsonLogs(s: Sender, topic: openarray[byte],
 
   s.web3.provider.eth_getLogs(options)
 
-proc getJsonLogs*[TContract](s: ContractInstance[TContract, Sender],
+proc getJsonLogs*[TContract](s: Sender[TContract],
                   EventName: type,
                   fromBlock, toBlock = none(RtBlockIdentifier),
                   blockHash = none(BlockHash)): Future[JsonNode] {.inline.} =
@@ -230,7 +232,7 @@ proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   else:
     return await web3.provider.eth_sendTransaction(c)
 
-proc sendData(sender: Sender,
+proc sendData(sender: Web3SenderImpl,
               data: seq[byte],
               value: UInt256,
               gas: uint64,
@@ -253,13 +255,13 @@ proc sendData(sender: Sender,
 
   return await web3.send(cc)
 
-proc send*[T](c: ContractInvocation[T, Sender],
+proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            value = 0.u256,
            gas = 3000000'u64,
            gasPrice = 0): Future[TxHash] =
   sendData(c.sender, c.data, value, gas, gasPrice)
 
-proc call*[T](c: ContractInvocation[T, Sender],
+proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
               value = 0.u256,
               gas = 3000000'u64,
               blockNumber = high(uint64)): Future[T] {.async.} =
@@ -294,7 +296,7 @@ proc getMinedTransactionReceipt*(web3: Web3, tx: TxHash): Future[ReceiptObject] 
       await sleepAsync(500.milliseconds)
   result = r.get
 
-proc exec*[T](c: ContractInvocation[T, Sender], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
+proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
   let h = await c.send(value, gas)
   let receipt = await c.web3.getMinedTransactionReceipt(h)
 
@@ -327,16 +329,16 @@ proc exec*[T](c: ContractInvocation[T, Sender], value = 0.u256, gas = 3000000'u6
 #let response = waitFor w3.eth.eth_sendTransaction(cc)
 #echo response
 
-proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): ContractInstance[T, Sender] =
-  ContractInstance[T, Sender](sender: Sender(web3: web3, contractAddress: toAddress))
+proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
+  Sender[T](sender: Web3SenderImpl(web3: web3, contractAddress: toAddress))
 
 proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} =
   let
     codeFut = case atBlock.kind
       of bidNumber:
-        s.web3.provider.eth_getCode(s.contractAddress, atBlock.number)
+        s.sender.web3.provider.eth_getCode(s.contractAddress, atBlock.number)
       of bidAlias:
-        s.web3.provider.eth_getCode(s.contractAddress, atBlock.alias)
+        s.sender.web3.provider.eth_getCode(s.contractAddress, atBlock.alias)
     code = await codeFut
 
   # TODO: Check that all methods of the contract are present by
@@ -344,5 +346,5 @@ proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} 
   #       https://ethereum.stackexchange.com/questions/11856/how-to-detect-from-web3-if-method-exists-on-a-deployed-contract
   return code.len > 0
 
-proc subscribe*[TContract](s: ContractInstance[TContract, Sender], t: typedesc, cb: proc): Future[Subscription] {.inline.} =
+proc subscribe*[TContract](s: Sender[TContract], t: typedesc, cb: proc): Future[Subscription] {.inline.} =
   subscribe(s, t, newJObject(), cb, SubscriptionErrorHandler nil)
