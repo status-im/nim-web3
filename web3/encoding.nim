@@ -20,15 +20,19 @@ func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var StInt[N
   to = type(to).fromBytesBE(input[offset ..< offset + meaningfulLen])
   meaningfulLen
 
-func fixedEncode1(a: openArray[byte]): seq[byte] =
+func encodeFixed(a: openArray[byte]): seq[byte] =
   var padding = a.len mod 32
   if padding != 0: padding = 32 - padding
   result.setLen(padding) # Zero fill padding
   result.add(a)
 
-func encode*[N](b: FixedBytes[N]): seq[byte] = fixedEncode1(array[N, byte](b))
-func encode*(b: Address): seq[byte] = fixedEncode1(array[20, byte](b))
-func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = fixedEncode1(b)
+func encode*[N](b: FixedBytes[N]): seq[byte] = encodeFixed(array[N, byte](b))
+func encode*(b: Address): seq[byte] = encodeFixed(array[20, byte](b))
+func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = encodeFixed(b)
+
+func copyArray(dst: var openarray[byte], src: openarray[byte]) {.inline.} =
+  assert(dst.len == src.len)
+  copyMem(addr dst, unsafeAddr src, src.len)
 
 func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
   let meaningfulLen = to.len
@@ -37,7 +41,7 @@ func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openAr
     padding = 32 - padding
   let offset = baseOffset + offset + padding
   if to.len != 0:
-    copyMem(addr to, unsafeAddr input[offset], meaningfulLen)
+    copyArray(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen + padding
 
 func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
@@ -58,20 +62,20 @@ func encode*(x: DynamicBytes): seq[byte] {.inline.} =
 func encode*(x: seq[byte]): seq[byte] {.inline.} =
   encodeDynamic(x)
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte]): int =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
   discard decode(input, baseOffset, dataOffset, dataLenBig)
   let dataLen = dataLenBig.truncate(int)
-  # TODO: Check data len, and raise?
   let actualDataOffset = baseOffset + dataOffset + 32
-  to = typeof(to)(@input[actualDataOffset ..< actualDataOffset + dataLen])
+  to = @input[actualDataOffset ..< actualDataOffset + dataLen]
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte]): int {.inline.} =
-  var d: DynamicBytes[0, int.high]
-  result = decode(input, baseOffset, offset, d)
-  to = move(seq[byte](d))
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
+  var s: seq[byte]
+  result = decode(input, baseOffset, offset, s)
+  # TODO: Check data len, and raise?
+  to = typeof(to)(move(s))
 
 func decode*(input: openarray[byte], baseOffset, offset: int, obj: var object): int
 
