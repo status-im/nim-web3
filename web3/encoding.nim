@@ -1,6 +1,6 @@
 import
   std/macros,
-  stint, ./ethtypes
+  stint, ./ethtypes, stew/assign2
 
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
   @(x.toByteArrayBE())
@@ -30,10 +30,6 @@ func encode*[N](b: FixedBytes[N]): seq[byte] = encodeFixed(array[N, byte](b))
 func encode*(b: Address): seq[byte] = encodeFixed(array[20, byte](b))
 func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = encodeFixed(b)
 
-func copyArray(dst: var openarray[byte], src: openarray[byte]) {.inline.} =
-  assert(dst.len == src.len)
-  copyMem(addr dst, unsafeAddr src, src.len)
-
 func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
   let meaningfulLen = to.len
   var padding = to.len mod 32
@@ -41,7 +37,7 @@ func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openAr
     padding = 32 - padding
   let offset = baseOffset + offset + padding
   if to.len != 0:
-    copyArray(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
+    assign(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen + padding
 
 func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
