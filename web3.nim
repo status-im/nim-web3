@@ -146,9 +146,7 @@ proc subscribeForLogs*(w: Web3, options: JsonNode,
     result.historicalEventsProcessed = true
 
 proc addAddressAndSignatureToOptions(options: JsonNode, address: Address, topic: seq[byte]): JsonNode =
-  result = options
-  if result.isNil:
-    result = newJObject()
+  result = if options.isNil: newJObject() else: options
   if "address" notin result:
     result["address"] = %address
   var topics = result{"topics"}
