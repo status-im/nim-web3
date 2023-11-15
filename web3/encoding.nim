@@ -11,7 +11,7 @@ func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
 func decode*(input: openarray[byte], baseOffset, offset: int, to: var StUint): int =
   const meaningfulLen = to.bits div 8
   let offset = offset + baseOffset
-  to = type(to).fromBytesBE(input[offset ..< offset + meaningfulLen])
+  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
 
 func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var StInt[N]): int =
