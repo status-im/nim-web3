@@ -17,7 +17,7 @@ func decode*(input: openarray[byte], baseOffset, offset: int, to: var StUint): i
 func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var StInt[N]): int =
   const meaningfulLen = N div 8
   let offset = offset + baseOffset
-  to = type(to).fromBytesBE(input[offset ..< offset + meaningfulLen])
+  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
 
 func encodeFixed(a: openArray[byte]): seq[byte] =
@@ -65,7 +65,7 @@ func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte])
   discard decode(input, baseOffset, dataOffset, dataLenBig)
   let dataLen = dataLenBig.truncate(int)
   let actualDataOffset = baseOffset + dataOffset + 32
-  to = @input[actualDataOffset ..< actualDataOffset + dataLen]
+  to = input[actualDataOffset ..< actualDataOffset + dataLen]
 
 func decode*(input: openarray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
   var s: seq[byte]
@@ -171,4 +171,4 @@ func encode*(x: tuple): seq[byte] =
 # Obsolete
 from stew/byteutils import hexToSeqByte
 func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openarray[byte], ...) instead".} =
-  decode(hexToSeqByte(input), offset div 2, 0, to) * 2
+  decode(hexToSeqByte(input), 0, offset div 2, to) * 2
