@@ -1,7 +1,18 @@
-import pkg/unittest2
-import ../web3
-import chronos, options, json, stint, eth/keys
-import test_utils
+# nim-web3
+# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
+import
+  std/[options, json],
+  pkg/unittest2,
+  chronos, stint, eth/keys,
+  ../web3,
+  ./helpers/utils
 
 #[ Contract NumberStorage
 pragma solidity ^0.4.18;
@@ -39,10 +50,10 @@ suite "Signed transactions":
       let acc = Address(toCanonicalAddress(pk.toPublicKey()))
 
       var tx: EthSend
-      tx.source = accounts[0]
+      tx.`from` = accounts[0]
       tx.value = some(ethToWei(10.u256))
       tx.to = some(acc)
-      tx.gasPrice = some(gasPrice)
+      tx.gasPrice = some(gasPrice.Quantity)
 
       # Send 10 eth to acc
       discard await web3.send(tx)

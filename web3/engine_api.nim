@@ -1,11 +1,24 @@
+# nim-web3
+# Copyright (c) 2022-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 import
   strutils,
   json_serialization/std/[sets, net], serialization/errors,
   json_rpc/[client, jsonmarshal],
-  conversions, engine_api_types
+  ./conversions,
+  ./engine_api_types,
+  ./execution_types
 
 export
-  engine_api_types, conversions
+  engine_api_types,
+  conversions,
+  execution_types
 
 from os import DirSep, AltSep
 template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
