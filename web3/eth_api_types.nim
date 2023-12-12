@@ -150,7 +150,7 @@ type
     maxFeePerGas*: Option[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Option[Quantity]          # EIP-1559
     maxFeePerBlobGas*: Option[UInt256]               # EIP-4844
-    versionedHashes*: Option[seq[VersionedHash]]     # EIP-4844
+    blobVersionedHashes*: Option[seq[VersionedHash]] # EIP-4844
 
   ReceiptObject* = ref object           # A transaction receipt object, or null when no receipt was found:
     transactionHash*: TxHash            # hash of the transaction.
