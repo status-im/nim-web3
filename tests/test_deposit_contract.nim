@@ -1,8 +1,19 @@
-import pkg/unittest2
-import ../web3
-import chronos, options, json, stint
-import test_utils
-import ./depositcontract
+# nim-web3
+# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
+import
+  std/[options, json],
+  pkg/unittest2,
+  chronos, stint,
+  ../web3,
+  ./helpers/utils,
+  ./helpers/depositcontract
 
 contract(DepositContract):
   proc deposit(pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], signature: DynamicBytes[0, 96], deposit_data_root: FixedBytes[32])
@@ -36,7 +47,7 @@ suite "Deposit contract":
 
       let s = await ns.subscribe(DepositEvent, %*{"fromBlock": "0x0"}) do (
           pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8])
-          {.raises: [Defect], gcsafe.}:
+          {.raises: [], gcsafe.}:
         try:
           echo "onDeposit"
           echo "pubkey: ", pubkey

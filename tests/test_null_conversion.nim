@@ -1,14 +1,10 @@
-import os
-import macros
-import std/json
-import std/strutils
-import pkg/unittest2
-import stint
-
-import json_rpc/jsonmarshal
-
-import ../web3
-import ../web3/[conversions, ethtypes, engine_api_types]
+import
+  std/[os, macros, json, strutils],
+  pkg/unittest2,
+  stint,
+  json_rpc/jsonmarshal,
+  ../web3,
+  ../web3/[conversions, eth_api_types, engine_api_types]
 
 template should_be_value_error(input: string, value: untyped): void =
   expect ValueError:

@@ -1,42 +1,53 @@
+# nim-web3
+# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 ## This module contains signatures for the Ethereum client RPCs.
 ## The signatures are not imported directly, but read and processed with parseStmt,
 ## then a procedure body is generated to marshal native Nim parameters to json and visa versa.
-import json, options, stint, ethtypes
+import json, options, stint, eth_api_types
 
 proc web3_clientVersion(): string
-proc web3_sha3(data: string): string
+proc web3_sha3(data: seq[byte]): Hash256
 proc net_version(): string
-proc net_peerCount(): int
+proc net_peerCount(): Quantity
 proc net_listening(): bool
 proc eth_protocolVersion(): string
 proc eth_syncing(): JsonNode
-proc eth_coinbase(): string
+proc eth_coinbase(): Address
 proc eth_mining(): bool
-proc eth_hashrate(): int
+proc eth_hashrate(): Quantity
 proc eth_gasPrice(): Quantity
 proc eth_accounts(): seq[Address]
 proc eth_blockNumber(): Quantity
 proc eth_getBalance(data: Address, blockId: BlockIdentifier): UInt256
-proc eth_getStorageAt(data: Address, quantity: int, blockId: BlockIdentifier): seq[byte]
+proc eth_getStorageAt(data: Address, slot: UInt256, blockId: BlockIdentifier): UInt256
 proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
-proc eth_getBlockTransactionCountByHash(data: BlockHash)
-proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier)
-proc eth_getUncleCountByBlockHash(data: BlockHash)
-proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier)
+proc eth_getBlockTransactionCountByHash(data: BlockHash): Quantity
+proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
+proc eth_getUncleCountByBlockHash(data: BlockHash): Quantity
+proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
 proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
-proc eth_sign(address: Address, data: string): seq[byte]
+proc eth_sign(address: Address, data: seq[byte]): seq[byte]
+proc eth_signTransaction(data: EthSend): seq[byte]
 proc eth_sendTransaction(obj: EthSend): TxHash
-proc eth_sendRawTransaction(data: string): TxHash
-proc eth_call(call: EthCall, blockId: BlockIdentifier): string #UInt256
-proc eth_estimateGas(call: EthCall, blockId: BlockIdentifier): UInt256
+proc eth_sendRawTransaction(data: seq[byte]): TxHash
+proc eth_call(call: EthCall, blockId: BlockIdentifier): seq[byte]
+proc eth_estimateGas(call: EthCall, blockId: BlockIdentifier): Quantity
+proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): AccessListResult
 proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
 proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
 proc eth_getTransactionByHash(data: TxHash): TransactionObject
-proc eth_getTransactionByBlockHashAndIndex(data: UInt256, quantity: int): TransactionObject
-proc eth_getTransactionByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: int): TransactionObject
-proc eth_getTransactionReceipt(data: TxHash): Option[ReceiptObject]
-proc eth_getUncleByBlockHashAndIndex(data: UInt256, quantity: int64): BlockObject
-proc eth_getUncleByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: int64): BlockObject
+proc eth_getTransactionByBlockHashAndIndex(data: Hash256, quantity: Quantity): TransactionObject
+proc eth_getTransactionByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: Quantity): TransactionObject
+proc eth_getTransactionReceipt(data: TxHash): ReceiptObject
+proc eth_getUncleByBlockHashAndIndex(data: Hash256, quantity: Quantity): BlockObject
+proc eth_getUncleByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: Quantity): BlockObject
 proc eth_getCompilers(): seq[string]
 proc eth_compileLLL(): seq[byte]
 proc eth_compileSolidity(): seq[byte]
@@ -52,8 +63,8 @@ proc eth_getLogs(filterOptions: JsonNode): JsonNode
 proc eth_chainId(): Quantity
 
 proc eth_getWork(): seq[UInt256]
-proc eth_submitWork(nonce: int64, powHash: Uint256, mixDigest: Uint256): bool
-proc eth_submitHashrate(hashRate: UInt256, id: Uint256): bool
+proc eth_submitWork(nonce: int64, powHash: Hash256, mixDigest: Hash256): bool
+proc eth_submitHashrate(hashRate: UInt256, id: UInt256): bool
 proc eth_subscribe(name: string, options: JsonNode): string
 proc eth_subscribe(name: string): string
 proc eth_unsubscribe(id: string)
@@ -63,13 +74,3 @@ proc eth_getProof(
   slots: seq[UInt256],
   blockId: BlockIdentifier): ProofResponse
 
-proc shh_post(): string
-proc shh_version(message: WhisperPost): bool
-proc shh_newIdentity(): array[60, byte]
-proc shh_hasIdentity(identity: array[60, byte]): bool
-proc shh_newGroup(): array[60, byte]
-proc shh_addToGroup(identity: array[60, byte]): bool
-proc shh_newFilter(filterOptions: FilterOptions, to: array[60, byte], topics: seq[UInt256]): int
-proc shh_uninstallFilter(id: int): bool
-proc shh_getFilterChanges(id: int): seq[WhisperMessage]
-proc shh_getMessages(id: int): seq[WhisperMessage]
