@@ -105,4 +105,8 @@ suite "Signed transactions":
       assert(n == 5.u256)
       await web3.close()
 
-    waitFor test()
+    try:
+      waitFor test()
+    except CatchableError as err:
+      echo "Failed to send signed tx", err.msg
+      fail()

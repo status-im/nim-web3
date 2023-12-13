@@ -34,6 +34,7 @@ template invalidQuantityPrefix(s: string): bool =
 
 func `%`*(n: Int256|UInt256): JsonNode = %("0x" & n.toHex)
 
+
 # allows UInt256 to be passed as a json string
 func fromJson*(n: JsonNode, argName: string, result: var UInt256) =
   # expects base 16 string, starting with "0x"
@@ -43,7 +44,7 @@ func fromJson*(n: JsonNode, argName: string, result: var UInt256) =
     raise newException(ValueError, "Parameter \"" & argName & "\" value too long for UInt256: " & $hexStr.len)
   if hexStr.invalidQuantityPrefix:
     raise newException(ValueError, "Parameter \"" & argName & "\" value has invalid leading 0")
-  result = hexStr.parse(StUint[256], 16) # TODO: Handle errors
+  result = hexStr.parse(StUint[256], 16) # TODO Add error checking
 
 # allows ref UInt256 to be passed as a json string
 func fromJson*(n: JsonNode, argName: string, result: var ref UInt256) =
@@ -55,13 +56,18 @@ func fromJson*(n: JsonNode, argName: string, result: var ref UInt256) =
   if hexStr.invalidQuantityPrefix:
     raise newException(ValueError, "Parameter \"" & argName & "\" value has invalid leading 0")
   new result
-  result[] = hexStr.parse(StUint[256], 16) # TODO: Handle errors
+  result[] = hexStr.parse(StUint[256], 16) # TODO Add error checking
 
 func bytesFromJson(n: JsonNode, argName: string, result: var openArray[byte]) =
   n.kind.expect(JString, argName)
   let hexStr = n.getStr()
+
+  if not ("0x" in hexStr):
+    raise newException(ValueError, "Parameter \"" & argName & "\" is not a hexadecimal string")
+
   if hexStr.len != result.len * 2 + 2: # including "0x"
     raise newException(ValueError, "Parameter \"" & argName & "\" value wrong length: " & $hexStr.len)
+
   hexToByteArray(hexStr, result)
 
 func fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N])

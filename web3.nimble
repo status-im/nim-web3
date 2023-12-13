@@ -7,12 +7,11 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-mode = ScriptMode.Verbose
-
-version       = "0.2.2"
-author        = "Status Research & Development GmbH"
-description   = "This is the humble begginings of library similar to web3.[js|py]"
-license       = "MIT or Apache License 2.0"
+mode        = ScriptMode.Verbose
+version     = "0.2.4"
+author      = "Status Research & Development GmbH"
+description = "This is the humble begginings of library similar to web3.[js|py]"
+license     = "MIT or Apache License 2.0"
 
 ### Dependencies
 requires "nim >= 1.6.0"
