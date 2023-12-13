@@ -9,7 +9,7 @@
 
 import
   options,
-  eth_api_types, stew/byteutils, stint,
+  eth_api_types, stint,
   eth/[common, keys, rlp], eth/common/transaction
 
 func signTransaction(tr: var Transaction, pk: PrivateKey) =

@@ -175,12 +175,6 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
 macro contract*(cname: untyped, body: untyped): untyped =
   var objects = parseContract(body)
   result = newStmtList()
-  let
-    address = ident "address"
-    client = ident "client"
-    receipt = genSym(nskForVar)
-    receiver = ident "receiver"
-    eventListener = ident "eventListener"
   result.add quote do:
     type
       `cname`* = object

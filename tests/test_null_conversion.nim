@@ -1,5 +1,5 @@
 import
-  std/[os, macros, json, strutils],
+  std/[json, strutils],
   pkg/unittest2,
   stint,
   json_rpc/jsonmarshal,
@@ -9,6 +9,9 @@ import
 template should_be_value_error(input: string, value: untyped): void =
   expect ValueError:
     fromJson(%input, "", value)
+
+template should_not_error(input: string, value: untyped): void =
+  fromJson(%input, "", value)
 
 suite "Null conversion":
   var resAddress: Address
@@ -47,10 +50,12 @@ suite "Null conversion":
     should_be_value_error("0x", resDynamicBytes)
     should_be_value_error("0x", resFixedBytes)
     should_be_value_error("0x", resQuantity)
-    should_be_value_error("0x", resRlpEncodedBytes)
-    should_be_value_error("0x", resTypedTransaction)
     should_be_value_error("0x", resUInt256)
     should_be_value_error("0x", resUInt256Ref)
+
+  test "passing hex (0x) values to normal convertors":
+    should_not_error("0x", resRlpEncodedBytes)
+    should_not_error("0x", resTypedTransaction)
 
   test "passing malformed hex (0x_) values to normal convertors":
     should_be_value_error("0x_", resAddress)

@@ -178,6 +178,5 @@ func encode*(x: tuple): seq[byte] =
     inc i
 
 # Obsolete
-from stew/byteutils import hexToSeqByte
 func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openarray[byte], ...) instead".} =
   decode(hexToSeqByte(input), 0, offset div 2, to) * 2

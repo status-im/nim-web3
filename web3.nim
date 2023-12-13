@@ -8,15 +8,14 @@
 # those terms.
 
 import
-  std/[options, math, json, tables, uri, strformat]
+  std/[options, json, tables, uri, strformat]
 
 from os import DirSep, AltSep
 from eth/common/eth_types import ChainId
 
 import
-  stint, httputils, chronicles, chronos, nimcrypto/keccak,
+  stint, httputils, chronos,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
-
   chronos/apps/http/httpclient,
   web3/[eth_api_types, conversions, ethhexstrings, transaction_signing, encoding, contract_dsl]
 
