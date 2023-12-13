@@ -8,218 +8,176 @@
 # those terms.
 
 import
-  std/[typetraits, strutils, macros, math]
+  std/macros,
+  stint, ./eth_api_types, stew/[assign2, byteutils]
 
-import
-  stint, stew/byteutils, ./eth_api_types
+func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
+  @(x.toByteArrayBE())
 
-type
-  EncodeResult* = tuple[dynamic: bool, data: string]
+func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
+  @(x.toByteArrayBE())
 
-func encode*[bits: static[int]](x: StUint[bits]): EncodeResult =
-  ## Encodes a `StUint` to a textual representation for use in the JsonRPC
-  ## `sendTransaction` call.
-  (dynamic: false, data: '0'.repeat((256 - bits) div 4) & x.dumpHex)
-
-func encode*[bits: static[int]](x: StInt[bits]): EncodeResult =
-  ## Encodes a `StInt` to a textual representation for use in the JsonRPC
-  ## `sendTransaction` call.
-  (dynamic: false,
-  data:
-    if x.isNegative:
-      'f'.repeat((256 - bits) div 4) & x.dumpHex
-    else:
-      '0'.repeat((256 - bits) div 4) & x.dumpHex
-  )
-
-func decode*(input: string, offset: int, to: var StUint): int =
-  let meaningfulLen = to.bits div 8 * 2
-  to = type(to).fromHex(input[offset .. offset + meaningfulLen - 1])
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var StUint): int =
+  const meaningfulLen = to.bits div 8
+  let offset = offset + baseOffset
+  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
 
-func decode*[N](input: string, offset: int, to: var StInt[N]): int =
-  let meaningfulLen = N div 8 * 2
-  fromHex(input[offset .. offset + meaningfulLen], to)
+func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var StInt[N]): int =
+  const meaningfulLen = N div 8
+  let offset = offset + baseOffset
+  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
 
-func fixedEncode(a: openArray[byte]): EncodeResult =
+func encodeFixed(a: openArray[byte]): seq[byte] =
   var padding = a.len mod 32
   if padding != 0: padding = 32 - padding
-  result = (dynamic: false, data: "00".repeat(padding) & byteutils.toHex(a))
+  result.setLen(padding) # Zero fill padding
+  result.add(a)
 
-func encode*[N](b: FixedBytes[N]): EncodeResult = fixedEncode(array[N, byte](b))
-func encode*(b: Address): EncodeResult = fixedEncode(array[20, byte](b))
+func encode*[N](b: FixedBytes[N]): seq[byte] = encodeFixed(array[N, byte](b))
+func encode*(b: Address): seq[byte] = encodeFixed(array[20, byte](b))
+func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = encodeFixed(b)
 
-func decodeFixed(input: string, offset: int, to: var openArray[byte]): int =
-  let meaningfulLen = to.len * 2
+func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
+  let meaningfulLen = to.len
   var padding = to.len mod 32
-  if padding != 0: padding = (32 - padding) * 2
-  let offset = offset + padding
-  hexToByteArray(input[offset .. offset + meaningfulLen - 1], to)
+  if padding != 0:
+    padding = 32 - padding
+  let offset = baseOffset + offset + padding
+  if to.len != 0:
+    assign(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen + padding
 
-func decode*[N](input: string, offset: int, to: var FixedBytes[N]): int {.inline.} =
-  decodeFixed(input, offset, array[N, byte](to))
+func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
+  decodeFixed(input, baseOffset, offset, array[N, byte](to))
 
-func decode*(input: string, offset: int, to: var Address): int {.inline.} =
-  decodeFixed(input, offset, array[20, byte](to))
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var Address): int {.inline.} =
+  decodeFixed(input, baseOffset, offset, array[20, byte](to))
 
-func encodeDynamic(v: openArray[byte]): EncodeResult =
-  result.dynamic = true
-  result.data = v.len.toHex(64).toLower
-  for y in v:
-    result.data &= y.toHex.toLower
-  result.data &= "00".repeat(v.len mod 32)
+func encodeDynamic(v: openArray[byte]): seq[byte] =
+  result = encode(v.len.u256)
+  result.add(v)
+  for i in 0 ..< (v.len mod 32):
+    result.add(0)
 
-func encode*(x: DynamicBytes): EncodeResult {.inline.} =
+func encode*(x: DynamicBytes): seq[byte] {.inline.} =
   encodeDynamic(distinctBase x)
 
-func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline.} =
-  var dataOffset, dataLen: UInt256
-  result = decode(input, offset, dataOffset)
-  discard decode(input, dataOffset.truncate(int) * 2, dataLen)
+func encode*(x: seq[byte]): seq[byte] {.inline.} =
+  encodeDynamic(x)
+
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte]): int =
+  var dataOffsetBig, dataLenBig: UInt256
+  result = decode(input, baseOffset, offset, dataOffsetBig)
+  let dataOffset = dataOffsetBig.truncate(int)
+  discard decode(input, baseOffset, dataOffset, dataLenBig)
+  let dataLen = dataLenBig.truncate(int)
+  let actualDataOffset = baseOffset + dataOffset + 32
+  to = input[actualDataOffset ..< actualDataOffset + dataLen]
+
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
+  var s: seq[byte]
+  result = decode(input, baseOffset, offset, s)
   # TODO: Check data len, and raise?
-  let actualDataOffset = (dataOffset.truncate(int) + 32) * 2
-  to = typeof(to)(hexToSeqByte(input[actualDataOffset ..< actualDataOffset + dataLen.truncate(int) * 2]))
+  to = typeof(to)(move(s))
 
-macro makeTypeEnum(): untyped =
-  ## This macro creates all the various types of Solidity contracts and maps
-  ## them to the type used for their encoding. It also creates an enum to
-  ## identify these types in the contract signatures, along with encoder
-  ## functions used in the generated procedures.
-  result = newStmtList()
-  var lastpow2: int
-  for i in countdown(256, 8, 8):
-    let
-      identUint = newIdentNode("Uint" & $i)
-      identInt = newIdentNode("Int" & $i)
-    if ceil(log2(i.float)) == floor(log2(i.float)):
-      lastpow2 = i
-    if i notin [256, 125]: # Int/UInt256/128 are already defined in stint. No need to repeat.
-      result.add quote do:
-        type
-          `identUint`* = StUint[`lastpow2`]
-          `identInt`* = StInt[`lastpow2`]
-  let
-    identUint = ident("Uint")
-    identInt = ident("Int")
-    identBool = ident("Bool")
-  result.add quote do:
-    type
-      `identUint`* = UInt256
-      `identInt`* = Int256
-      `identBool`* = distinct Int256
+func decode*(input: openarray[byte], baseOffset, offset: int, obj: var object): int
 
-  for m in countup(8, 256, 8):
-    let
-      identInt = ident("Int" & $m)
-      identUint = ident("Uint" & $m)
-      identFixed = ident "Fixed" & $m
-      identUfixed = ident "Ufixed" & $m
-      identT = ident "T"
-    result.add quote do:
-      # Fixed stuff is not actually implemented yet, these procedures don't
-      # do what they are supposed to.
-      type
-        `identFixed`*[N: static[int]] = distinct `identInt`
-        `identUfixed`*[N: static[int]] = distinct `identUint`
+func decode*[T](input: openarray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline.} =
+  var dataOffsetBig, dataLenBig: UInt256
+  result = decode(input, baseOffset, offset, dataOffsetBig)
+  let dataOffset = dataOffsetBig.truncate(int)
+  discard decode(input, baseOffset, dataOffset, dataLenBig)
+  # TODO: Check data len, and raise?
+  let dataLen = dataLenBig.truncate(int)
+  to.setLen(dataLen)
+  let baseOffset = baseOffset + dataOffset + 32
+  var offset = 0
+  for i in 0 ..< dataLen:
+    offset += decode(input, baseOffset, offset, to[i])
 
-      # func to*(x: `identInt`, `identT`: typedesc[`identFixed`]): `identT` =
-      #   T(x)
+proc isDynamicObject(T: typedesc): bool
 
-      # func to*(x: `identUint`, `identT`: typedesc[`identUfixed`]): `identT` =
-      #   T(x)
+template isDynamicType(a: typedesc): bool =
+  when a is seq | openarray | string | DynamicBytes:
+    true
+  elif a is object:
+    const r = isDynamicObject(a)
+    r
+  else:
+    false
 
-      # func encode*[N: static[int]](x: `identFixed`[N]): EncodeResult =
-      #   encode(`identInt`(x) * (10 ^ N).to(`identInt`))
+proc isDynamicObject(T: typedesc): bool =
+  var a: T
+  for v in fields(a):
+    if isDynamicType(typeof(v)): return true
+  false
 
-      # func encode*[N: static[int]](x: `identUfixed`[N]): EncodeResult =
-      #   encode(`identUint`(x) * (10 ^ N).to(`identUint`))
+func encode*(x: bool): seq[byte] = encode(x.int.u256)
 
-      # func decode*[N: static[int]](input: string, to: `identFixed`[N]): `identFixed`[N] =
-      #   decode(input, `identInt`) div / (10 ^ N).to(`identInt`)
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var bool): int =
+  var i: Int256
+  result = decode(input, baseOffset, offset, i)
+  to = not i.isZero()
 
-      # func decode*[N: static[int]](input: string, to: `identUfixed`[N]): `identFixed`[N] =
-      #   decode(input, `identUint`) div / (10 ^ N).to(`identUint`)
+func decode*(input: openarray[byte], baseOffset, offset: int, obj: var object): int =
+  when isDynamicObject(typeof(obj)):
+    var dataOffsetBig: UInt256
+    result = decode(input, baseOffset, offset, dataOffsetBig)
+    let dataOffset = dataOffsetBig.truncate(int)
+    let offset = baseOffset + dataOffset
+    var offset2 = 0
+    for k, field in fieldPairs(obj):
+      let sz = decode(input, offset, offset2, field)
+      offset2 += sz
+  else:
+    var offset = offset
+    for field in fields(obj):
+      let sz = decode(input, baseOffset, offset, field)
+      offset += sz
+      result += sz
 
-  let
-    identFixed = ident("Fixed")
-    identUfixed = ident("Ufixed")
-  result.add quote do:
-    type
-      `identFixed`* = distinct Int128
-      `identUfixed`* = distinct UInt128
-  for i in 1..256:
-    let
-      identBytes = ident("Bytes" & $i)
-      identResult = ident "result"
-    result.add quote do:
-      type
-        `identBytes`* = FixedBytes[`i`]
+func encode*(x: tuple): seq[byte]
 
-  #result.add newEnum(ident "FieldKind", fields, public = true, pure = true)
+func encode*[T](x: openarray[T]): seq[byte] =
+  result = encode(x.len.u256)
+  when isDynamicType(T):
+    result.setLen((1 + x.len) * 32)
+    for i in 0 ..< x.len:
+      let offset = result.len
+      result &= encode(x[i])
+      result[i .. i + 31] = encode(offset.u256)
+  else:
+    for i in 0 ..< x.len:
+      result &= encode(x[i])
 
-makeTypeEnum()
+proc getTupleImpl(t: NimNode): NimNode =
+  getTypeImpl(t)[1].getTypeImpl()
 
-func parse*(T: type Bool, val: bool): T =
-  let i = if val: 1 else: 0
-  T i.i256
+macro typeListLen*(t: typedesc[tuple]): int =
+  newLit(t.getTupleImpl().len)
 
-func `==`*(a: Bool, b: Bool): bool =
-  Int256(a) == Int256(b)
-
-func encode*(x: Bool): EncodeResult = encode(Int256(x))
-func decode*(input: string, offset: int, to: var Bool): int =
-  let meaningfulLen = Int256.bits div 8 * 2
-  to = Bool Int256.fromHex(input[offset .. offset + meaningfulLen - 1])
-  meaningfulLen
-
-func decode*(input: string, offset: int, obj: var object): int =
-  var offset = offset
-  for field in fields(obj):
-    offset += decode(input, offset, field)
-
-type
-  Encodable = concept x
-    encode(x) is EncodeResult
-
-func encode*(x: seq[Encodable]): EncodeResult =
-  result.dynamic = true
-  result.data = x.len.toHex(64).toLower
-  var
-    offset = 32*x.len
-    data = ""
-  for i in x:
-    let encoded = encode(i)
-    if encoded.dynamic:
-      result.data &= offset.toHex(64).toLower
-      data &= encoded.data
+func encode*(x: tuple): seq[byte] =
+  var offsets {.used.}: array[typeListLen(typeof(x)), int]
+  var i = 0
+  for v in fields(x):
+    when isDynamicType(typeof(v)):
+      offsets[i] = result.len
+      result.setLen(result.len + 32)
     else:
-      result.data &= encoded.data
-    offset += encoded.data.len
-  result.data &= data
+      result &= encode(v)
+    inc i
+  i = 0
+  for v in fields(x):
+    when isDynamicType(typeof(v)):
+      let offset = result.len
+      let o = offsets[i]
+      result[o .. o + 31] = encode(offset.u256)
+      result &= encode(v)
+    inc i
 
-func decode*[T](input: string, to: seq[T]): seq[T] =
-  var count = input[0..64].decode(StUint)
-  result = newSeq[T](count)
-  for i in 0..count:
-    result[i] = input[i*64 .. (i+1)*64].decode(T)
-
-func encode*(x: openArray[Encodable]): EncodeResult =
-  result.dynamic = false
-  result.data = ""
-  var
-    offset = 32*x.len
-    data = ""
-  for i in x:
-    let encoded = encode(i)
-    if encoded.dynamic:
-      result.data &= offset.toHex(64).toLower
-      data &= encoded.data
-    else:
-      result.data &= encoded.data
-    offset += encoded.data.len
-
-func decode*[T; I: static int](input: string, to: array[0..I, T]): array[0..I, T] =
-  for i in 0..I:
-    result[i] = input[i*64 .. (i+1)*64].decode(T)
+# Obsolete
+from stew/byteutils import hexToSeqByte
+func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openarray[byte], ...) instead".} =
+  decode(hexToSeqByte(input), 0, offset div 2, to) * 2
