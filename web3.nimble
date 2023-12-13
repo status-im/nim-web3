@@ -1,6 +1,10 @@
 mode = ScriptMode.Verbose
 
+<<<<<<< Updated upstream
 version       = "0.0.1"
+=======
+version       = "0.2.4"
+>>>>>>> Stashed changes
 author        = "Status Research & Development GmbH"
 description   = "This is the humble begginings of library similar to web3.[js|py]"
 license       = "MIT or Apache License 2.0"
