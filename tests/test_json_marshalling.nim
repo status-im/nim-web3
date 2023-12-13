@@ -1,8 +1,18 @@
+# nim-web3
+# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 import
-  std/typetraits,
-  unittest, std/json, json_rpc/jsonmarshal, json_serialization,
+  std/[typetraits, json],
   stint,
-  ../web3/[conversions, ethtypes]
+  unittest2,
+  json_rpc/jsonmarshal, json_serialization,
+  ../web3/[conversions, eth_api_types]
 
 proc `==`(x, y: Quantity): bool {.borrow, noSideEffect.}
 

@@ -1,8 +1,22 @@
-import pkg/unittest2
-import ../web3, ../web3/transaction_signing
-import stew/byteutils
-import chronos, options, json, stint, eth/keys, eth/common/eth_types
-import test_utils
+# nim-web3
+# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
+import
+  std/[options, json],
+  pkg/unittest2,
+  chronos, stint,
+  eth/keys,
+  eth/common/eth_types,
+  stew/byteutils,
+  ../web3,
+  ../web3/transaction_signing,
+  ./helpers/utils
 
 #[ Contract NumberStorage
 pragma solidity ^0.4.18;
@@ -32,15 +46,17 @@ suite "Signed transactions":
       publicKey = privateKey.toPublicKey()
       address = publicKey.toCanonicalAddress()
     var tx: EthSend
-    tx.nonce = some(Nonce(9))
-    tx.source = Address(address)
+    tx.nonce = some(Quantity(9))
+    tx.`from` = Address(address)
     tx.value = some(1000000000000000000.u256)
     tx.to = some(Address(hexToByteArray[20]("0x3535353535353535353535353535353535353535")))
     tx.gas = some(Quantity(21000'u64))
-    tx.gasPrice = some(int64(20000000000'i64))
-    tx.data = ""
+    tx.gasPrice = some(Quantity(20000000000'i64))
+    tx.data = @[]
 
-    check "0x" & encodeTransaction(tx, privateKey, ChainId(1)) == "0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"
+    let txBytes = encodeTransaction(tx, privateKey, ChainId(1))
+    let txHex = "0x" & txBytes.toHex
+    check txHex == "0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"
 
   test "contract creation and method invocation":
     proc test() {.async.} =
@@ -48,14 +64,14 @@ suite "Signed transactions":
 
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
       let accounts = await web3.provider.eth_accounts()
-      let gasPrice = GasInt(await web3.provider.eth_gasPrice())
+      let gasPrice = await web3.provider.eth_gasPrice()
       web3.defaultAccount = accounts[0]
 
       let pk = PrivateKey.random(theRNG[])
       let acc = Address(toCanonicalAddress(pk.toPublicKey()))
 
       var tx: EthSend
-      tx.source = accounts[0]
+      tx.`from` = accounts[0]
       tx.value = some(ethToWei(10.u256))
       tx.to = some(acc)
       tx.gasPrice = some(gasPrice)
@@ -76,14 +92,14 @@ suite "Signed transactions":
       assert(balance in ethToWei(4.u256)..ethToWei(5.u256)) # 5 minus gas costs
 
       # Creating the contract with a signed tx
-      let receipt = await web3.deployContract(NumberStorageCode, gasPrice = gasPrice)
+      let receipt = await web3.deployContract(NumberStorageCode, gasPrice = gasPrice.int)
       let contractAddress = receipt.contractAddress.get
       balance = await web3.provider.eth_getBalance(acc, "latest")
       assert(balance < ethToWei(5.u256))
 
       let c = web3.contractSender(NumberStorage, contractAddress)
       # Calling a methof with a signed tx
-      discard await c.setNumber(5.u256).send(gasPrice = gasPrice)
+      discard await c.setNumber(5.u256).send(gasPrice = gasPrice.int)
 
       let n = await c.getNumber().call()
       assert(n == 5.u256)
