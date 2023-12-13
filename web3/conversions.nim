@@ -1,16 +1,19 @@
-# Copyright (c) 2019-2022 Status Research & Development GmbH
-# Licensed and distributed under either of
-#   * MIT license (license terms in the root directory or at https://opensource.org/licenses/MIT).
-#   * Apache v2 license (license terms in the root directory or at https://www.apache.org/licenses/LICENSE-2.0).
-# at your option. This file may not be copied, modified, or distributed except according to those terms.
+# nim-web3
+# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
 
 import
   std/[json, options, strutils, strformat, tables, typetraits],
   stint, stew/byteutils, json_serialization, faststreams/textio,
-  ethtypes, ethhexstrings,
+  ./eth_api_types, ./ethhexstrings,
   ./engine_api_types
 
-from json_rpc/jsonmarshal import expect
+from json_rpc/jsonmarshal import expect, fromJson
 
 template invalidQuantityPrefix(s: string): bool =
   # https://ethereum.org/en/developers/docs/apis/json-rpc/#hex-value-encoding
@@ -129,6 +132,37 @@ func fromJson*(
     raise newException(
       ValueError, "Parameter \"" & argName & "\" value invalid: " & n.getStr)
 
+func fromJson*(n: JsonNode, argName: string, result: var RtBlockIdentifier) =
+  n.kind.expect(JString, argName)
+  let hexStr = n.getStr()
+  if validate(hexStr.HexQuantityStr):
+    result = RtBlockIdentifier(kind: bidNumber, number: fromHex[uint64](hexStr))
+  else:
+    result = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
+
+func fromJson*(n: JsonNode, argName: string, result: var TxOrHash) =
+  if n.kind == JString:
+    var hash: TxHash
+    fromJson(n, argName, hash)
+    result = TxOrHash(kind: tohHash, hash: hash)
+  else:
+    var tx: TransactionObject
+    fromJson(n, argName, tx)
+    result = TxOrHash(kind: tohTx, tx: tx)
+
+func fromJson*(n: JsonNode, argName: string, result: var EthSend) =
+  n.kind.expect(JObject, argName)
+  for k, v in n:
+    case k
+    of "from": fromJson(v, argName, result.`from`)
+    of "to": fromJson(v, argName, result.to)
+    of "gas": fromJson(v, argName, result.gas)
+    of "gasPrice": fromJson(v, argName, result.gasPrice)
+    of "value": fromJson(v, argName, result.value)
+    of "data": fromJson(v, argName, result.data)
+    of "nonce": fromJson(v, argName, result.nonce)
+    else: discard
+
 func `%`*(v: Quantity): JsonNode =
   %encodeQuantity(v.uint64)
 
@@ -146,6 +180,9 @@ func `%`*(v: TypedTransaction): JsonNode =
 
 func `%`*(v: RlpEncodedBytes): JsonNode =
   %("0x" & distinctBase(v).toHex)
+
+func `%`*(v: openArray[byte]): JsonNode =
+  %("0x" & v.toHex)
 
 proc writeHexValue(w: JsonWriter, v: openArray[byte]) =
   w.stream.write "\"0x"
@@ -197,27 +234,21 @@ proc readValue*(r: var JsonReader, T: type Quantity): T =
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(v.uint64)
 
-func `$`*[N](v: FixedBytes[N]): string {.inline.} =
-  "0x" & array[N, byte](v).toHex
-
 func `$`*(v: TypedTransaction): string {.inline.} =
   "0x" & distinctBase(v).toHex
 
 func `$`*(v: RlpEncodedBytes): string {.inline.} =
   "0x" & distinctBase(v).toHex
 
-func `$`*(v: DynamicBytes): string {.inline.} =
-  "0x" & toHex(v)
-
 func `%`*(x: EthSend): JsonNode =
   result = newJObject()
-  result["from"] = %x.source
+  result["from"] = %x.`from`
   if x.to.isSome:
     result["to"] = %x.to.unsafeGet
   if x.gas.isSome:
     result["gas"] = %x.gas.unsafeGet
   if x.gasPrice.isSome:
-    result["gasPrice"] = %Quantity(x.gasPrice.unsafeGet)
+    result["gasPrice"] = %x.gasPrice.unsafeGet
   if x.value.isSome:
     result["value"] = %x.value.unsafeGet
   if x.data.len > 0:
@@ -242,18 +273,23 @@ func `%`*(x: EthCall): JsonNode =
 func `%`*(x: byte): JsonNode =
   %x.int
 
+func `%`*(x: RtBlockIdentifier): JsonNode =
+  case x.kind
+  of bidNumber: %(&"0x{x.number:X}")
+  of bidAlias: %x.alias
+
 func `%`*(x: FilterOptions): JsonNode =
   result = newJObject()
   if x.fromBlock.isSome:
     result["fromBlock"] = %x.fromBlock.unsafeGet
   if x.toBlock.isSome:
     result["toBlock"] = %x.toBlock.unsafeGet
-  if x.address.isSome:
-    result["address"] = %x.address.unsafeGet
-  if x.topics.isSome:
-    result["topics"] = %x.topics.unsafeGet
+  result["address"] = %x.address
+  if x.blockHash.isSome:
+    result["blockHash"] = %x.blockHash.unsafeGet
+  result["topics"] = %x.topics
 
-func `%`*(x: RtBlockIdentifier): JsonNode =
+func `%`*(x: TxOrHash): JsonNode =
   case x.kind
-  of bidNumber: %(&"0x{x.number:X}")
-  of bidAlias: %x.alias
+  of tohHash: %x.hash
+  of tohTx: %x.tx

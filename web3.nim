@@ -1,3 +1,12 @@
+# nim-web3
+# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 import
   std/[options, math, json, tables, uri, strformat]
 
@@ -7,15 +16,15 @@ import
   stint, httputils, chronicles, chronos, nimcrypto/keccak,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
   chronos/apps/http/httpclient,
-  web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding, contract_dsl]
+  web3/[eth_api_types, conversions, ethhexstrings, transaction_signing, encoding, contract_dsl]
 
 template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 
 ## Generate client convenience marshalling wrappers from forward declarations
-createRpcSigs(RpcClient, sourceDir & "/web3/ethcallsigs.nim")
+createRpcSigs(RpcClient, sourceDir & "/web3/eth_api_callsigs.nim")
 
 export UInt256, Int256, Uint128, Int128
-export ethtypes, conversions, encoding, contract_dsl, HttpClientFlag, HttpClientFlags
+export eth_api_types, conversions, encoding, contract_dsl, HttpClientFlag, HttpClientFlags
 
 type
   Web3* = ref object
@@ -23,7 +32,7 @@ type
     subscriptions*: Table[string, Subscription]
     defaultAccount*: Address
     privateKey*: Option[PrivateKey]
-    lastKnownNonce*: Option[Nonce]
+    lastKnownNonce*: Option[Quantity]
     onDisconnect*: proc() {.gcsafe, raises: [].}
 
   Web3SenderImpl = ref object
@@ -195,7 +204,7 @@ proc getJsonLogs(s: Web3SenderImpl, topic: openarray[byte],
   options["topics"] = topics
   if blockHash.isSome:
     doAssert fromBlock.isNone and toBlock.isNone
-    options["blockhash"] = %blockHash.unsafeGet
+    options["blockHash"] = %blockHash.unsafeGet
   else:
     if fromBlock.isSome:
       options["fromBlock"] = %fromBlock.unsafeGet
@@ -211,13 +220,13 @@ proc getJsonLogs*[TContract](s: Sender[TContract],
   mixin eventTopic
   getJsonLogs(s.sender, eventTopic(EventName))
 
-proc nextNonce*(web3: Web3): Future[Nonce] {.async.} =
+proc nextNonce*(web3: Web3): Future[Quantity] {.async.} =
   if web3.lastKnownNonce.isSome:
     inc web3.lastKnownNonce.get
     return web3.lastKnownNonce.get
   else:
     let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress.Address
-    result = int(await web3.provider.eth_getTransactionCount(fromAddress, "latest"))
+    result = await web3.provider.eth_getTransactionCount(fromAddress, "latest")
     web3.lastKnownNonce = some result
 
 proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
@@ -225,7 +234,7 @@ proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
     var cc = c
     if cc.nonce.isNone:
       cc.nonce = some(await web3.nextNonce())
-    let t = "0x" & encodeTransaction(cc, web3.privateKey.get())
+    let t = encodeTransaction(cc, web3.privateKey.get())
     return await web3.provider.eth_sendRawTransaction(t)
   else:
     return await web3.provider.eth_sendTransaction(c)
@@ -237,19 +246,20 @@ proc sendData(sender: Web3SenderImpl,
               gasPrice: int): Future[TxHash] {.async.} =
   let
     web3 = sender.web3
-    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice)
-               else: none(int)
+    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice.Quantity)
+               else: none(Quantity)
     nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
-            else: none(Nonce)
+            else: none(Quantity)
 
     cc = EthSend(
-      data: data.to0xHex,
-      source: web3.defaultAccount,
+      data: data,
+      `from`: web3.defaultAccount,
       to: some(sender.contractAddress),
       gas: some(Quantity(gas)),
       value: some(value),
       nonce: nonce,
-      gasPrice: gasPrice)
+      gasPrice: gasPrice,
+    )
 
   return await web3.send(cc)
 
@@ -265,12 +275,12 @@ proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
               blockNumber = high(uint64)): Future[T] {.async.} =
   let web3 = c.sender.web3
   var cc: EthCall
-  cc.data = some(c.data.to0xHex)
+  cc.data = some(c.data)
   cc.source = some(web3.defaultAccount)
-  cc.to = c.sender.contractAddress
+  cc.to = some(c.sender.contractAddress)
   cc.gas = some(Quantity(gas))
   cc.value = some(value)
-  let response = strip0xPrefix:
+  let response =
     if blockNumber != high(uint64):
       await web3.provider.eth_call(cc, &"0x{blockNumber:X}")
     else:
@@ -278,7 +288,7 @@ proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
 
   if response.len > 0:
     var res: T
-    discard decode(hexToSeqByte(response), 0, 0, res)
+    discard decode(response, 0, 0, res)
     return res
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
@@ -287,12 +297,12 @@ proc getMinedTransactionReceipt*(web3: Web3, tx: TxHash): Future[ReceiptObject] 
   ## Returns the receipt for the transaction. Waits for it to be mined if necessary.
   # TODO: Potentially more optimal solution is to subscribe and wait for appropriate
   # notification. Now we're just polling every 500ms which should be ok for most cases.
-  var r: Option[ReceiptObject]
-  while r.isNone:
+  var r: ReceiptObject
+  while r.isNil:
     r = await web3.provider.eth_getTransactionReceipt(tx)
-    if r.isNone:
+    if r.isNil:
       await sleepAsync(500.milliseconds)
-  result = r.get
+  result = r
 
 proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
   let h = await c.send(value, gas)

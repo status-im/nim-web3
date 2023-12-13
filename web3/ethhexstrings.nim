@@ -1,3 +1,12 @@
+# nim-web3
+# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 import
   std/[json, strutils]
 
@@ -20,7 +29,7 @@ template stripLeadingZeros(value: string): string =
 
 func encodeQuantity*(value: SomeUnsignedInt): string =
   var hValue = value.toHex.stripLeadingZeros
-  result = "0x" & hValue
+  result = "0x" & hValue.toLowerAscii
 
 func hasHexHeader*(value: string): bool =
   value.len >= 2 and value[0] == '0' and value[1] in {'x', 'X'}

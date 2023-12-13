@@ -1,7 +1,7 @@
 import
   std/[macros, strutils, options, json],
   nimcrypto/keccak,
-  ./[encoding, ethtypes],
+  ./[encoding, primitives],
   stint,
   stew/byteutils
 

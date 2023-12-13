@@ -1,6 +1,15 @@
+# nim-web3
+# Copyright (c) 2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 import
   std/macros,
-  stint, ./ethtypes, stew/assign2
+  stint, ./eth_api_types, stew/[assign2, byteutils]
 
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
   @(x.toByteArrayBE())

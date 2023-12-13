@@ -1,7 +1,18 @@
-import pkg/unittest2
-import ../web3
-import chronos, options, json, stint
-import test_utils
+# nim-web3
+# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
+import
+  std/[options, json],
+  pkg/unittest2,
+  chronos, stint,
+  ../web3,
+  ./helpers/utils
 
 type
   Data1 = object
@@ -109,6 +120,12 @@ contract(MetaCoin):
 
 const MetaCoinCode = "608060405234801561001057600080fd5b5032600090815260208190526040902061271090556101c2806100346000396000f30060806040526004361061004b5763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166390b98a118114610050578063f8b2cb4f14610095575b600080fd5b34801561005c57600080fd5b5061008173ffffffffffffffffffffffffffffffffffffffff600435166024356100d5565b604080519115158252519081900360200190f35b3480156100a157600080fd5b506100c373ffffffffffffffffffffffffffffffffffffffff6004351661016e565b60408051918252519081900360200190f35b336000908152602081905260408120548211156100f457506000610168565b336000818152602081815260408083208054879003905573ffffffffffffffffffffffffffffffffffffffff871680845292819020805487019055805186815290519293927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929181900390910190a35060015b92915050565b73ffffffffffffffffffffffffffffffffffffffff16600090815260208190526040902054905600a165627a7a72305820000313ec0ebbff4ffefbe79d615d0ab019d8566100c40eb95a4eee617a87d1090029"
 
+proc `$`(list: seq[Address]): string =
+  result.add '['
+  for x in list:
+    result.add $x
+    result.add ", "
+  result.add ']'
 
 suite "Contracts":
   setup:
@@ -139,7 +156,8 @@ suite "Contracts":
       var b = await ns.getBool().call()
       assert(b == false)
 
-      echo "setBool: ", await ns.setBool(true).send()
+      let r = await ns.setBool(true).send()
+      echo "setBool: ", r
 
       b = await ns.getBool().call()
       assert(b == true)
