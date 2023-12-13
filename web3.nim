@@ -11,10 +11,12 @@ import
   std/[options, math, json, tables, uri, strformat]
 
 from os import DirSep, AltSep
+from eth/common/eth_types import ChainId
 
 import
   stint, httputils, chronicles, chronos, nimcrypto/keccak,
   json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
+
   chronos/apps/http/httpclient,
   web3/[eth_api_types, conversions, ethhexstrings, transaction_signing, encoding, contract_dsl]
 
@@ -23,7 +25,7 @@ template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
 ## Generate client convenience marshalling wrappers from forward declarations
 createRpcSigs(RpcClient, sourceDir & "/web3/eth_api_callsigs.nim")
 
-export UInt256, Int256, Uint128, Int128
+export UInt256, Int256, Uint128, Int128, ChainId
 export eth_api_types, conversions, encoding, contract_dsl, HttpClientFlag, HttpClientFlags
 
 type
@@ -239,11 +241,20 @@ proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   else:
     return await web3.provider.eth_sendTransaction(c)
 
+proc send*(web3: Web3, c: EthSend, chainId: ChainId): Future[TxHash] {.async.} =
+  doAssert(web3.privateKey.isSome())
+  var cc = c
+  if cc.nonce.isNone:
+    cc.nonce = some(await web3.nextNonce())
+  let t = encodeTransaction(cc, web3.privateKey.get(), chainId)
+  return await web3.provider.eth_sendRawTransaction(t)
+
 proc sendData(sender: Web3SenderImpl,
               data: seq[byte],
               value: UInt256,
               gas: uint64,
-              gasPrice: int): Future[TxHash] {.async.} =
+              gasPrice: int,
+              chainId = none(ChainId)): Future[TxHash] {.async.} =
   let
     web3 = sender.web3
     gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice.Quantity)
@@ -261,13 +272,23 @@ proc sendData(sender: Web3SenderImpl,
       gasPrice: gasPrice,
     )
 
-  return await web3.send(cc)
+  if chainId.isNone:
+    return await web3.send(cc)
+  else:
+    return await web3.send(cc, chainId.get)
 
 proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            value = 0.u256,
            gas = 3000000'u64,
            gasPrice = 0): Future[TxHash] =
   sendData(c.sender, c.data, value, gas, gasPrice)
+
+proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
+           chainId: ChainId,
+           value = 0.u256,
+           gas = 3000000'u64,
+           gasPrice = 0): Future[TxHash] =
+  sendData(c.sender, c.data, value, gas, gasPrice, some(chainId))
 
 proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
               value = 0.u256,
