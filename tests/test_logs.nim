@@ -79,7 +79,7 @@ suite "Logs":
             sender: Address, value: UInt256)
             {.raises: [], gcsafe.}:
           try:
-            echo "onEvent: ", sender, " value ", value
+            echo "onEvent: ", sender, " value ", value.toHex
             inc notificationsReceived
 
             if notificationsReceived == invocationsBefore + invocationsAfter:

@@ -196,7 +196,7 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
 proc getJsonLogs(s: Web3SenderImpl, topic: openarray[byte],
-                  fromBlock, toBlock = none(RtBlockIdentifier),
+                  fromBlock = none(RtBlockIdentifier), toBlock = none(RtBlockIdentifier),
                   blockHash = none(BlockHash)): Future[JsonNode] =
   var options = newJObject()
   options["address"] = %s.contractAddress
@@ -216,7 +216,7 @@ proc getJsonLogs(s: Web3SenderImpl, topic: openarray[byte],
 
 proc getJsonLogs*[TContract](s: Sender[TContract],
                   EventName: type,
-                  fromBlock, toBlock = none(RtBlockIdentifier),
+                  fromBlock= none(RtBlockIdentifier), toBlock = none(RtBlockIdentifier),
                   blockHash = none(BlockHash)): Future[JsonNode] {.inline.} =
   mixin eventTopic
   getJsonLogs(s.sender, eventTopic(EventName))

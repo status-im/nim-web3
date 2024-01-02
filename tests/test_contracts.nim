@@ -211,7 +211,7 @@ suite "Contracts":
           fromAddr, toAddr: Address, value: UInt256)
           {.raises: [], gcsafe.}:
         try:
-          echo "onTransfer: ", fromAddr, " transferred ", value, " to ", toAddr
+          echo "onTransfer: ", fromAddr, " transferred ", value.toHex, " to ", toAddr
           inc notificationsReceived
           assert(fromAddr == web3.defaultAccount)
           assert((notificationsReceived == 1 and value == 50.u256) or
@@ -222,12 +222,15 @@ suite "Contracts":
           # chronos still raises exceptions which inherit directly from Exception
           doAssert false, err.msg
 
-      echo "getbalance (now): ", await ns.getBalance(web3.defaultAccount).call()
-      echo "getbalance (after creation): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = deployedAtBlock)
+      let balNow = await ns.getBalance(web3.defaultAccount).call()
+      echo "getbalance (now): ", balNow.toHex
+      let balNew = await ns.getBalance(web3.defaultAccount).call(blockNumber = deployedAtBlock)
+      echo "getbalance (after creation): ", balNew.toHex
 
       # Let's try to get the balance at a point in time where the contract was not deployed yet:
       try:
-        echo "getbalance (first block): ", await ns.getBalance(web3.defaultAccount).call(blockNumber = 1'u64)
+        let balFirst = await ns.getBalance(web3.defaultAccount).call(blockNumber = 1'u64)
+        echo "getbalance (first block): ", balFirst.toHex
       except CatchableError as err:
         echo "getbalance (first block): ", err.msg
 

@@ -6,9 +6,6 @@ import
   ../../web3/primitives
 
 proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[ReceiptObject] {.async.} =
-  let provider = web3.provider
-  let accounts = await provider.eth_accounts()
-
   var code = code
   var tr: EthSend
   tr.`from` = web3.defaultAccount

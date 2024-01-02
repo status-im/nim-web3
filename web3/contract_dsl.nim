@@ -295,7 +295,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          options: JsonNode,
                          `callbackIdent`: `procTy`,
                          errorHandler: SubscriptionErrorHandler,
-                         withHistoricEvents = true): Future[Subscription] =
+                         withHistoricEvents = true): Future[Subscription] {.used.} =
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [].} =
               try:
                 `argParseBody`
@@ -310,7 +310,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          options: JsonNode,
                          `callbackIdent`: `procTyWithRawData`,
                          errorHandler: SubscriptionErrorHandler,
-                         withHistoricEvents = true): Future[Subscription] =
+                         withHistoricEvents = true): Future[Subscription] {.used.} =
             proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [].} =
               try:
                 `argParseBody`
