@@ -2,7 +2,7 @@ import
   std/[macros, strutils, options],
   nimcrypto/keccak,
   json_serialization,
-  ./[encoding, primitives, eth_api_types],
+  ./[encoding, eth_api_types],
   stint,
   stew/byteutils
 
@@ -12,6 +12,10 @@ type
     sender*: TSender
 
   ContractInstance*[TContract, TSender] = object
+    sender*: TSender
+
+  ContractDeployment*[TContract, TSender] = object
+    data*: seq[byte]
     sender*: TSender
 
   InterfaceObjectKind = enum
@@ -173,6 +177,179 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
   for event in events:
     result.add InterfaceObject(kind: InterfaceObjectKind.event, eventObject: event)
 
+proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
+  let
+    signature = getSignature(functionObject)
+    procName = ident functionObject.name
+    senderName = ident "sender"
+    output = if functionObject.outputs.len != 1:
+        ident "void"
+      else:
+        functionObject.outputs[0].typ
+    funcParamsTuple = newNimNode(nnkTupleConstr)
+
+  for input in functionObject.inputs:
+    funcParamsTuple.add(ident input.name)
+
+  result = quote do:
+    proc `procName`*[TSender](`senderName`: ContractInstance[`cname`, TSender]): ContractInvocation[`output`, TSender] =
+      discard
+  for input in functionObject.inputs:
+    result[3].add nnkIdentDefs.newTree(
+      ident input.name,
+      input.typ,
+      newEmptyNode()
+    )
+  result[6] = quote do:
+    return initContractInvocation(
+        `output`, `senderName`.sender,
+        static(keccak256Bytes(`signature`)[0..<4]) & encode(`funcParamsTuple`))
+
+proc `&`(a, b: openarray[byte]): seq[byte] =
+  let sza = a.len
+  let szb = b.len
+  result.setLen(sza + szb)
+  if sza > 0:
+    copyMem(addr result[0], unsafeAddr a[0], sza)
+  if szb > 0:
+    copyMem(addr result[sza], unsafeAddr b[0], szb)
+
+proc genConstructor(cname: NimNode, constructorObject: ConstructorObject): NimNode =
+  let
+    sender = genSym(nskParam, "sender")
+    contractCode = genSym(nskParam, "contractCode")
+    funcParamsTuple = newNimNode(nnkTupleConstr)
+
+  for input in constructorObject.inputs:
+    funcParamsTuple.add(ident input.name)
+
+  result = quote do:
+    proc deployContract*[TSender](`sender`: TSender, contractType: typedesc[`cname`], `contractCode`: openarray[byte]): ContractDeployment[`cname`, TSender] =
+      discard
+  for input in constructorObject.inputs:
+    result[3].add nnkIdentDefs.newTree(
+      ident input.name,
+      input.typ,
+      newEmptyNode()
+    )
+  result[6] = quote do:
+    return ContractDeployment[`cname`, TSender](data: `contractCode` & encode(`funcParamsTuple`), sender: `sender`)
+
+proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
+  if not eventObject.anonymous:
+    let callbackIdent = ident "callback"
+    let jsonIdent = ident "j"
+    let jsonData = ident "jsonData"
+    var
+      params = nnkFormalParams.newTree(newEmptyNode())
+      paramsWithRawData = nnkFormalParams.newTree(newEmptyNode())
+
+      argParseBody = newStmtList()
+      i = 1
+      call = nnkCall.newTree(callbackIdent)
+      callWithRawData = nnkCall.newTree(callbackIdent)
+      offset = ident "offset"
+      inputData = ident "inputData"
+
+    argParseBody.add quote do:
+      let `jsonData` = JrpcConv.decode(`jsonIdent`.string, JsonNode)
+
+    var offsetInited = false
+
+    for input in eventObject.inputs:
+      let param = nnkIdentDefs.newTree(
+        ident input.name,
+        input.typ,
+        newEmptyNode()
+      )
+      params.add param
+      paramsWithRawData.add param
+      let
+        argument = genSym(nskVar)
+        kind = input.typ
+      if input.indexed:
+        argParseBody.add quote do:
+          var `argument`: `kind`
+          discard decode(hexToSeqByte(`jsonData`["topics"][`i`].getStr), 0, 0, `argument`)
+        i += 1
+      else:
+        if not offsetInited:
+          argParseBody.add quote do:
+            var `inputData` = hexToSeqByte(`jsonData`["data"].getStr)
+            var `offset` = 0
+
+          offsetInited = true
+
+        argParseBody.add quote do:
+          var `argument`: `kind`
+          `offset` += decode(`inputData`, 0, `offset`, `argument`)
+      call.add argument
+      callWithRawData.add argument
+    let
+      eventName = eventObject.name
+      cbident = ident eventName
+      procTy = nnkProcTy.newTree(params, newEmptyNode())
+      signature = getSignature(eventObject)
+
+    # generated with dumpAstGen - produces "{.raises: [], gcsafe.}"
+    let pragmas = nnkPragma.newTree(
+      nnkExprColonExpr.newTree(
+        newIdentNode("raises"),
+        nnkBracket.newTree()
+      ),
+      newIdentNode("gcsafe")
+    )
+
+    procTy[1] = pragmas
+
+    callWithRawData.add jsonIdent
+    paramsWithRawData.add nnkIdentDefs.newTree(
+      jsonIdent,
+      bindSym "JsonString",
+      newEmptyNode()
+    )
+
+    let procTyWithRawData = nnkProcTy.newTree(paramsWithRawData, newEmptyNode())
+    procTyWithRawData[1] = pragmas
+
+    result = quote do:
+      type `cbident`* = object
+
+      template eventTopic*(T: type `cbident`): eth_api_types.Topic =
+        const r = keccak256Bytes(`signature`)
+        eth_api_types.Topic(r)
+
+      proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
+                      t: type `cbident`,
+                      options: FilterOptions,
+                      `callbackIdent`: `procTy`,
+                      errorHandler: SubscriptionErrorHandler,
+                      withHistoricEvents = true): Future[Subscription] {.used.} =
+        proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
+          try:
+            `argParseBody`
+            `call`
+          except CatchableError as err:
+            errorHandler err[]
+
+        s.sender.subscribeForLogs(options, eventTopic(`cbident`), eventHandler, errorHandler, withHistoricEvents)
+
+      proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
+                      t: type `cbident`,
+                      options: FilterOptions,
+                      `callbackIdent`: `procTyWithRawData`,
+                      errorHandler: SubscriptionErrorHandler,
+                      withHistoricEvents = true): Future[Subscription] {.used.} =
+        proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
+          try:
+            `argParseBody`
+            `callWithRawData`
+          except CatchableError as err:
+            errorHandler err[]
+
+        s.sender.subscribeForLogs(options, eventTopic(`cbident`), eventHandler, errorHandler, withHistoricEvents)
+
+
 macro contract*(cname: untyped, body: untyped): untyped =
   var objects = parseContract(body)
   result = newStmtList()
@@ -180,153 +357,20 @@ macro contract*(cname: untyped, body: untyped): untyped =
     type
       `cname`* = object
 
+  var constructorGenerated = false
+
   for obj in objects:
     case obj.kind:
     of function:
-      let
-        signature = getSignature(obj.functionObject)
-        procName = ident obj.functionObject.name
-        senderName = ident "sender"
-        output = if obj.functionObject.outputs.len != 1:
-            ident "void"
-          else:
-            obj.functionObject.outputs[0].typ
-        funcParamsTuple = newNimNode(nnkTupleConstr)
-
-      for input in obj.functionObject.inputs:
-        funcParamsTuple.add(ident input.name)
-
-      var procDef = quote do:
-        proc `procName`*[TSender](`senderName`: ContractInstance[`cname`, TSender]): ContractInvocation[`output`, TSender] =
-          discard
-      for input in obj.functionObject.inputs:
-        procDef[3].add nnkIdentDefs.newTree(
-          ident input.name,
-          input.typ,
-          newEmptyNode()
-        )
-      procDef[6].add quote do:
-        return initContractInvocation(
-            `output`, `senderName`.sender,
-            static(keccak256Bytes(`signature`)[0..<4]) & encode(`funcParamsTuple`))
-
-      result.add procDef
+      result.add genFunction(cname, obj.functionObject)
+    of constructor:
+      result.add genConstructor(cname, obj.constructorObject)
+      constructorGenerated = true
     of event:
-      if not obj.eventObject.anonymous:
-        let callbackIdent = ident "callback"
-        let jsonIdent = ident "j"
-        let jsonData = ident "jsonData"
-        var
-          params = nnkFormalParams.newTree(newEmptyNode())
-          paramsWithRawData = nnkFormalParams.newTree(newEmptyNode())
+      result.add genEvent(cname, obj.eventObject)
 
-          argParseBody = newStmtList()
-          i = 1
-          call = nnkCall.newTree(callbackIdent)
-          callWithRawData = nnkCall.newTree(callbackIdent)
-          offset = ident "offset"
-          inputData = ident "inputData"
-
-        argParseBody.add quote do:
-          let `jsonData` = JrpcConv.decode(`jsonIdent`.string, JsonNode)
-
-        var offsetInited = false
-
-        for input in obj.eventObject.inputs:
-          let param = nnkIdentDefs.newTree(
-            ident input.name,
-            input.typ,
-            newEmptyNode()
-          )
-          params.add param
-          paramsWithRawData.add param
-          let
-            argument = genSym(nskVar)
-            kind = input.typ
-          if input.indexed:
-            argParseBody.add quote do:
-              var `argument`: `kind`
-              discard decode(hexToSeqByte(`jsonData`["topics"][`i`].getStr), 0, 0, `argument`)
-            i += 1
-          else:
-            if not offsetInited:
-              argParseBody.add quote do:
-                var `inputData` = hexToSeqByte(`jsonData`["data"].getStr)
-                var `offset` = 0
-
-              offsetInited = true
-
-            argParseBody.add quote do:
-              var `argument`: `kind`
-              `offset` += decode(`inputData`, 0, `offset`, `argument`)
-          call.add argument
-          callWithRawData.add argument
-        let
-          eventName = obj.eventObject.name
-          cbident = ident eventName
-          procTy = nnkProcTy.newTree(params, newEmptyNode())
-          signature = getSignature(obj.eventObject)
-
-        # generated with dumpAstGen - produces "{.raises: [], gcsafe.}"
-        let pragmas = nnkPragma.newTree(
-          nnkExprColonExpr.newTree(
-            newIdentNode("raises"),
-            nnkBracket.newTree()
-          ),
-          newIdentNode("gcsafe")
-        )
-
-        procTy[1] = pragmas
-
-        callWithRawData.add jsonIdent
-        paramsWithRawData.add nnkIdentDefs.newTree(
-          jsonIdent,
-          bindSym "JsonString",
-          newEmptyNode()
-        )
-
-        let procTyWithRawData = nnkProcTy.newTree(paramsWithRawData, newEmptyNode())
-        procTyWithRawData[1] = pragmas
-
-        result.add quote do:
-          type `cbident`* = object
-
-          template eventTopic*(T: type `cbident`): eth_api_types.Topic =
-            const r = keccak256Bytes(`signature`)
-            eth_api_types.Topic(r)
-
-          proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
-                         t: type `cbident`,
-                         options: FilterOptions,
-                         `callbackIdent`: `procTy`,
-                         errorHandler: SubscriptionErrorHandler,
-                         withHistoricEvents = true): Future[Subscription] {.used.} =
-            proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
-              try:
-                `argParseBody`
-                `call`
-              except CatchableError as err:
-                errorHandler err[]
-
-            s.sender.subscribeForLogs(options, eventTopic(`cbident`), eventHandler, errorHandler, withHistoricEvents)
-
-          proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
-                         t: type `cbident`,
-                         options: FilterOptions,
-                         `callbackIdent`: `procTyWithRawData`,
-                         errorHandler: SubscriptionErrorHandler,
-                         withHistoricEvents = true): Future[Subscription] {.used.} =
-            proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
-              try:
-                `argParseBody`
-                `callWithRawData`
-              except CatchableError as err:
-                errorHandler err[]
-
-            s.sender.subscribeForLogs(options, eventTopic(`cbident`), eventHandler, errorHandler, withHistoricEvents)
-
-    else:
-      discard
+  if not constructorGenerated:
+    result.add genConstructor(cname, ConstructorObject())
 
   when defined(debugMacros) or defined(debugWeb3Macros):
     echo result.repr
