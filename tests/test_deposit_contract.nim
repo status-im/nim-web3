@@ -13,6 +13,7 @@ import
   chronos, stint,
   ../web3,
   ./helpers/utils,
+  ./helpers/primitives_utils,
   ./helpers/depositcontract
 
 contract(DepositContract):
@@ -45,7 +46,8 @@ suite "Deposit contract":
 
       var fut = newFuture[void]()
 
-      let s = await ns.subscribe(DepositEvent, %*{"fromBlock": "0x0"}) do (
+      let options = FilterOptions(fromBlock: some(blockId(0)))
+      let s = await ns.subscribe(DepositEvent, options) do (
           pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8])
           {.raises: [], gcsafe.}:
         try:

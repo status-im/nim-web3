@@ -1,5 +1,7 @@
-import pkg/unittest2
-import ../web3
+import 
+  pkg/unittest2,
+  ../web3/encoding,
+  ../web3/primitives
 
 type
   PubKeyBytes = DynamicBytes[48, 48]

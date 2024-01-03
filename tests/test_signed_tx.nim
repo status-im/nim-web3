@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/[options, json],
+  std/[options],
   pkg/unittest2,
   chronos, stint,
   eth/keys,
@@ -16,7 +16,8 @@ import
   stew/byteutils,
   ../web3,
   ../web3/transaction_signing,
-  ./helpers/utils
+  ./helpers/utils,
+  ./helpers/primitives_utils
 
 #[ Contract NumberStorage
 pragma solidity ^0.4.18;

@@ -12,7 +12,7 @@ import
   pkg/unittest2,
   stew/byteutils,
   ../web3/execution_types,
-  ./helpers/utils
+  ./helpers/primitives_utils
 
 suite "Execution types tests":
   let

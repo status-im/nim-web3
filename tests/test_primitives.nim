@@ -12,7 +12,7 @@ import
   pkg/unittest2,
   stew/byteutils,
   ../web3/primitives,
-  ./helpers/utils
+  ./helpers/primitives_utils
 
 suite "Primitives":
   const

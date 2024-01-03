@@ -75,7 +75,8 @@ suite "Logs":
         let notifFut = newFuture[void]()
         var notificationsReceived = 0
 
-        let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do (
+        let options = FilterOptions(fromBlock: some(blockId(0)))
+        let s = await ns.subscribe(MyEvent, options) do (
             sender: Address, value: UInt256)
             {.raises: [], gcsafe.}:
           try:

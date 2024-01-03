@@ -8,24 +8,25 @@
 # those terms.
 
 import
-  std/[options, json, tables, uri, strformat]
+  std/[options, json, tables, uri],
+  stint, httputils, chronos,
+  json_rpc/[rpcclient, jsonmarshal],
+  eth/keys,
+  chronos/apps/http/httpclient,
+  web3/[eth_api_types, conversions, transaction_signing, encoding, contract_dsl],
+  web3/eth_api
 
-from os import DirSep, AltSep
 from eth/common/eth_types import ChainId
 
-import
-  stint, httputils, chronos,
-  json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
-  chronos/apps/http/httpclient,
-  web3/[eth_api_types, conversions, ethhexstrings, transaction_signing, encoding, contract_dsl]
-
-template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
-
-## Generate client convenience marshalling wrappers from forward declarations
-createRpcSigs(RpcClient, sourceDir & "/web3/eth_api_callsigs.nim")
-
 export UInt256, Int256, Uint128, Int128, ChainId
-export eth_api_types, conversions, encoding, contract_dsl, HttpClientFlag, HttpClientFlags
+export
+  eth_api_types,
+  conversions,
+  encoding,
+  contract_dsl,
+  HttpClientFlag,
+  HttpClientFlags,
+  eth_api
 
 type
   Web3* = ref object
@@ -56,20 +57,40 @@ type
     historicalEventsProcessed: bool
     removed: bool
 
-proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
-  let s = w.subscriptions.getOrDefault(j{"subscription"}.getStr())
+proc handleSubscriptionNotification(w: Web3, params: JsonNode) =
+  let s = w.subscriptions.getOrDefault(params{"subscription"}.getStr())
   if not s.isNil and not s.removed:
     if s.historicalEventsProcessed:
-      s.eventHandler(j{"result"})
+      s.eventHandler(params{"result"})
     else:
-      s.pendingEvents.add(j)
+      s.pendingEvents.add(params)
+
+template `or`(a: JsonNode, b: typed): JsonNode =
+  if a.isNil: b else: a
 
 proc newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
   result.subscriptions = initTable[string, Subscription]()
-  let r = result
-  provider.setMethodHandler("eth_subscription") do(j: JsonNode):
-    r.handleSubscriptionNotification(j)
+  let w3 = result
+
+  provider.onProcessMessage = proc(client: RpcClient, line: string):
+                                Result[bool, string] {.gcsafe, raises: [].} =
+    try:
+      let node = JrpcConv.decode(line, JsonNode)
+      if "method" notin node:
+        # fallback to regular onProcessMessage
+        return ok(true)
+
+      # This could be subscription notification
+      let name = node["method"].getStr()
+      if name == "eth_subscription":
+        let params = node{"params"} or newJArray()
+        w3.handleSubscriptionNotification(params)
+
+      # don't fallback, just quit onProcessMessage
+      return ok(false)
+    except CatchableError as exc:
+      return err(exc.msg)
 
 proc newWeb3*(
     uri: string,
@@ -99,9 +120,9 @@ proc newWeb3*(
 
 proc close*(web3: Web3): Future[void] = web3.provider.close()
 
-proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
+proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async.} =
   try:
-    let logs = await s.web3.provider.eth_getLogs(options)
+    let logs = await s.web3.provider.eth_getJsonLogs(options)
     for l in logs:
       if s.removed: break
       s.eventHandler(l)
@@ -116,7 +137,7 @@ proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
     echo "Caught exception in getHistoricalEvents: ", e.msg
     echo e.getStackTrace()
 
-proc subscribe*(w: Web3, name: string, options: JsonNode,
+proc subscribe*(w: Web3, name: string, options: Option[FilterOptions],
                 eventHandler: SubscriptionEventHandler,
                 errorHandler: SubscriptionErrorHandler): Future[Subscription]
                {.async.} =
@@ -132,10 +153,10 @@ proc subscribe*(w: Web3, name: string, options: JsonNode,
   ## the error.
 
   # Don't send an empty `{}` object as an extra argument if there are no options
-  let id = if options.isNil:
+  let id = if options.isNone:
     await w.provider.eth_subscribe(name)
   else:
-    await w.provider.eth_subscribe(name, options)
+    await w.provider.eth_subscribe(name, options.get)
 
   result = Subscription(id: id,
                         web3: w,
@@ -144,29 +165,25 @@ proc subscribe*(w: Web3, name: string, options: JsonNode,
 
   w.subscriptions[id] = result
 
-proc subscribeForLogs*(w: Web3, options: JsonNode,
+proc subscribeForLogs*(w: Web3, options: FilterOptions,
                        logsHandler: SubscriptionEventHandler,
                        errorHandler: SubscriptionErrorHandler,
                        withHistoricEvents = true): Future[Subscription]
                       {.async.} =
-  result = await subscribe(w, "logs", options, logsHandler, errorHandler)
+  result = await subscribe(w, "logs", some(options), logsHandler, errorHandler)
   if withHistoricEvents:
     discard getHistoricalEvents(result, options)
   else:
     result.historicalEventsProcessed = true
 
-proc addAddressAndSignatureToOptions(options: JsonNode, address: Address, topic: seq[byte]): JsonNode =
-  result = if options.isNil: newJObject() else: options
-  if "address" notin result:
-    result["address"] = %address
-  var topics = result{"topics"}
-  if topics.isNil:
-    topics = newJArray()
-    result["topics"] = topics
-  topics.elems.insert(%to0xHex(topic), 0)
+proc addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Topic): FilterOptions =
+  result = options
+  if result.address.kind == slkNull:
+    result.address = AddressOrList(kind: slkSingle, single: address)
+  result.topics.insert(TopicOrList(kind: slkSingle, single: topic), 0)
 
-proc subscribeForLogs*(s: Web3SenderImpl, options: JsonNode,
-                       topic: seq[byte],
+proc subscribeForLogs*(s: Web3SenderImpl, options: FilterOptions,
+                       topic: Topic,
                        logsHandler: SubscriptionEventHandler,
                        errorHandler: SubscriptionErrorHandler,
                        withHistoricEvents = true): Future[Subscription] =
@@ -178,16 +195,16 @@ proc subscribeForBlockHeaders*(w: Web3,
                                errorHandler: SubscriptionErrorHandler): Future[Subscription]
                               {.async.} =
   proc eventHandler(json: JsonNode) {.gcsafe, raises: [].} =
-    var blk: BlockHeader
+
     try:
-      fromJson(json, "result", blk)
+      let blk = JrpcConv.decode($json, BlockHeader)
       blockHeadersCallback(blk)
     except CatchableError as err:
       errorHandler(err[])
 
   # `nil` options so that we skip sending an empty `{}` object as an extra argument
   # to geth for `newHeads`: https://github.com/ethereum/go-ethereum/issues/21588
-  result = await subscribe(w, "newHeads", nil, eventHandler, errorHandler)
+  result = await subscribe(w, "newHeads", none(FilterOptions), eventHandler, errorHandler)
   result.historicalEventsProcessed = true
 
 proc unsubscribe*(s: Subscription): Future[void] {.async.} =
@@ -195,28 +212,30 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   s.removed = true
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
-proc getJsonLogs(s: Web3SenderImpl, topic: openarray[byte],
-                  fromBlock = none(RtBlockIdentifier), toBlock = none(RtBlockIdentifier),
+proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
+                  fromBlock = none(RtBlockIdentifier),
+                  toBlock = none(RtBlockIdentifier),
                   blockHash = none(BlockHash)): Future[JsonNode] =
-  var options = newJObject()
-  options["address"] = %s.contractAddress
-  var topics = newJArray()
-  topics.elems.insert(%to0xHex(topic), 0)
-  options["topics"] = topics
+
+  var options = FilterOptions(
+    address: AddressOrList(kind: slkSingle, single: s.contractAddress),
+    topics: @[TopicOrList(kind: slkSingle, single: topic)],
+  )
+
   if blockHash.isSome:
     doAssert fromBlock.isNone and toBlock.isNone
-    options["blockHash"] = %blockHash.unsafeGet
+    options.blockHash = blockHash
   else:
-    if fromBlock.isSome:
-      options["fromBlock"] = %fromBlock.unsafeGet
-    if toBlock.isSome:
-      options["toBlock"] = %toBlock.unsafeGet
+    options.fromBlock = fromBlock
+    options.toBlock = toBlock
 
-  s.web3.provider.eth_getLogs(options)
+  # TODO: optimize it instead of double conversion
+  s.web3.provider.eth_getJsonLogs(options)
 
 proc getJsonLogs*[TContract](s: Sender[TContract],
                   EventName: type,
-                  fromBlock= none(RtBlockIdentifier), toBlock = none(RtBlockIdentifier),
+                  fromBlock= none(RtBlockIdentifier),
+                  toBlock = none(RtBlockIdentifier),
                   blockHash = none(BlockHash)): Future[JsonNode] {.inline.} =
   mixin eventTopic
   getJsonLogs(s.sender, eventTopic(EventName))
@@ -302,7 +321,7 @@ proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
   cc.value = some(value)
   let response =
     if blockNumber != high(uint64):
-      await web3.provider.eth_call(cc, &"0x{blockNumber:X}")
+      await web3.provider.eth_call(cc, blockId(blockNumber))
     else:
       await web3.provider.eth_call(cc, "latest")
 
@@ -375,4 +394,4 @@ proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} 
   return code.len > 0
 
 proc subscribe*[TContract](s: Sender[TContract], t: typedesc, cb: proc): Future[Subscription] {.inline.} =
-  subscribe(s, t, newJObject(), cb, SubscriptionErrorHandler nil)
+  subscribe(s, t, FilterOptions(), cb, SubscriptionErrorHandler nil)

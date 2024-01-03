@@ -171,23 +171,28 @@ type
     blobGasUsed*: Option[Quantity]      # uint64
     blobGasPrice*: Option[UInt256]      # UInt256
 
-  FilterDataKind* = enum fkItem, fkList
-  FilterData* = object
-    # Difficult to process variant objects in input data, as kind is immutable.
-    # TODO: This might need more work to handle "or" options
-    kind*: FilterDataKind
-    items*: seq[FilterData]
-    item*: UInt256
-    # TODO: I don't think this will work as input, need only one value that is either UInt256 or seq[UInt256]
-
   Topic* = FixedBytes[32]
+
+  SingleOrListKind* = enum
+    slkNull
+    slkSingle
+    slkList
+
+  SingleOrList*[T] = object
+    case kind*: SingleOrListKind
+    of slkSingle: single*: T
+    of slkList: list*: seq[T]
+    of slkNull: discard
+
+  TopicOrList* = SingleOrList[Topic]
+  AddressOrList* = SingleOrList[Address]
 
   FilterOptions* = object
     fromBlock*: Option[RtBlockIdentifier] # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
     toBlock*: Option[RtBlockIdentifier]   # (optional, default: "latest") integer block number, or "latest" for the last mined block or "pending", "earliest" for not yet mined transactions.
     # TODO: address as optional list of address or optional address
-    address*: seq[Address]              # (optional) contract address or a list of addresses from which logs should originate.
-    topics*: seq[Option[seq[Topic]]]    # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
+    address*: AddressOrList             # (optional) contract address or a list of addresses from which logs should originate.
+    topics*: seq[TopicOrList]           # (optional) list of DATA topics. Topics are order-dependent. Each topic can also be a list of DATA with "or" options.
     blockHash*: Option[BlockHash]       # (optional) hash of the block. If its present, fromBlock and toBlock, should be none. Introduced in EIP234
 
   LogObject* = object

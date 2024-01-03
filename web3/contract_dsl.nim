@@ -44,8 +44,8 @@ type
     of constructor: constructorObject: ConstructorObject
     of event: eventObject: EventObject
 
-proc keccak256Bytes(s: string): seq[byte] {.inline.} =
-  @(keccak256.digest(s).data)
+proc keccak256Bytes(s: string): array[32, byte] {.inline.} =
+  keccak256.digest(s).data
 
 proc initContractInvocation[TSender](TResult: typedesc, sender: TSender, data: seq[byte]): ContractInvocation[TResult, TSender] {.inline.} =
   ContractInvocation[TResult, TSender](data: data, sender: sender)
@@ -286,13 +286,13 @@ macro contract*(cname: untyped, body: untyped): untyped =
         result.add quote do:
           type `cbident`* = object
 
-          template eventTopic*(T: type `cbident`): seq[byte] =
+          template eventTopic*(T: type `cbident`): Topic =
             const r = keccak256Bytes(`signature`)
-            r
+            Topic(r)
 
           proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
                          t: type `cbident`,
-                         options: JsonNode,
+                         options: FilterOptions,
                          `callbackIdent`: `procTy`,
                          errorHandler: SubscriptionErrorHandler,
                          withHistoricEvents = true): Future[Subscription] {.used.} =
@@ -307,7 +307,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
 
           proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
                          t: type `cbident`,
-                         options: JsonNode,
+                         options: FilterOptions,
                          `callbackIdent`: `procTyWithRawData`,
                          errorHandler: SubscriptionErrorHandler,
                          withHistoricEvents = true): Future[Subscription] {.used.} =
