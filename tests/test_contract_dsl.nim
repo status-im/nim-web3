@@ -29,6 +29,7 @@ proc checkData(d: ContractInvocation | ContractDeployment, expectedData: string)
 contract(TestContract):
   proc getBool(): bool
   proc setBool(a: bool)
+  proc setString(a: string)
 
 contract(TestContractWithConstructor):
   proc init(someArg1, someArg2: UInt256) {.constructor.}
@@ -42,6 +43,7 @@ suite "Contract DSL":
     checkData(c.getBool(), "0x12a7b914")
     checkData(c.setBool(true), "0x1e26fd330000000000000000000000000000000000000000000000000000000000000001")
     checkData(c.setBool(false), "0x1e26fd330000000000000000000000000000000000000000000000000000000000000000")
+    checkData(c.setString("hello"), "0x7fcaf6660000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000568656c6c6f0000000000")
 
   test "Constructors":
     let s = DummySender()

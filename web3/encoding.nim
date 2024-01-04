@@ -67,6 +67,9 @@ func encode*(x: DynamicBytes): seq[byte] {.inline.} =
 func encode*(x: seq[byte]): seq[byte] {.inline.} =
   encodeDynamic(x)
 
+func encode*(x: string): seq[byte] {.inline.} =
+  encodeDynamic(x.toOpenArrayByte(0, x.high))
+
 func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte]): int =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
@@ -75,6 +78,15 @@ func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte])
   let dataLen = dataLenBig.truncate(int)
   let actualDataOffset = baseOffset + dataOffset + 32
   to = input[actualDataOffset ..< actualDataOffset + dataLen]
+
+func decode*(input: openarray[byte], baseOffset, offset: int, to: var string): int =
+  var dataOffsetBig, dataLenBig: UInt256
+  result = decode(input, baseOffset, offset, dataOffsetBig)
+  let dataOffset = dataOffsetBig.truncate(int)
+  discard decode(input, baseOffset, dataOffset, dataLenBig)
+  let dataLen = dataLenBig.truncate(int)
+  let actualDataOffset = baseOffset + dataOffset + 32
+  to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
 
 func decode*(input: openarray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
   var s: seq[byte]
