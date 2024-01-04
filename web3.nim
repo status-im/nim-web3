@@ -375,7 +375,7 @@ proc getMinedTransactionReceipt*(web3: Web3, tx: TxHash): Future[ReceiptObject] 
 
 proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
   let h = await c.send(value, gas)
-  let receipt = await c.web3.getMinedTransactionReceipt(h)
+  let receipt = await c.sender.web3.getMinedTransactionReceipt(h)
 
   # TODO: decode result from receipt
 
