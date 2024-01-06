@@ -64,19 +64,6 @@ template toHex*(x: Address): string =
 template fromHex*(T: type Address, hexStr: string): T =
   T fromHex(distinctBase(T), hexStr)
 
-template skip0xPrefix(hexStr: string): int =
-  ## Returns the index of the first meaningful char in `hexStr` by skipping
-  ## "0x" prefix
-  if hexStr.len > 1 and hexStr[0] == '0' and hexStr[1] in {'x', 'X'}: 2
-  else: 0
-
-func strip0xPrefix*(s: string): string =
-  let prefixLen = skip0xPrefix(s)
-  if prefixLen != 0:
-    s[prefixLen .. ^1]
-  else:
-    s
-
 func fromHex*[minLen, maxLen](T: type DynamicBytes[minLen, maxLen], hexStr: string): T {.raises: [ValueError].} =
   let prefixLen = skip0xPrefix(hexStr)
   let hexDataLen = hexStr.len - prefixLen
