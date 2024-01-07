@@ -127,7 +127,7 @@ type
   AccessListResult* = object
     accessList*: seq[AccessTuple]
     error*: string
-    gasUsed: Quantity
+    gasUsed*: Quantity
 
   TransactionObject* = ref object                    # A transaction object, or null when no transaction was found:
     hash*: TxHash                                    # hash of the transaction.
