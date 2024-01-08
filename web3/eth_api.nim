@@ -27,7 +27,7 @@ createRpcSigsFromNim(RpcClient):
   proc net_peerCount(): Quantity
   proc net_listening(): bool
   proc eth_protocolVersion(): string
-  proc eth_syncing(): JsonNode
+  proc eth_syncing(): SyncObject
   proc eth_coinbase(): Address
   proc eth_mining(): bool
   proc eth_hashrate(): Quantity
@@ -83,4 +83,4 @@ createRpcSigsFromNim(RpcClient):
     blockId: BlockIdentifier): ProofResponse
 
 createSingleRpcSig(RpcClient, "eth_getJsonLogs"):
-  proc eth_getLogs(filterOptions: FilterOptions): JsonNode
+  proc eth_getLogs(filterOptions: FilterOptions): seq[JsonString]

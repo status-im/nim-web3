@@ -11,6 +11,7 @@ import
   std/[options, json, tables, uri],
   stint, httputils, chronos,
   json_rpc/[rpcclient, jsonmarshal],
+  json_rpc/private/jrpc_sys,
   eth/keys,
   chronos/apps/http/httpclient,
   web3/[eth_api_types, conversions, transaction_signing, encoding, contract_dsl],
@@ -43,7 +44,7 @@ type
 
   Sender*[T] = ContractInstance[T, Web3SenderImpl]
 
-  SubscriptionEventHandler* = proc (j: JsonNode) {.gcsafe, raises: [].}
+  SubscriptionEventHandler* = proc (j: JsonString) {.gcsafe, raises: [].}
   SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [].}
 
   BlockHeaderHandler* = proc (b: BlockHeader) {.gcsafe, raises: [].}
@@ -53,21 +54,48 @@ type
     web3*: Web3
     eventHandler*: SubscriptionEventHandler
     errorHandler*: SubscriptionErrorHandler
-    pendingEvents: seq[JsonNode]
+    pendingEvents: seq[JsonString]
     historicalEventsProcessed: bool
     removed: bool
 
-proc handleSubscriptionNotification(w: Web3, params: JsonNode) =
-  let s = w.subscriptions.getOrDefault(params{"subscription"}.getStr())
+proc getValue(params: RequestParamsRx, field: string, FieldType: type):
+        Result[FieldType, string] {.gcsafe, raises: [].} =
+  try:
+    for param in params.named:
+      if param.name == field:
+        when FieldType is JsonString:
+          return ok(param.value)
+        else:
+          let val = JrpcConv.decode(param.value.string, FieldType)
+          return ok(val)
+  except CatchableError as exc:
+    return err(exc.msg)
+
+proc toJsonString(params: RequestParamsRx):
+       Result[JsonString, string] {.gcsafe, raises: [].} =
+  try:
+    let res = JrpcSys.encode(params.toTx)
+    return ok(res.JsonString)
+  except CatchableError as exc:
+    return err(exc.msg)
+
+proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
+                                Result[void, string] {.gcsafe, raises: [].} =
+  let subs = params.getValue("subscription", string).valueOr:
+    return err(error)
+  let s = w.subscriptions.getOrDefault(subs)
   if not s.isNil and not s.removed:
     if s.historicalEventsProcessed:
-      s.eventHandler(params{"result"})
+      let res = params.getValue("result", JsonString).valueOr:
+        return err(error)
+      s.eventHandler(res)
     else:
-      s.pendingEvents.add(params)
+      let par = params.toJsonString().valueOr:
+        return err(error)
+      s.pendingEvents.add(par)
 
-template `or`(a: JsonNode, b: typed): JsonNode =
-  if a.isNil: b else: a
-
+  ok()
+  
 proc newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
   result.subscriptions = initTable[string, Subscription]()
@@ -76,16 +104,18 @@ proc newWeb3*(provider: RpcClient): Web3 =
   provider.onProcessMessage = proc(client: RpcClient, line: string):
                                 Result[bool, string] {.gcsafe, raises: [].} =
     try:
-      let node = JrpcConv.decode(line, JsonNode)
-      if "method" notin node:
+      let req = JrpcSys.decode(line, RequestRx)
+      if req.`method`.isNone:
         # fallback to regular onProcessMessage
         return ok(true)
 
       # This could be subscription notification
-      let name = node["method"].getStr()
+      let name = req.`method`.get
       if name == "eth_subscription":
-        let params = node{"params"} or newJArray()
-        w3.handleSubscriptionNotification(params)
+        if req.params.kind != rpNamed:
+          return ok(false)
+        w3.handleSubscriptionNotification(req.params).isOkOr:
+          return err(error)
 
       # don't fallback, just quit onProcessMessage
       return ok(false)
@@ -194,10 +224,10 @@ proc subscribeForBlockHeaders*(w: Web3,
                                blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [].},
                                errorHandler: SubscriptionErrorHandler): Future[Subscription]
                               {.async.} =
-  proc eventHandler(json: JsonNode) {.gcsafe, raises: [].} =
+  proc eventHandler(json: JsonString) {.gcsafe, raises: [].} =
 
     try:
-      let blk = JrpcConv.decode($json, BlockHeader)
+      let blk = JrpcConv.decode(json.string, BlockHeader)
       blockHeadersCallback(blk)
     except CatchableError as err:
       errorHandler(err[])
@@ -215,7 +245,7 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
 proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
                   fromBlock = none(RtBlockIdentifier),
                   toBlock = none(RtBlockIdentifier),
-                  blockHash = none(BlockHash)): Future[JsonNode] =
+                  blockHash = none(BlockHash)): Future[seq[JsonString]] =
 
   var options = FilterOptions(
     address: AddressOrList(kind: slkSingle, single: s.contractAddress),
@@ -236,7 +266,7 @@ proc getJsonLogs*[TContract](s: Sender[TContract],
                   EventName: type,
                   fromBlock= none(RtBlockIdentifier),
                   toBlock = none(RtBlockIdentifier),
-                  blockHash = none(BlockHash)): Future[JsonNode] {.inline.} =
+                  blockHash = none(BlockHash)): Future[seq[JsonString]] {.inline.} =
   mixin eventTopic
   getJsonLogs(s.sender, eventTopic(EventName))
 

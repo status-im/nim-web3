@@ -1,6 +1,7 @@
 import
-  std/[macros, strutils, options, json],
+  std/[macros, strutils, options],
   nimcrypto/keccak,
+  json_serialization,
   ./[encoding, primitives, eth_api_types],
   stint,
   stew/byteutils
@@ -214,6 +215,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
       if not obj.eventObject.anonymous:
         let callbackIdent = ident "callback"
         let jsonIdent = ident "j"
+        let jsonData = ident "jsonData"
         var
           params = nnkFormalParams.newTree(newEmptyNode())
           paramsWithRawData = nnkFormalParams.newTree(newEmptyNode())
@@ -224,6 +226,9 @@ macro contract*(cname: untyped, body: untyped): untyped =
           callWithRawData = nnkCall.newTree(callbackIdent)
           offset = ident "offset"
           inputData = ident "inputData"
+
+        argParseBody.add quote do:
+          let `jsonData` = JrpcConv.decode(`jsonIdent`.string, JsonNode)
 
         var offsetInited = false
 
@@ -241,12 +246,12 @@ macro contract*(cname: untyped, body: untyped): untyped =
           if input.indexed:
             argParseBody.add quote do:
               var `argument`: `kind`
-              discard decode(hexToSeqByte(`jsonIdent`["topics"][`i`].getStr), 0, 0, `argument`)
+              discard decode(hexToSeqByte(`jsonData`["topics"][`i`].getStr), 0, 0, `argument`)
             i += 1
           else:
             if not offsetInited:
               argParseBody.add quote do:
-                var `inputData` = hexToSeqByte(`jsonIdent`["data"].getStr)
+                var `inputData` = hexToSeqByte(`jsonData`["data"].getStr)
                 var `offset` = 0
 
               offsetInited = true
@@ -276,7 +281,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
         callWithRawData.add jsonIdent
         paramsWithRawData.add nnkIdentDefs.newTree(
           jsonIdent,
-          bindSym "JsonNode",
+          bindSym "JsonString",
           newEmptyNode()
         )
 
@@ -296,7 +301,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          `callbackIdent`: `procTy`,
                          errorHandler: SubscriptionErrorHandler,
                          withHistoricEvents = true): Future[Subscription] {.used.} =
-            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [].} =
+            proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
               try:
                 `argParseBody`
                 `call`
@@ -311,7 +316,7 @@ macro contract*(cname: untyped, body: untyped): untyped =
                          `callbackIdent`: `procTyWithRawData`,
                          errorHandler: SubscriptionErrorHandler,
                          withHistoricEvents = true): Future[Subscription] {.used.} =
-            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [].} =
+            proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
               try:
                 `argParseBody`
                 `callWithRawData`
