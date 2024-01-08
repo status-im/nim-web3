@@ -41,7 +41,7 @@ type
   # those should be merged into one type `GenericTransaction` with a lot more fields
   # see: https://github.com/ethereum/execution-apis/blob/main/src/schemas/transaction.yaml#L244
   EthCall* = object
-    source*: Option[Address]    # (optional) The address the transaction is sent from.
+    `from`*: Option[Address]    # (optional) The address the transaction is sent from.
     to*: Option[Address]        # The address the transaction is directed to.
     gas*: Option[Quantity]      # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
     gasPrice*: Option[Quantity] # (optional) Integer of the gasPrice used for each paid gas.
@@ -253,3 +253,9 @@ func txOrHash*(hash: TxHash): TxOrHash =
 
 func txOrHash*(tx: TransactionObject): TxOrHash =
   TxOrHash(kind: tohTx, tx: tx)
+
+proc `source=`*(c: var EthCall, a: Option[Address]) =
+  c.`from` = a
+
+func source*(c: EthCall): Option[Address] =
+  c.`from`
