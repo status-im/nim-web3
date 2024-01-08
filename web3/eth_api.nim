@@ -82,5 +82,14 @@ createRpcSigsFromNim(RpcClient):
     slots: seq[UInt256],
     blockId: BlockIdentifier): ProofResponse
 
+  # TODO: @tavurth
+  proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): UInt256
+  proc eth_feeHistory(paramA: string, paramB: string, paramC: seq[string]): UInt256
+
+  proc debug_getRawBlock(address: string)
+  proc debug_getRawHeader(address: string)
+  proc debug_getRawReceipts(address: string)
+  proc debug_getRawTransaction(address: string)
+
 createSingleRpcSig(RpcClient, "eth_getJsonLogs"):
   proc eth_getLogs(filterOptions: FilterOptions): seq[JsonString]
