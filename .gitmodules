@@ -1,3 +1,0 @@
-[submodule "tests/execution-apis"]
-	path = tests/execution-apis
-	url = git@github.com:ethereum/execution-apis.git

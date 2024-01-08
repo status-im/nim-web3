@@ -1,20 +1,33 @@
+# nim-web3
+# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 import
-  std/[macros, strutils, options, math, json, tables, uri, strformat]
+  std/[options, json, tables, uri],
+  stint, httputils, chronos,
+  json_rpc/[rpcclient, jsonmarshal],
+  json_rpc/private/jrpc_sys,
+  eth/keys,
+  chronos/apps/http/httpclient,
+  web3/[eth_api_types, conversions, transaction_signing, encoding, contract_dsl],
+  web3/eth_api
 
-from os import DirSep, AltSep
+from eth/common/eth_types import ChainId
 
-import
-  stint, httputils, chronicles, chronos, nimcrypto/keccak,
-  json_rpc/[rpcclient, jsonmarshal], stew/byteutils, eth/keys,
-  web3/[ethtypes, conversions, ethhexstrings, transaction_signing, encoding]
-
-template sourceDir: string = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
-
-## Generate client convenience marshalling wrappers from forward declarations
-createRpcSigs(RpcClient, sourceDir & "/web3/ethcallsigs.nim")
-
-export UInt256, Int256, Uint128, Int128
-export ethtypes, conversions, encoding
+export UInt256, Int256, Uint128, Int128, ChainId
+export
+  eth_api_types,
+  conversions,
+  encoding,
+  contract_dsl,
+  HttpClientFlag,
+  HttpClientFlags,
+  eth_api
 
 type
   Web3* = ref object
@@ -22,60 +35,104 @@ type
     subscriptions*: Table[string, Subscription]
     defaultAccount*: Address
     privateKey*: Option[PrivateKey]
-    lastKnownNonce*: Option[Nonce]
-    onDisconnect*: proc() {.gcsafe, raises: [Defect].}
+    lastKnownNonce*: Option[Quantity]
+    onDisconnect*: proc() {.gcsafe, raises: [].}
 
-  Sender*[T] = ref object
+  Web3SenderImpl = ref object
     web3*: Web3
     contractAddress*: Address
 
-  EncodeResult* = tuple[dynamic: bool, data: string]
+  Sender*[T] = ContractInstance[T, Web3SenderImpl]
 
-  SubscriptionEventHandler* = proc (j: JsonNode) {.gcsafe, raises: [Defect].}
-  SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [Defect].}
+  SubscriptionEventHandler* = proc (j: JsonString) {.gcsafe, raises: [].}
+  SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [].}
 
-  BlockHeaderHandler* = proc (b: BlockHeader) {.gcsafe, raises: [Defect].}
+  BlockHeaderHandler* = proc (b: BlockHeader) {.gcsafe, raises: [].}
 
   Subscription* = ref object
     id*: string
     web3*: Web3
     eventHandler*: SubscriptionEventHandler
     errorHandler*: SubscriptionErrorHandler
-    pendingEvents: seq[JsonNode]
+    pendingEvents: seq[JsonString]
     historicalEventsProcessed: bool
     removed: bool
 
-  ContractCallBase = ref object of RootObj
-    web3: Web3
-    data: string
-    to: Address
-    value: UInt256
+proc getValue(params: RequestParamsRx, field: string, FieldType: type):
+        Result[FieldType, string] {.gcsafe, raises: [].} =
+  try:
+    for param in params.named:
+      if param.name == field:
+        when FieldType is JsonString:
+          return ok(param.value)
+        else:
+          let val = JrpcConv.decode(param.value.string, FieldType)
+          return ok(val)
+  except CatchableError as exc:
+    return err(exc.msg)
 
-  ContractCall*[T] = ref object of ContractCallBase
+proc toJsonString(params: RequestParamsRx):
+       Result[JsonString, string] {.gcsafe, raises: [].} =
+  try:
+    let res = JrpcSys.encode(params.toTx)
+    return ok(res.JsonString)
+  except CatchableError as exc:
+    return err(exc.msg)
 
-proc handleSubscriptionNotification(w: Web3, j: JsonNode) =
-  let s = w.subscriptions.getOrDefault(j{"subscription"}.getStr())
+proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
+                                Result[void, string] {.gcsafe, raises: [].} =
+  let subs = params.getValue("subscription", string).valueOr:
+    return err(error)
+  let s = w.subscriptions.getOrDefault(subs)
   if not s.isNil and not s.removed:
     if s.historicalEventsProcessed:
-      s.eventHandler(j{"result"})
+      let res = params.getValue("result", JsonString).valueOr:
+        return err(error)
+      s.eventHandler(res)
     else:
-      s.pendingEvents.add(j)
+      let par = params.toJsonString().valueOr:
+        return err(error)
+      s.pendingEvents.add(par)
 
+  ok()
+  
 proc newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
   result.subscriptions = initTable[string, Subscription]()
-  let r = result
-  provider.setMethodHandler("eth_subscription") do(j: JsonNode):
-    r.handleSubscriptionNotification(j)
+  let w3 = result
+
+  provider.onProcessMessage = proc(client: RpcClient, line: string):
+                                Result[bool, string] {.gcsafe, raises: [].} =
+    try:
+      let req = JrpcSys.decode(line, RequestRx)
+      if req.`method`.isNone:
+        # fallback to regular onProcessMessage
+        return ok(true)
+
+      # This could be subscription notification
+      let name = req.`method`.get
+      if name == "eth_subscription":
+        if req.params.kind != rpNamed:
+          return ok(false)
+        w3.handleSubscriptionNotification(req.params).isOkOr:
+          return err(error)
+
+      # don't fallback, just quit onProcessMessage
+      return ok(false)
+    except CatchableError as exc:
+      return err(exc.msg)
 
 proc newWeb3*(
-    uri: string, getHeaders: GetJsonRpcRequestHeaders = nil):
+    uri: string,
+    getHeaders: GetJsonRpcRequestHeaders = nil,
+    httpFlags: HttpClientFlags = {}):
     Future[Web3] {.async.} =
   let u = parseUri(uri)
   var provider: RpcClient
   case u.scheme
   of "http", "https":
-    let p = newRpcHttpClient(getHeaders = getHeaders)
+    let p = newRpcHttpClient(getHeaders = getHeaders,
+                             flags = httpFlags)
     await p.connect(uri)
     provider = p
   of "ws", "wss":
@@ -93,9 +150,9 @@ proc newWeb3*(
 
 proc close*(web3: Web3): Future[void] = web3.provider.close()
 
-proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
+proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async.} =
   try:
-    let logs = await s.web3.provider.eth_getLogs(options)
+    let logs = await s.web3.provider.eth_getJsonLogs(options)
     for l in logs:
       if s.removed: break
       s.eventHandler(l)
@@ -110,7 +167,7 @@ proc getHistoricalEvents(s: Subscription, options: JsonNode) {.async.} =
     echo "Caught exception in getHistoricalEvents: ", e.msg
     echo e.getStackTrace()
 
-proc subscribe*(w: Web3, name: string, options: JsonNode,
+proc subscribe*(w: Web3, name: string, options: Option[FilterOptions],
                 eventHandler: SubscriptionEventHandler,
                 errorHandler: SubscriptionErrorHandler): Future[Subscription]
                {.async.} =
@@ -126,10 +183,10 @@ proc subscribe*(w: Web3, name: string, options: JsonNode,
   ## the error.
 
   # Don't send an empty `{}` object as an extra argument if there are no options
-  let id = if options.isNil:
+  let id = if options.isNone:
     await w.provider.eth_subscribe(name)
   else:
-    await w.provider.eth_subscribe(name, options)
+    await w.provider.eth_subscribe(name, options.get)
 
   result = Subscription(id: id,
                         web3: w,
@@ -138,32 +195,46 @@ proc subscribe*(w: Web3, name: string, options: JsonNode,
 
   w.subscriptions[id] = result
 
-proc subscribeForLogs*(w: Web3, options: JsonNode,
+proc subscribeForLogs*(w: Web3, options: FilterOptions,
                        logsHandler: SubscriptionEventHandler,
                        errorHandler: SubscriptionErrorHandler,
                        withHistoricEvents = true): Future[Subscription]
                       {.async.} =
-  result = await subscribe(w, "logs", options, logsHandler, errorHandler)
+  result = await subscribe(w, "logs", some(options), logsHandler, errorHandler)
   if withHistoricEvents:
     discard getHistoricalEvents(result, options)
   else:
     result.historicalEventsProcessed = true
 
+proc addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Topic): FilterOptions =
+  result = options
+  if result.address.kind == slkNull:
+    result.address = AddressOrList(kind: slkSingle, single: address)
+  result.topics.insert(TopicOrList(kind: slkSingle, single: topic), 0)
+
+proc subscribeForLogs*(s: Web3SenderImpl, options: FilterOptions,
+                       topic: Topic,
+                       logsHandler: SubscriptionEventHandler,
+                       errorHandler: SubscriptionErrorHandler,
+                       withHistoricEvents = true): Future[Subscription] =
+  let options = addAddressAndSignatureToOptions(options, s.contractAddress, topic)
+  s.web3.subscribeForLogs(options, logsHandler, errorHandler, withHistoricEvents)
+
 proc subscribeForBlockHeaders*(w: Web3,
-                               blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [Defect].},
+                               blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [].},
                                errorHandler: SubscriptionErrorHandler): Future[Subscription]
                               {.async.} =
-  proc eventHandler(json: JsonNode) {.gcsafe, raises: [Defect].} =
-    var blk: BlockHeader
+  proc eventHandler(json: JsonString) {.gcsafe, raises: [].} =
+
     try:
-      fromJson(json, "result", blk)
+      let blk = JrpcConv.decode(json.string, BlockHeader)
       blockHeadersCallback(blk)
     except CatchableError as err:
       errorHandler(err[])
 
   # `nil` options so that we skip sending an empty `{}` object as an extra argument
   # to geth for `newHeads`: https://github.com/ethereum/go-ethereum/issues/21588
-  result = await subscribe(w, "newHeads", nil, eventHandler, errorHandler)
+  result = await subscribe(w, "newHeads", none(FilterOptions), eventHandler, errorHandler)
   result.historicalEventsProcessed = true
 
 proc unsubscribe*(s: Subscription): Future[void] {.async.} =
@@ -171,394 +242,41 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   s.removed = true
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
-proc unknownType() = discard # Used for informative errors
+proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
+                  fromBlock = none(RtBlockIdentifier),
+                  toBlock = none(RtBlockIdentifier),
+                  blockHash = none(BlockHash)): Future[seq[JsonString]] =
 
-template typeSignature(T: typedesc): string =
-  when T is string:
-    "string"
-  elif T is DynamicBytes:
-    "bytes"
-  elif T is FixedBytes:
-    "bytes" & $T.N
-  elif T is StUint:
-    "uint" & $T.bits
-  elif T is Address:
-    "address"
-  elif T is Bool:
-    "bool"
-  else:
-    unknownType(T)
+  var options = FilterOptions(
+    address: AddressOrList(kind: slkSingle, single: s.contractAddress),
+    topics: @[TopicOrList(kind: slkSingle, single: topic)],
+  )
 
-proc initContractCall[T](web3: Web3, data: string, to: Address): ContractCall[T] {.inline.} =
-  ContractCall[T](web3: web3, data: data, to: to)
-
-type
-  InterfaceObjectKind = enum
-    function, constructor, event
-  MutabilityKind = enum
-    pure, view, nonpayable, payable
-  FunctionInputOutput = object
-    name: string
-    typ: NimNode
-  EventInput = object
-    name: string
-    typ: NimNode
-    indexed: bool
-  FunctionObject = object
-    name: string
-    stateMutability: MutabilityKind
-    inputs: seq[FunctionInputOutput]
-    outputs: seq[FunctionInputOutput]
-  ConstructorObject = object
-    stateMutability: MutabilityKind
-    inputs: seq[FunctionInputOutput]
-    outputs: seq[FunctionInputOutput]
-  EventObject = object
-    name: string
-    inputs: seq[EventInput]
-    anonymous: bool
-
-  InterfaceObject = object
-    case kind: InterfaceObjectKind
-    of function: functionObject: FunctionObject
-    of constructor: constructorObject: ConstructorObject
-    of event: eventObject: EventObject
-
-proc joinStrings(s: varargs[string]): string = join(s)
-
-proc getSignature(function: FunctionObject | EventObject): NimNode =
-  result = newCall(bindSym"joinStrings")
-  result.add(newLit(function.name & "("))
-  for i, input in function.inputs:
-    result.add(newCall(bindSym"typeSignature", input.typ))
-    if i != function.inputs.high:
-      result.add(newLit(","))
-  result.add(newLit(")"))
-  result = newCall(ident"static", result)
-
-proc addAddressAndSignatureToOptions(options: JsonNode, address: Address, signature: string): JsonNode =
-  result = options
-  if result.isNil:
-    result = newJObject()
-  if "address" notin result:
-    result["address"] = %address
-  var topics = result{"topics"}
-  if topics.isNil:
-    topics = newJArray()
-    result["topics"] = topics
-  topics.elems.insert(%signature, 0)
-
-proc parseContract(body: NimNode): seq[InterfaceObject] =
-  proc parseOutputs(outputNode: NimNode): seq[FunctionInputOutput] =
-    result.add FunctionInputOutput(typ: (if outputNode.kind == nnkEmpty: ident"void" else: outputNode))
-
-  proc parseInputs(inputNodes: NimNode): seq[FunctionInputOutput] =
-    for i in 1..<inputNodes.len:
-      let input = inputNodes[i]
-      input.expectKind(nnkIdentDefs)
-      let typ = input[^2]
-      for j in 0 .. input.len - 3:
-        let arg = input[j]
-        result.add(FunctionInputOutput(
-          name: $arg,
-          typ: typ,
-        ))
-
-  proc parseEventInputs(inputNodes: NimNode): seq[EventInput] =
-    for i in 1..<inputNodes.len:
-      let input = inputNodes[i]
-      input.expectKind(nnkIdentDefs)
-      let typ = input[^2]
-      for j in 0 .. input.len - 3:
-        let arg = input[j]
-        case typ.kind:
-        of nnkBracketExpr:
-          if $typ[0] == "indexed":
-            result.add EventInput(
-              name: $arg,
-              typ: typ[1],
-              indexed: true
-            )
-          else:
-            result.add EventInput(name: $arg, typ: typ)
-        else:
-          result.add EventInput(name: $arg, typ: typ)
-
-  var
-    constructor: Option[ConstructorObject]
-    functions: seq[FunctionObject]
-    events: seq[EventObject]
-  for procdef in body:
-    doAssert(procdef.kind == nnkProcDef,
-      "Contracts can only be built with procedures")
-    let
-      isconstructor = procdef[4].findChild(it.strVal == "constructor") != nil
-      isevent = procdef[4].findChild(it.strVal == "event") != nil
-    doAssert(not (isconstructor and constructor.isSome),
-      "Contract can only have a single constructor")
-    doAssert(not (isconstructor and isevent),
-      "Can't be both event and constructor")
-    if not isevent:
-      let
-        ispure = procdef[4].findChild(it.strVal == "pure") != nil
-        isview = procdef[4].findChild(it.strVal == "view") != nil
-        ispayable = procdef[4].findChild(it.strVal == "payable") != nil
-      doAssert(not (ispure and isview),
-        "can't be both `pure` and `view`")
-      doAssert(not ((ispure or isview) and ispayable),
-        "can't be both `pure` or `view` while being `payable`")
-      if isconstructor:
-        constructor = some(ConstructorObject(
-          stateMutability: if ispure: pure elif isview: view elif ispayable: payable else: nonpayable,
-          inputs: parseInputs(procdef[3]),
-          outputs: parseOutputs(procdef[3][0])
-        ))
-      else:
-        functions.add FunctionObject(
-          name: procdef[0].strVal,
-          stateMutability: if ispure: pure elif isview: view elif ispayable: payable else: nonpayable,
-          inputs: parseInputs(procdef[3]),
-          outputs: parseOutputs(procdef[3][0])
-        )
-    else:
-      let isanonymous = procdef[4].findChild(it.strVal == "anonymous") != nil
-      doAssert(procdef[3][0].kind == nnkEmpty,
-        "Events can't have return values")
-      events.add EventObject(
-        name: procdef[0].strVal,
-        inputs: parseEventInputs(procdef[3]),
-        anonymous: isanonymous
-      )
-
-  if constructor.isSome:
-    result.add InterfaceObject(kind: InterfaceObjectKind.constructor, constructorObject: constructor.unsafeGet)
-  for function in functions:
-    result.add InterfaceObject(kind: InterfaceObjectKind.function, functionObject: function)
-  for event in events:
-    result.add InterfaceObject(kind: InterfaceObjectKind.event, eventObject: event)
-
-macro contract*(cname: untyped, body: untyped): untyped =
-  var objects = parseContract(body)
-  result = newStmtList()
-  let
-    address = ident "address"
-    client = ident "client"
-    receipt = genSym(nskForVar)
-    receiver = ident "receiver"
-    eventListener = ident "eventListener"
-  result.add quote do:
-    type
-      `cname`* = object
-
-  for obj in objects:
-    case obj.kind:
-    of function:
-      let
-        signature = getSignature(obj.functionObject)
-        procName = ident obj.functionObject.name
-        senderName = ident "sender"
-        output = if obj.functionObject.outputs.len != 1:
-            ident "void"
-          else:
-            obj.functionObject.outputs[0].typ
-      var
-        encodedParams = genSym(nskVar)#newLit("")
-        offset = genSym(nskVar)
-        dataBuf = genSym(nskVar)
-        encodings = genSym(nskVar)
-        encoder = newStmtList()
-      encoder.add quote do:
-        var
-          `offset` = 0
-          `encodedParams` = ""
-          `dataBuf` = ""
-          `encodings`: seq[EncodeResult]
-      for input in obj.functionObject.inputs:
-        let inputName = ident input.name
-        encoder.add quote do:
-          let encoding = encode(`inputName`)
-          `offset` += (if encoding.dynamic:
-            32
-          else:
-            encoding.data.len div 2)
-          `encodings`.add encoding
-      encoder.add quote do:
-        for encoding in `encodings`:
-          if encoding.dynamic:
-            `encodedParams` &= `offset`.toHex(64).toLower
-            `dataBuf` &= encoding.data
-          else:
-            `encodedParams` &= encoding.data
-          `offset` += encoding.data.len div 2
-
-        `encodedParams` &= `dataBuf`
-      var procDef = quote do:
-        proc `procName`*(`senderName`: Sender[`cname`]): ContractCall[`output`] =
-          discard
-      for input in obj.functionObject.inputs:
-        procDef[3].add nnkIdentDefs.newTree(
-          ident input.name,
-          input.typ,
-          newEmptyNode()
-        )
-      procDef[6].add quote do:
-        `encoder`
-        return initContractCall[`output`](
-            `senderName`.web3,
-            ($keccak256.digest(`signature`))[0..<8].toLower & `encodedParams`,
-            `senderName`.contractAddress)
-
-      result.add procDef
-    of event:
-      if not obj.eventObject.anonymous:
-        let callbackIdent = ident "callback"
-        let jsonIdent = ident "j"
-        var
-          params = nnkFormalParams.newTree(newEmptyNode())
-          paramsWithRawData = nnkFormalParams.newTree(newEmptyNode())
-
-          argParseBody = newStmtList()
-          i = 1
-          call = nnkCall.newTree(callbackIdent)
-          callWithRawData = nnkCall.newTree(callbackIdent)
-          offset = ident "offset"
-          inputData = ident "inputData"
-
-        var offsetInited = false
-
-        for input in obj.eventObject.inputs:
-          let param = nnkIdentDefs.newTree(
-            ident input.name,
-            input.typ,
-            newEmptyNode()
-          )
-          params.add param
-          paramsWithRawData.add param
-          let
-            argument = genSym(nskVar)
-            kind = input.typ
-          if input.indexed:
-            argParseBody.add quote do:
-              var `argument`: `kind`
-              discard decode(strip0xPrefix(`jsonIdent`["topics"][`i`].getStr), 0, `argument`)
-            i += 1
-          else:
-            if not offsetInited:
-              argParseBody.add quote do:
-                var `inputData` = strip0xPrefix(`jsonIdent`["data"].getStr)
-                var `offset` = 0
-
-              offsetInited = true
-
-            argParseBody.add quote do:
-              var `argument`: `kind`
-              `offset` += decode(`inputData`, `offset`, `argument`)
-          call.add argument
-          callWithRawData.add argument
-        let
-          eventName = obj.eventObject.name
-          cbident = ident eventName
-          procTy = nnkProcTy.newTree(params, newEmptyNode())
-          signature = getSignature(obj.eventObject)
-
-        # generated with dumpAstGen - produces "{.raises: [Defect], gcsafe.}"
-        let pragmas = nnkPragma.newTree(
-          nnkExprColonExpr.newTree(
-            newIdentNode("raises"),
-            nnkBracket.newTree(
-              newIdentNode("Defect")
-            )
-          ),
-          newIdentNode("gcsafe")
-        )
-
-        procTy[1] = pragmas
-
-        callWithRawData.add jsonIdent
-        paramsWithRawData.add nnkIdentDefs.newTree(
-          jsonIdent,
-          bindSym "JsonNode",
-          newEmptyNode()
-        )
-
-        let procTyWithRawData = nnkProcTy.newTree(paramsWithRawData, newEmptyNode())
-        procTyWithRawData[1] = pragmas
-
-        result.add quote do:
-          type `cbident`* = object
-
-          template eventTopic*(T: type `cbident`): string =
-            "0x" & toLowerAscii($keccak256.digest(`signature`))
-
-          proc subscribe(s: Sender[`cname`],
-                         t: type `cbident`,
-                         options: JsonNode,
-                         `callbackIdent`: `procTy`,
-                         errorHandler: SubscriptionErrorHandler,
-                         withHistoricEvents = true): Future[Subscription] =
-            let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
-
-            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
-              try:
-                `argParseBody`
-                `call`
-              except CatchableError as err:
-                errorHandler err[]
-
-            s.web3.subscribeForLogs(options, eventHandler, errorHandler, withHistoricEvents)
-
-          proc subscribe(s: Sender[`cname`],
-                         t: type `cbident`,
-                         options: JsonNode,
-                         `callbackIdent`: `procTyWithRawData`,
-                         errorHandler: SubscriptionErrorHandler,
-                         withHistoricEvents = true): Future[Subscription] =
-            let options = addAddressAndSignatureToOptions(options, s.contractAddress, eventTopic(`cbident`))
-
-            proc eventHandler(`jsonIdent`: JsonNode) {.gcsafe, raises: [Defect].} =
-              try:
-                `argParseBody`
-                `callWithRawData`
-              except CatchableError as err:
-                errorHandler err[]
-
-            s.web3.subscribeForLogs(options, eventHandler, errorHandler, withHistoricEvents)
-
-    else:
-      discard
-
-  when defined(debugMacros) or defined(debugWeb3Macros):
-    echo result.repr
-
-proc getJsonLogs*(s: Sender,
-                  EventName: type,
-                  fromBlock, toBlock = none(RtBlockIdentifier),
-                  blockHash = none(BlockHash)): Future[JsonNode] =
-  mixin eventTopic
-
-  var options = newJObject()
-  options["address"] = %s.contractAddress
-  var topics = newJArray()
-  topics.elems.insert(%eventTopic(EventName), 0)
-  options["topics"] = topics
   if blockHash.isSome:
     doAssert fromBlock.isNone and toBlock.isNone
-    options["blockhash"] = %blockHash.unsafeGet
+    options.blockHash = blockHash
   else:
-    if fromBlock.isSome:
-      options["fromBlock"] = %fromBlock.unsafeGet
-    if toBlock.isSome:
-      options["toBlock"] = %toBlock.unsafeGet
+    options.fromBlock = fromBlock
+    options.toBlock = toBlock
 
-  s.web3.provider.eth_getLogs(options)
+  # TODO: optimize it instead of double conversion
+  s.web3.provider.eth_getJsonLogs(options)
 
-proc nextNonce*(web3: Web3): Future[Nonce] {.async.} =
+proc getJsonLogs*[TContract](s: Sender[TContract],
+                  EventName: type,
+                  fromBlock= none(RtBlockIdentifier),
+                  toBlock = none(RtBlockIdentifier),
+                  blockHash = none(BlockHash)): Future[seq[JsonString]] {.inline.} =
+  mixin eventTopic
+  getJsonLogs(s.sender, eventTopic(EventName))
+
+proc nextNonce*(web3: Web3): Future[Quantity] {.async.} =
   if web3.lastKnownNonce.isSome:
     inc web3.lastKnownNonce.get
     return web3.lastKnownNonce.get
   else:
     let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress.Address
-    result = int(await web3.provider.eth_getTransactionCount(fromAddress, "latest"))
+    result = await web3.provider.eth_getTransactionCount(fromAddress, "latest")
     web3.lastKnownNonce = some result
 
 proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
@@ -566,52 +284,80 @@ proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
     var cc = c
     if cc.nonce.isNone:
       cc.nonce = some(await web3.nextNonce())
-    let t = "0x" & encodeTransaction(cc, web3.privateKey.get())
+    let t = encodeTransaction(cc, web3.privateKey.get())
     return await web3.provider.eth_sendRawTransaction(t)
   else:
     return await web3.provider.eth_sendTransaction(c)
 
-proc send*(c: ContractCallBase,
-           value = 0.u256,
-           gas = 3000000'u64,
-           gasPrice = 0): Future[TxHash] {.async.} =
+proc send*(web3: Web3, c: EthSend, chainId: ChainId): Future[TxHash] {.async.} =
+  doAssert(web3.privateKey.isSome())
+  var cc = c
+  if cc.nonce.isNone:
+    cc.nonce = some(await web3.nextNonce())
+  let t = encodeTransaction(cc, web3.privateKey.get(), chainId)
+  return await web3.provider.eth_sendRawTransaction(t)
+
+proc sendData(sender: Web3SenderImpl,
+              data: seq[byte],
+              value: UInt256,
+              gas: uint64,
+              gasPrice: int,
+              chainId = none(ChainId)): Future[TxHash] {.async.} =
   let
-    web3 = c.web3
-    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice)
-               else: none(int)
+    web3 = sender.web3
+    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice.Quantity)
+               else: none(Quantity)
     nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
-            else: none(Nonce)
+            else: none(Quantity)
 
     cc = EthSend(
-      data: "0x" & c.data,
-      source: web3.defaultAccount,
-      to: some(c.to),
+      data: data,
+      `from`: web3.defaultAccount,
+      to: some(sender.contractAddress),
       gas: some(Quantity(gas)),
       value: some(value),
       nonce: nonce,
-      gasPrice: gasPrice)
+      gasPrice: gasPrice,
+    )
 
-  return await web3.send(cc)
+  if chainId.isNone:
+    return await web3.send(cc)
+  else:
+    return await web3.send(cc, chainId.get)
 
-proc call*[T](c: ContractCall[T],
+proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
+           value = 0.u256,
+           gas = 3000000'u64,
+           gasPrice = 0): Future[TxHash] =
+  sendData(c.sender, c.data, value, gas, gasPrice)
+
+proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
+           chainId: ChainId,
+           value = 0.u256,
+           gas = 3000000'u64,
+           gasPrice = 0): Future[TxHash] =
+  sendData(c.sender, c.data, value, gas, gasPrice, some(chainId))
+
+proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
               value = 0.u256,
               gas = 3000000'u64,
               blockNumber = high(uint64)): Future[T] {.async.} =
+  let web3 = c.sender.web3
   var cc: EthCall
-  cc.data = some("0x" & c.data)
-  cc.source = some(c.web3.defaultAccount)
-  cc.to = c.to
+  cc.data = some(c.data)
+  cc.source = some(web3.defaultAccount)
+  cc.to = some(c.sender.contractAddress)
   cc.gas = some(Quantity(gas))
   cc.value = some(value)
-  let response = strip0xPrefix:
+  let response =
     if blockNumber != high(uint64):
-      await c.web3.provider.eth_call(cc, &"0x{blockNumber:X}")
+      await web3.provider.eth_call(cc, blockId(blockNumber))
     else:
-      await c.web3.provider.eth_call(cc, "latest")
+      await web3.provider.eth_call(cc, "latest")
 
   if response.len > 0:
     var res: T
-    discard decode(response, 0, res)
+    discard decode(response, 0, 0, res)
     return res
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
@@ -620,16 +366,16 @@ proc getMinedTransactionReceipt*(web3: Web3, tx: TxHash): Future[ReceiptObject] 
   ## Returns the receipt for the transaction. Waits for it to be mined if necessary.
   # TODO: Potentially more optimal solution is to subscribe and wait for appropriate
   # notification. Now we're just polling every 500ms which should be ok for most cases.
-  var r: Option[ReceiptObject]
-  while r.isNone:
+  var r: ReceiptObject
+  while r.isNil:
     r = await web3.provider.eth_getTransactionReceipt(tx)
-    if r.isNone:
+    if r.isNil:
       await sleepAsync(500.milliseconds)
-  result = r.get
+  result = r
 
-proc exec*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
+proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 3000000'u64): Future[T] {.async.} =
   let h = await c.send(value, gas)
-  let receipt = await c.web3.getMinedTransactionReceipt(h)
+  let receipt = await c.sender.web3.getMinedTransactionReceipt(h)
 
   # TODO: decode result from receipt
 
@@ -661,15 +407,15 @@ proc exec*[T](c: ContractCall[T], value = 0.u256, gas = 3000000'u64): Future[T] 
 #echo response
 
 proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
-  Sender[T](web3: web3, contractAddress: toAddress)
+  Sender[T](sender: Web3SenderImpl(web3: web3, contractAddress: toAddress))
 
 proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} =
   let
     codeFut = case atBlock.kind
       of bidNumber:
-        s.web3.provider.eth_getCode(s.contractAddress, atBlock.number)
+        s.sender.web3.provider.eth_getCode(s.contractAddress, atBlock.number)
       of bidAlias:
-        s.web3.provider.eth_getCode(s.contractAddress, atBlock.alias)
+        s.sender.web3.provider.eth_getCode(s.contractAddress, atBlock.alias)
     code = await codeFut
 
   # TODO: Check that all methods of the contract are present by
@@ -677,8 +423,5 @@ proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} 
   #       https://ethereum.stackexchange.com/questions/11856/how-to-detect-from-web3-if-method-exists-on-a-deployed-contract
   return code.len > 0
 
-proc subscribe*(s: Sender, t: typedesc, cb: proc): Future[Subscription] {.inline.} =
-  subscribe(s, t, newJObject(), cb, SubscriptionErrorHandler nil)
-
-proc `$`*(b: Bool): string =
-  $(StInt[256](b))
+proc subscribe*[TContract](s: Sender[TContract], t: typedesc, cb: proc): Future[Subscription] {.inline.} =
+  subscribe(s, t, FilterOptions(), cb, SubscriptionErrorHandler nil)

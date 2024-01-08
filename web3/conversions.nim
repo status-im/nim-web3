@@ -1,20 +1,80 @@
-# Copyright (c) 2019-2022 Status Research & Development GmbH
-# Licensed and distributed under either of
-#   * MIT license (license terms in the root directory or at https://opensource.org/licenses/MIT).
-#   * Apache v2 license (license terms in the root directory or at https://www.apache.org/licenses/LICENSE-2.0).
-# at your option. This file may not be copied, modified, or distributed except according to those terms.
+# nim-web3
+# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
 
 import
-  std/[json, options, strutils, strformat, tables, typetraits],
-  stint, stew/byteutils, json_serialization, faststreams/textio,
-  ethtypes, ethhexstrings,
-  ./engine_api_types
+  std/strutils,
+  stint,
+  stew/byteutils,
+  faststreams/textio,
+  json_rpc/jsonmarshal,
+  json_serialization/std/options,
+  json_serialization,
+  ./primitives,
+  ./engine_api_types,
+  ./eth_api_types,
+  ./execution_types
 
-from json_rpc/rpcserver import expect
+export
+  options,
+  json_serialization,
+  jsonmarshal
+
+template derefType(T: type): untyped =
+  typeof(T()[])
+
+# eth_api_types
+SyncObject.useDefaultSerializationIn JrpcConv
+WithdrawalObject.useDefaultSerializationIn JrpcConv
+AccessTuple.useDefaultSerializationIn JrpcConv
+AccessListResult.useDefaultSerializationIn JrpcConv
+LogObject.useDefaultSerializationIn JrpcConv
+StorageProof.useDefaultSerializationIn JrpcConv
+ProofResponse.useDefaultSerializationIn JrpcConv
+FilterOptions.useDefaultSerializationIn JrpcConv
+EthSend.useDefaultSerializationIn JrpcConv
+EthCall.useDefaultSerializationIn JrpcConv
+
+derefType(BlockHeader).useDefaultSerializationIn JrpcConv
+derefType(BlockObject).useDefaultSerializationIn JrpcConv
+derefType(TransactionObject).useDefaultSerializationIn JrpcConv
+derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
+
+# engine_api_types
+WithdrawalV1.useDefaultSerializationIn JrpcConv
+ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
+ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
+ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
+ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
+BlobsBundleV1.useDefaultSerializationIn JrpcConv
+ExecutionPayloadBodyV1.useDefaultSerializationIn JrpcConv
+PayloadAttributesV1.useDefaultSerializationIn JrpcConv
+PayloadAttributesV2.useDefaultSerializationIn JrpcConv
+PayloadAttributesV3.useDefaultSerializationIn JrpcConv
+PayloadAttributesV1OrV2.useDefaultSerializationIn JrpcConv
+PayloadStatusV1.useDefaultSerializationIn JrpcConv
+ForkchoiceStateV1.useDefaultSerializationIn JrpcConv
+ForkchoiceUpdatedResponse.useDefaultSerializationIn JrpcConv
+TransitionConfigurationV1.useDefaultSerializationIn JrpcConv
+GetPayloadV2Response.useDefaultSerializationIn JrpcConv
+GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
+GetPayloadV3Response.useDefaultSerializationIn JrpcConv
+
+# execution types
+ExecutionPayload.useDefaultSerializationIn JrpcConv
+PayloadAttributes.useDefaultSerializationIn JrpcConv
+GetPayloadResponse.useDefaultSerializationIn JrpcConv
+
+{.push gcsafe, raises: [].}
 
 template invalidQuantityPrefix(s: string): bool =
   # https://ethereum.org/en/developers/docs/apis/json-rpc/#hex-value-encoding
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.1/src/engine/specification.md#structures
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/common.md#encoding
   # "When encoding quantities (integers, numbers): encode as hex, prefix with
   # "0x", the most compact representation (slight exception: zero should be
   # represented as "0x0")."
@@ -29,91 +89,178 @@ template invalidQuantityPrefix(s: string): bool =
   else:
     (not s.startsWith "0x") or s == "0x"
 
-func `%`*(n: Int256|UInt256): JsonNode = %("0x" & n.toHex)
+template toHexImpl(hex, pos: untyped) =
+  const
+    hexChars  = "0123456789abcdef"
+    maxDigits = sizeof(x) * 2
+
+  var
+    hex: array[maxDigits, char]
+    pos = hex.len
+    n = x
+
+  template prepend(c: char) =
+    dec pos
+    hex[pos] = c
+
+  for _ in 0 ..< 8:
+    prepend(hexChars[int(n and 0xF)])
+    n = n shr 4
+
+  while hex[pos] == '0' and pos < hex.high:
+    inc pos
+
+proc toHex(s: OutputStream, x: uint64) {.gcsafe, raises: [IOError].} =
+  toHexImpl(hex, pos)
+  write s, hex.toOpenArray(pos, static(hex.len - 1))
+
+func encodeQuantity(x: uint64): string =
+  toHexImpl(hex, pos)
+  result = "0x"
+  for i in pos..<hex.len:
+    result.add hex[i]
+
+template wrapValueError(body: untyped) =
+  try:
+    body
+  except ValueError as exc:
+    r.raiseUnexpectedValue(exc.msg)
+
+proc writeValue*(w: var JsonWriter[JrpcConv], val: UInt256)
+      {.gcsafe, raises: [IOError].} =
+  w.writeValue("0x" & val.toHex)
 
 
 # allows UInt256 to be passed as a json string
-func fromJson*(n: JsonNode, argName: string, result: var UInt256) =
+proc readValue*(r: var JsonReader[JrpcConv], val: var UInt256)
+      {.gcsafe, raises: [IOError, JsonReaderError].} =
   # expects base 16 string, starting with "0x"
-  n.kind.expect(JString, argName)
-  let hexStr = n.getStr()
+  let tok = r.tokKind
+  if tok != JsonValueKind.String:
+    r.raiseUnexpectedValue("Expected string for UInt256, got=" & $tok)
+  let hexStr = r.parseString()
   if hexStr.len > 64 + 2: # including "0x"
-    raise newException(ValueError, "Parameter \"" & argName & "\" value too long for UInt256: " & $hexStr.len)
+    r.raiseUnexpectedValue("String value too long for UInt256: " & $hexStr.len)
   if hexStr.invalidQuantityPrefix:
-    raise newException(ValueError, "Parameter \"" & argName & "\" value has invalid leading 0")
-  result = hexStr.parse(StUint[256], 16) # TODO Add error checking
+    r.raiseUnexpectedValue("UInt256 value has invalid leading 0")
+  wrapValueError:
+    val = hexStr.parse(StUint[256], 16)
 
-# allows ref UInt256 to be passed as a json string
-func fromJson*(n: JsonNode, argName: string, result: var ref UInt256) =
-  # expects base 16 string, starting with "0x"
-  n.kind.expect(JString, argName)
-  let hexStr = n.getStr()
-  if hexStr.len > 64 + 2: # including "0x"
-    raise newException(ValueError, "Parameter \"" & argName & "\" value too long for UInt256: " & $hexStr.len)
+proc writeHexValue(w: var JsonWriter[JrpcConv], v: openArray[byte])
+      {.gcsafe, raises: [IOError].} =
+  w.stream.write "\"0x"
+  w.stream.writeHex v
+  w.stream.write "\""
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: DynamicBytes)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*[N](w: var JsonWriter[JrpcConv], v: FixedBytes[N])
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Address)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: TypedTransaction)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: RlpEncodedBytes)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[byte])
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, v
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Quantity)
+      {.gcsafe, raises: [IOError].} =
+  w.stream.write "\"0x"
+  w.stream.toHex(distinctBase v)
+  w.stream.write "\""
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var DynamicBytes)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    val = fromHex(DynamicBytes, r.parseString())
+
+proc readValue*[N](r: var JsonReader[JrpcConv], val: var FixedBytes[N])
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    val = fromHex(FixedBytes[N], r.parseString())
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var Address)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    val = fromHex(Address, r.parseString())
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var TypedTransaction)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    let hexStr = r.parseString()
+    if hexStr != "0x":
+      # skip empty hex
+      val = TypedTransaction hexToSeqByte(hexStr)
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var RlpEncodedBytes)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    let hexStr = r.parseString()
+    if hexStr != "0x":
+      # skip empty hex
+      val = RlpEncodedBytes hexToSeqByte(hexStr)
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    let hexStr = r.parseString()
+    if hexStr != "0x":
+      # skip empty hex
+      val = hexToSeqByte(hexStr)
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var Quantity)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
-    raise newException(ValueError, "Parameter \"" & argName & "\" value has invalid leading 0")
-  new result
-  result[] = hexStr.parse(StUint[256], 16) # TODO Add error checking
+    r.raiseUnexpectedValue("Quantity value has invalid leading 0")
+  wrapValueError:
+    val = Quantity parseHexInt(hexStr)
 
-func bytesFromJson(n: JsonNode, argName: string, result: var openArray[byte]) =
-  n.kind.expect(JString, argName)
-  let hexStr = n.getStr()
+func valid(hex: string): bool =
+  for x in hex:
+    if x notin HexDigits: return false
+  true
 
-  if not ("0x" in hexStr):
-    raise newException(ValueError, "Parameter \"" & argName & "\" is not a hexadecimal string")
+proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  let hexStr = r.parseString()
+  wrapValueError:
+    if valid(hexStr):
+      val = RtBlockIdentifier(kind: bidNumber, number: fromHex[uint64](hexStr))
+    else:
+      val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
 
-  if hexStr.len != result.len * 2 + 2: # including "0x"
-    raise newException(ValueError, "Parameter \"" & argName & "\" value wrong length: " & $hexStr.len)
+proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
+      {.gcsafe, raises: [IOError].} =
+  case v.kind
+  of bidNumber: w.writeValue(v.number.Quantity)
+  of bidAlias: w.writeValue(v.alias)
 
-  hexToByteArray(hexStr, result)
+proc readValue*(r: var JsonReader[JrpcConv], val: var TxOrHash)
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  if r.tokKind == JsonValueKind.String:
+    val = TxOrHash(kind: tohHash, hash: r.readValue(TxHash))
+  else:
+    val = TxOrHash(kind: tohTx, tx: r.readValue(TransactionObject))
 
-func fromJson*[N](n: JsonNode, argName: string, result: var FixedBytes[N])
-    {.inline.} =
-  # expects base 16 string, starting with "0x"
-  bytesFromJson(n, argName, array[N, byte](result))
-
-func fromJson*(n: JsonNode, argName: string, result: var DynamicBytes)
-    {.inline.} =
-  n.kind.expect(JString, argName)
-  result = fromHex(type result, n.getStr())
-
-func fromJson*(n: JsonNode, argName: string, result: var Address) {.inline.} =
-  # expects base 16 string, starting with "0x"
-  bytesFromJson(n, argName, array[20, byte](result))
-
-func fromJson*(n: JsonNode, argName: string, result: var TypedTransaction)
-    {.inline.} =
-  let hexStrLen = n.getStr().len
-  if hexStrLen < 2:
-    # "0x" prefix
-    raise newException(ValueError, "Parameter \"" & argName & "\" value too short:" & $hexStrLen)
-  if hexStrLen mod 2 != 0:
-    # Spare nibble
-    raise newException(ValueError, "Parameter \"" & argName & "\" value not byte-aligned:" & $hexStrLen)
-
-  distinctBase(result).setLen((hexStrLen - 2) div 2)
-  bytesFromJson(n, argName, distinctBase(result))
-
-func fromJson*(n: JsonNode, argName: string, result: var RlpEncodedBytes)
-    {.inline.} =
-  let hexStrLen = n.getStr().len
-
-  # "0x" prefix
-  if hexStrLen < 2:
-    raise newException(ValueError, "Parameter \"" & argName & "\" value too short:" & $hexStrLen)
-  if hexStrLen mod 2 != 0:
-    # Spare nibble
-    raise newException(ValueError, "Parameter \"" & argName & "\" value not byte-aligned:" & $hexStrLen)
-
-  distinctBase(result).setLen((hexStrLen - 2) div 2)
-  bytesFromJson(n, argName, distinctBase(result))
-
-func fromJson*(n: JsonNode, argName: string, result: var Quantity) {.inline.} =
-  n.kind.expect(JString, argName)
-  let hexStr = n.getStr
-  if hexStr.invalidQuantityPrefix:
-    raise newException(ValueError, "Parameter \"" & argName & "\" value has invalid leading 0")
-  result = Quantity(parseHexInt(hexStr))
+proc writeValue*(w: var JsonWriter[JrpcConv], v: TxOrHash)
+      {.gcsafe, raises: [IOError].} =
+  case v.kind
+  of tohHash: w.writeValue(v.hash)
+  of tohTx: w.writeValue(v.tx)
 
 func getEnumStringTable(enumType: typedesc): Table[string, enumType]
     {.compileTime.} =
@@ -124,78 +271,47 @@ func getEnumStringTable(enumType: typedesc): Table[string, enumType]
     res[$value] = value
   res
 
-func fromJson*(
-    n: JsonNode, argName: string, result: var PayloadExecutionStatus)
-    {.inline.} =
-  n.kind.expect(JString, argName)
-  const enumStrings = static: getEnumStringTable(type(result))
+proc readValue*(r: var JsonReader[JrpcConv], val: var PayloadExecutionStatus)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  const enumStrings = static: getEnumStringTable(PayloadExecutionStatus)
+
+  let tok = r.tokKind()
+  if tok != JsonValueKind.String:
+    r.raiseUnexpectedValue("Expect string but got=" & $tok)
+
   try:
-    result = enumStrings[n.getStr]
+    val = enumStrings[r.parseString()]
   except KeyError:
-    raise newException(
-      ValueError, "Parameter \"" & argName & "\" value invalid: " & n.getStr)
+    r.raiseUnexpectedValue("Failed to parse PayloadExecutionStatus")
 
-func `%`*(v: Quantity): JsonNode =
-  %encodeQuantity(v.uint64)
+proc writeValue*(w: var JsonWriter[JrpcConv], v: PayloadExecutionStatus)
+      {.gcsafe, raises: [IOError].} =
+  w.writeValue($v)
 
-func `%`*[N](v: FixedBytes[N]): JsonNode =
-  %("0x" & array[N, byte](v).toHex)
+proc readValue*[T](r: var JsonReader[JrpcConv], val: var SingleOrList[T])
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  let tok = r.tokKind()
+  case tok
+  of JsonValueKind.String:
+    val = SingleOrList[T](kind: slkSingle)
+    r.readValue(val.single)
+  of JsonValueKind.Array:
+    val = SingleOrList[T](kind: slkList)
+    r.readValue(val.list)
+  of JsonValueKind.Null:
+    val = SingleOrList[T](kind: slkNull)
+  else:
+    r.raiseUnexpectedValue("TopicOrList unexpected token kind =" & $tok)
 
-func `%`*(v: DynamicBytes): JsonNode =
-  %("0x" & toHex(v))
-
-func `%`*(v: Address): JsonNode =
-  %("0x" & array[20, byte](v).toHex)
-
-func `%`*(v: TypedTransaction): JsonNode =
-  %("0x" & distinctBase(v).toHex)
-
-func `%`*(v: RlpEncodedBytes): JsonNode =
-  %("0x" & distinctBase(v).toHex)
-
-proc writeHexValue(w: JsonWriter, v: openArray[byte]) =
-  w.stream.write "\"0x"
-  w.stream.writeHex v
-  w.stream.write "\""
-
-proc writeValue*(w: var JsonWriter, v: DynamicBytes) =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*[N](w: var JsonWriter, v: FixedBytes[N]) =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*(w: var JsonWriter, v: Address) =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*(w: var JsonWriter, v: TypedTransaction) =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*(w: var JsonWriter, v: RlpEncodedBytes) =
-  writeHexValue w, distinctBase(v)
-
-proc readValue*(r: var JsonReader, T: type DynamicBytes): T =
-  fromHex(T, r.readValue(string))
-
-proc readValue*[N](r: var JsonReader, T: type FixedBytes[N]): T =
-  fromHex(T, r.readValue(string))
-
-proc readValue*(r: var JsonReader, T: type Address): T =
-  fromHex(T, r.readValue(string))
-
-proc readValue*(r: var JsonReader, T: type TypedTransaction): T =
-  T fromHex(seq[byte], r.readValue(string))
-
-proc readValue*(r: var JsonReader, T: type RlpEncodedBytes): T =
-  T fromHex(seq[byte], r.readValue(string))
+proc writeValue*(w: var JsonWriter[JrpcConv], v: SingleOrList)
+      {.gcsafe, raises: [IOError].} =
+  case v.kind
+  of slkNull: w.writeValue(JsonString("null"))
+  of slkSingle: w.writeValue(v.single)
+  of slkList: w.writeValue(v.list)
 
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(v.uint64)
-
-func `$`*[N](v: FixedBytes[N]): string {.inline.} =
-  "0x" & array[N, byte](v).toHex
-
-func `$`*(v: Address): string {.inline.} =
-  "0x" & array[20, byte](v).toHex
 
 func `$`*(v: TypedTransaction): string {.inline.} =
   "0x" & distinctBase(v).toHex
@@ -203,54 +319,4 @@ func `$`*(v: TypedTransaction): string {.inline.} =
 func `$`*(v: RlpEncodedBytes): string {.inline.} =
   "0x" & distinctBase(v).toHex
 
-func `$`*(v: DynamicBytes): string {.inline.} =
-  "0x" & toHex(v)
-
-func `%`*(x: EthSend): JsonNode =
-  result = newJObject()
-  result["source"] = %x.source
-  if x.to.isSome:
-    result["to"] = %x.to.unsafeGet
-  if x.gas.isSome:
-    result["gas"] = %x.gas.unsafeGet
-  if x.gasPrice.isSome:
-    result["gasPrice"] = %Quantity(x.gasPrice.unsafeGet)
-  if x.value.isSome:
-    result["value"] = %x.value.unsafeGet
-  if x.data.len > 0:
-    result["data"] = %x.data
-  if x.nonce.isSome:
-    result["nonce"] = %x.nonce.unsafeGet
-
-func `%`*(x: EthCall): JsonNode =
-  result = newJObject()
-  result["to"] = %x.to
-  if x.source.isSome:
-    result["source"] = %x.source.unsafeGet
-  if x.gas.isSome:
-    result["gas"] = %x.gas.unsafeGet
-  if x.gasPrice.isSome:
-    result["gasPrice"] = %x.gasPrice.unsafeGet
-  if x.value.isSome:
-    result["value"] = %x.value.unsafeGet
-  if x.data.isSome:
-    result["data"] = %x.data.unsafeGet
-
-func `%`*(x: byte): JsonNode =
-  %x.int
-
-func `%`*(x: FilterOptions): JsonNode =
-  result = newJObject()
-  if x.fromBlock.isSome:
-    result["fromBlock"] = %x.fromBlock.unsafeGet
-  if x.toBlock.isSome:
-    result["toBlock"] = %x.toBlock.unsafeGet
-  if x.address.isSome:
-    result["address"] = %x.address.unsafeGet
-  if x.topics.isSome:
-    result["topics"] = %x.topics.unsafeGet
-
-func `%`*(x: RtBlockIdentifier): JsonNode =
-  case x.kind
-  of bidNumber: %(&"0x{x.number:X}")
-  of bidAlias: %x.alias
+{.pop.}

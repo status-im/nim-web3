@@ -1,18 +1,16 @@
-import os
-import macros
-import std/json
-import std/strutils
-import pkg/unittest2
-import stint
-
-import json_rpc/jsonmarshal
-
-import ../web3
-import ../web3/[conversions, ethtypes, engine_api_types]
+import
+  std/[json, strutils],
+  pkg/unittest2,
+  stint,
+  json_rpc/jsonmarshal,
+  ../web3/[conversions, eth_api_types, engine_api_types]
 
 template should_be_value_error(input: string, value: untyped): void =
-  expect ValueError:
-    fromJson(%input, "", value)
+  expect SerializationError:
+    value = JrpcConv.decode(input, typeof(value))
+
+template should_not_error(input: string, value: untyped): void =
+  value = JrpcConv.decode(input, typeof(value))
 
 suite "Null conversion":
   var resAddress: Address
@@ -24,8 +22,7 @@ suite "Null conversion":
   var resUInt256: UInt256
   var resUInt256Ref: ref UInt256
 
-  ## Covers the converters which can be found in web3/conversions.nim
-  ## Ensure that when passing a nully value they respond with a ValueError
+  ## Ensure that when passing a nully value they respond with a SerializationError
   test "passing null values to normal convertors":
     should_be_value_error("null", resAddress)
     should_be_value_error("null", resDynamicBytes)
@@ -34,7 +31,7 @@ suite "Null conversion":
     should_be_value_error("null", resRlpEncodedBytes)
     should_be_value_error("null", resTypedTransaction)
     should_be_value_error("null", resUInt256)
-    should_be_value_error("null", resUInt256Ref)
+    should_not_error("null", resUInt256Ref)
 
   test "passing empty values to normal convertors":
     should_be_value_error("", resAddress)
@@ -47,28 +44,30 @@ suite "Null conversion":
     should_be_value_error("", resUInt256Ref)
 
   test "passing invalid hex (0x) values to normal convertors":
-    should_be_value_error("0x", resAddress)
-    should_be_value_error("0x", resDynamicBytes)
-    should_be_value_error("0x", resFixedBytes)
-    should_be_value_error("0x", resQuantity)
-    should_be_value_error("0x", resRlpEncodedBytes)
-    should_be_value_error("0x", resTypedTransaction)
-    should_be_value_error("0x", resUInt256)
-    should_be_value_error("0x", resUInt256Ref)
+    should_be_value_error("\"0x\"", resAddress)
+    should_be_value_error("\"0x\"", resDynamicBytes)
+    should_be_value_error("\"0x\"", resFixedBytes)
+    should_be_value_error("\"0x\"", resQuantity)
+    should_be_value_error("\"0x\"", resUInt256)
+    should_be_value_error("\"0x\"", resUInt256Ref)
+
+  test "passing hex (0x) values to normal convertors":
+    should_not_error("\"0x\"", resRlpEncodedBytes)
+    should_not_error("\"0x\"", resTypedTransaction)
 
   test "passing malformed hex (0x_) values to normal convertors":
-    should_be_value_error("0x_", resAddress)
-    should_be_value_error("0x_", resDynamicBytes)
-    should_be_value_error("0x_", resFixedBytes)
-    should_be_value_error("0x_", resQuantity)
-    should_be_value_error("0x_", resRlpEncodedBytes)
-    should_be_value_error("0x_", resTypedTransaction)
-    should_be_value_error("0x_", resUInt256)
-    should_be_value_error("0x_", resUInt256Ref)
+    should_be_value_error("\"0x_\"", resAddress)
+    should_be_value_error("\"0x_\"", resDynamicBytes)
+    should_be_value_error("\"0x_\"", resFixedBytes)
+    should_be_value_error("\"0x_\"", resQuantity)
+    should_be_value_error("\"0x_\"", resRlpEncodedBytes)
+    should_be_value_error("\"0x_\"", resTypedTransaction)
+    should_be_value_error("\"0x_\"", resUInt256)
+    should_be_value_error("\"0x_\"", resUInt256Ref)
 
   ## Covering the web3/engine_api_types
   ##
-  ## NOTE: These will be transformed by the fromJson imported from
+  ## NOTE: These will be transformed by the JrpcConv imported from
   ##       nim-json-rpc/json_rpc/jsonmarshal
   test "passing nully values to specific convertors":
 
@@ -91,7 +90,6 @@ suite "Null conversion":
       should_be_value_error(forkchoiceUpdatedResponse.format(), resForkchoiceUpdatedResponse)
       should_be_value_error(transitionConfigurationV1.format(), resTransitionConfigurationV1)
 
-
   ## If different status types can have branching logic
   ## we should cover each status type with different null ops
   test "passing nully values to specific status types":
@@ -105,4 +103,4 @@ suite "Null conversion":
             "validationError": null
         }""".replace("status_name", $status_type)
 
-      should_be_value_error(payloadStatusV1, resPayloadStatusV1)
+      should_not_error(payloadStatusV1, resPayloadStatusV1)

@@ -1,9 +1,18 @@
-import pkg/unittest2
-import ../web3
-import chronos, options, json, stint
-import test_utils
+# nim-web3
+# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
 
-import random
+import
+  std/[options, json, random],
+  pkg/unittest2,
+  ../web3,
+  chronos, stint,
+  ./helpers/utils
 
 #[ Contract LoggerContract
 pragma solidity >=0.4.25 <0.6.0;
@@ -65,11 +74,12 @@ suite "Logs":
         let notifFut = newFuture[void]()
         var notificationsReceived = 0
 
-        let s = await ns.subscribe(MyEvent, %*{"fromBlock": "0x0"}) do (
+        let options = FilterOptions(fromBlock: some(blockId(0)))
+        let s = await ns.subscribe(MyEvent, options) do (
             sender: Address, value: UInt256)
-            {.raises: [Defect], gcsafe.}:
+            {.raises: [], gcsafe.}:
           try:
-            echo "onEvent: ", sender, " value ", value
+            echo "onEvent: ", sender, " value ", value.toHex
             inc notificationsReceived
 
             if notificationsReceived == invocationsBefore + invocationsAfter:

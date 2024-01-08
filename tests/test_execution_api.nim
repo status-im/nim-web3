@@ -8,7 +8,7 @@ import stew/byteutils
 import json_rpc/rpcclient
 
 import ../web3
-import ../web3/ethtypes
+import ../web3/eth_api_types
 import ../web3/conversions
 
 

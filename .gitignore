@@ -1,4 +1,5 @@
 nimcache/
+vendor/
 
 # Executables shall be put in an ignored build/ directory
 # Ignore dynamic, static libs and libtool archive files
@@ -9,6 +10,7 @@ build/
 *.la
 *.exe
 *.dll
+nimble.paths
 
 node_modules
 nohup.out
@@ -17,14 +19,15 @@ package-lock.json
 
 # Individual test executables
 all_tests
-depositcontract
-test
+test_contract_dsl
+test_contracts
 test_deposit_contract
-test_ethhexstrings
 test_execution_api
+test_execution_debug_apis
+test_execution_types
+test_json_marshalling
 test_logs
-test_null
 test_null_conversion
-test_quantity
+test_primitives
 test_signed_tx
-test_utils
+test_string_decoder
