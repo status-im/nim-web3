@@ -130,7 +130,6 @@ proc writeValue*(w: var JsonWriter[JrpcConv], val: UInt256)
       {.gcsafe, raises: [IOError].} =
   w.writeValue("0x" & val.toHex)
 
-
 # allows UInt256 to be passed as a json string
 proc readValue*(r: var JsonReader[JrpcConv], val: var UInt256)
       {.gcsafe, raises: [IOError, JsonReaderError].} =

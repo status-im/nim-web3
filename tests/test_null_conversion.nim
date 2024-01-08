@@ -22,6 +22,7 @@ suite "Null conversion":
   var resUInt256: UInt256
   var resUInt256Ref: ref UInt256
 
+  ## Covers the converters which can be found in web3/conversions.nim
   ## Ensure that when passing a nully value they respond with a SerializationError
   test "passing null values to normal convertors":
     should_be_value_error("null", resAddress)
