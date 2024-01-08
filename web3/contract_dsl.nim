@@ -1,7 +1,7 @@
 import
   std/[macros, strutils, options, json],
   nimcrypto/keccak,
-  ./[encoding, primitives],
+  ./[encoding, primitives, eth_api_types],
   stint,
   stew/byteutils
 
@@ -286,9 +286,9 @@ macro contract*(cname: untyped, body: untyped): untyped =
         result.add quote do:
           type `cbident`* = object
 
-          template eventTopic*(T: type `cbident`): Topic =
+          template eventTopic*(T: type `cbident`): eth_api_types.Topic =
             const r = keccak256Bytes(`signature`)
-            Topic(r)
+            eth_api_types.Topic(r)
 
           proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
                          t: type `cbident`,
