@@ -83,7 +83,6 @@ createRpcSigsFromNim(RpcClient):
     blockId: BlockIdentifier): ProofResponse
 
   # TODO: @tavurth
-  proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): UInt256
   proc eth_feeHistory(paramA: string, paramB: string, paramC: seq[string]): UInt256
 
   proc debug_getRawBlock(address: string)
