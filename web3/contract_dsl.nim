@@ -7,15 +7,7 @@ import
   stew/byteutils
 
 type
-  ContractInvocation*[TResult, TSender] = object
-    data*: seq[byte]
-    sender*: TSender
-
   ContractInstance*[TContract, TSender] = object
-    sender*: TSender
-
-  ContractDeployment*[TContract, TSender] = object
-    data*: seq[byte]
     sender*: TSender
 
   InterfaceObjectKind = enum
@@ -51,9 +43,6 @@ type
 
 proc keccak256Bytes(s: string): array[32, byte] {.inline.} =
   keccak256.digest(s).data
-
-proc initContractInvocation[TSender](TResult: typedesc, sender: TSender, data: seq[byte]): ContractInvocation[TResult, TSender] {.inline.} =
-  ContractInvocation[TResult, TSender](data: data, sender: sender)
 
 proc joinStrings(s: varargs[string]): string = join(s)
 
@@ -192,7 +181,7 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
     funcParamsTuple.add(ident input.name)
 
   result = quote do:
-    proc `procName`*[TSender](`senderName`: ContractInstance[`cname`, TSender]): ContractInvocation[`output`, TSender] =
+    proc `procName`*[TSender](`senderName`: ContractInstance[`cname`, TSender]): auto =
       discard
   for input in functionObject.inputs:
     result[3].add nnkIdentDefs.newTree(
@@ -200,10 +189,18 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
       input.typ,
       newEmptyNode()
     )
-  result[6] = quote do:
-    return initContractInvocation(
-        `output`, `senderName`.sender,
-        static(keccak256Bytes(`signature`)[0..<4]) & encode(`funcParamsTuple`))
+  if functionObject.stateMutability == view:
+    result[6] = quote do:
+      mixin createImmutableContractInvocation
+      return createImmutableContractInvocation(
+          `senderName`.sender, `output`,
+          static(keccak256Bytes(`signature`)[0..<4]) & encode(`funcParamsTuple`))
+  else:
+    result[6] = quote do:
+      mixin createMutableContractInvocation
+      return createMutableContractInvocation(
+          `senderName`.sender, `output`,
+          static(keccak256Bytes(`signature`)[0..<4]) & encode(`funcParamsTuple`))
 
 proc `&`(a, b: openarray[byte]): seq[byte] =
   let sza = a.len
@@ -224,7 +221,7 @@ proc genConstructor(cname: NimNode, constructorObject: ConstructorObject): NimNo
     funcParamsTuple.add(ident input.name)
 
   result = quote do:
-    proc deployContract*[TSender](`sender`: TSender, contractType: typedesc[`cname`], `contractCode`: openarray[byte]): ContractDeployment[`cname`, TSender] =
+    proc deployContract*[TSender](`sender`: TSender, contractType: typedesc[`cname`], `contractCode`: openarray[byte]): auto =
       discard
   for input in constructorObject.inputs:
     result[3].add nnkIdentDefs.newTree(
@@ -233,7 +230,8 @@ proc genConstructor(cname: NimNode, constructorObject: ConstructorObject): NimNo
       newEmptyNode()
     )
   result[6] = quote do:
-    return ContractDeployment[`cname`, TSender](data: `contractCode` & encode(`funcParamsTuple`), sender: `sender`)
+    mixin createContractDeployment
+    return createContractDeployment(`sender`, `cname`, `contractCode` & encode(`funcParamsTuple`))
 
 proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
   if not eventObject.anonymous:

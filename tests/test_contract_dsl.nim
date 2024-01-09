@@ -16,15 +16,19 @@ import
 type
   DummySender = object
 
+proc createMutableContractInvocation(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
+proc createImmutableContractInvocation(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
+proc createContractDeployment(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
+
 proc instantiateContract(t: typedesc): ContractInstance[t, DummySender] =
   discard
 
-proc checkData(d: ContractInvocation | ContractDeployment, expectedData: string) =
+proc checkData(a: seq[byte], expectedData: string) =
   let b = hexToSeqByte(expectedData)
-  if d.data != b:
-    echo "actual: ", d.data.to0xHex()
+  if a != b:
+    echo "actual: ", a.to0xHex()
     echo "expect: ", b.to0xHex()
-  doAssert(d.data == b)
+  doAssert(a == b)
 
 contract(TestContract):
   proc getBool(): bool

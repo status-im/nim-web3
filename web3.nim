@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/[options, json, tables, uri],
+  std/[options, json, tables, uri, macros],
   stint, httputils, chronos,
   json_rpc/[rpcclient, jsonmarshal],
   json_rpc/private/jrpc_sys,
@@ -42,7 +42,18 @@ type
     web3*: Web3
     contractAddress*: Address
 
+  Web3AsyncSenderImpl = ref object
+    web3*: Web3
+    contractAddress*: Address
+    defaultAccount*: Address
+    value*: UInt256
+    gas*: uint64
+    gasPrice*: int
+    chainId*: Option[ChainId]
+    blockNumber*: uint64
+
   Sender*[T] = ContractInstance[T, Web3SenderImpl]
+  AsyncSender*[T] = ContractInstance[T, Web3AsyncSenderImpl]
 
   SubscriptionEventHandler* = proc (j: JsonString) {.gcsafe, raises: [].}
   SubscriptionErrorHandler* = proc (err: CatchableError) {.gcsafe, raises: [].}
@@ -57,6 +68,10 @@ type
     pendingEvents: seq[JsonString]
     historicalEventsProcessed: bool
     removed: bool
+
+  ContractInvocation*[TResult, TSender] = object
+    data*: seq[byte]
+    sender*: TSender
 
 proc getValue(params: RequestParamsRx, field: string, FieldType: type):
         Result[FieldType, string] {.gcsafe, raises: [].} =
@@ -297,14 +312,15 @@ proc send*(web3: Web3, c: EthSend, chainId: ChainId): Future[TxHash] {.async.} =
   let t = encodeTransaction(cc, web3.privateKey.get(), chainId)
   return await web3.provider.eth_sendRawTransaction(t)
 
-proc sendData(sender: Web3SenderImpl,
+proc sendData(web3: Web3,
+              contractAddress: Address,
+              defaultAccount: Address,
               data: seq[byte],
               value: UInt256,
               gas: uint64,
               gasPrice: int,
               chainId = none(ChainId)): Future[TxHash] {.async.} =
   let
-    web3 = sender.web3
     gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice.Quantity)
                else: none(Quantity)
     nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
@@ -312,8 +328,8 @@ proc sendData(sender: Web3SenderImpl,
 
     cc = EthSend(
       data: data,
-      `from`: web3.defaultAccount,
-      to: some(sender.contractAddress),
+      `from`: defaultAccount,
+      to: some(contractAddress),
       gas: some(Quantity(gas)),
       value: some(value),
       nonce: nonce,
@@ -329,36 +345,41 @@ proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            value = 0.u256,
            gas = 3000000'u64,
            gasPrice = 0): Future[TxHash] =
-  sendData(c.sender, c.data, value, gas, gasPrice)
+  sendData(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, gasPrice)
 
 proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            chainId: ChainId,
            value = 0.u256,
            gas = 3000000'u64,
            gasPrice = 0): Future[TxHash] =
-  sendData(c.sender, c.data, value, gas, gasPrice, some(chainId))
+  sendData(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, some(chainId))
 
-proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
+proc callAux(web3: Web3,
+              contractAddress: Address,
+              defaultAccount: Address,
+              data: seq[byte],
               value = 0.u256,
               gas = 3000000'u64,
-              blockNumber = high(uint64)): Future[T] {.async.} =
-  let web3 = c.sender.web3
+              blockNumber = high(uint64)): Future[seq[byte]] {.async.} =
   var cc: EthCall
-  cc.data = some(c.data)
-  cc.source = some(web3.defaultAccount)
-  cc.to = some(c.sender.contractAddress)
+  cc.data = some(data)
+  cc.source = some(defaultAccount)
+  cc.to = some(contractAddress)
   cc.gas = some(Quantity(gas))
   cc.value = some(value)
-  let response =
+  result =
     if blockNumber != high(uint64):
       await web3.provider.eth_call(cc, blockId(blockNumber))
     else:
       await web3.provider.eth_call(cc, "latest")
 
+proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
+              value = 0.u256,
+              gas = 3000000'u64,
+              blockNumber = high(uint64)): Future[T] {.async.} =
+  let response = await callAux(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
   if response.len > 0:
-    var res: T
-    discard decode(response, 0, 0, res)
-    return res
+    discard decode(response, 0, 0, result)
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
 
@@ -409,6 +430,43 @@ proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 30
 proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
   Sender[T](sender: Web3SenderImpl(web3: web3, contractAddress: toAddress))
 
+proc createMutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typedesc, data: sink seq[byte]): ContractInvocation[ReturnType, Web3SenderImpl] {.inline.} =
+  ContractInvocation[ReturnType, Web3SenderImpl](sender: sender, data: data)
+
+proc createImmutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typedesc, data: sink seq[byte]): ContractInvocation[ReturnType, Web3SenderImpl] {.inline.} =
+  ContractInvocation[ReturnType, Web3SenderImpl](sender: sender, data: data)
+
+proc contractInstance*(web3: Web3, T: typedesc, toAddress: Address): AsyncSender[T] =
+  AsyncSender[T](sender: Web3AsyncSenderImpl(web3: web3, contractAddress: toAddress, defaultAccount: web3.defaultAccount, gas: 3000000, blockNumber: uint64.high))
+
+proc createMutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: typedesc, data: sink seq[byte]) {.async.} =
+  assert(sender.gas > 0)
+  let h = await sendData(sender.web3, sender.contractAddress, sender.defaultAccount, data, sender.value, sender.gas, sender.gasPrice, sender.chainId)
+  let receipt = await sender.web3.getMinedTransactionReceipt(h)
+
+proc createImmutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: typedesc, data: sink seq[byte]): Future[ReturnType] {.async.} =
+  let response = await callAux(sender.web3, sender.contractAddress, sender.defaultAccount, data, sender.value, sender.gas, sender.blockNumber)
+  if response.len > 0:
+    discard decode(response, 0, 0, result)
+  else:
+    raise newException(CatchableError, "No response from the Web3 provider")
+
+proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Address] {.async.} =
+  var tr: EthSend
+  tr.`from` = web3.defaultAccount
+  tr.data = data
+  tr.gas = Quantity(30000000).some
+  if gasPrice != 0:
+    tr.gasPrice = some(gasPrice.Quantity)
+
+  let h = await web3.send(tr)
+  let r = await web3.getMinedTransactionReceipt(h)
+  return r.contractAddress.get
+
+proc createContractDeployment*(web3: Web3, ContractType: typedesc, data: sink seq[byte]): Future[AsyncSender[ContractType]] {.async.} =
+  let a = await deployContractAux(web3, data, gasPrice = 0)
+  return contractInstance(web3, ContractType, a)
+
 proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} =
   let
     codeFut = case atBlock.kind
@@ -425,3 +483,24 @@ proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} 
 
 proc subscribe*[TContract](s: Sender[TContract], t: typedesc, cb: proc): Future[Subscription] {.inline.} =
   subscribe(s, t, FilterOptions(), cb, SubscriptionErrorHandler nil)
+
+proc copy[T](s: AsyncSender[T]): AsyncSender[T] =
+  result = s
+  result.sender.new()
+  result.sender[] = s.sender[]
+
+macro adjust*(s: AsyncSender, modifications: varargs[untyped]): untyped =
+  ## Copies AsyncSender, modifying its properties. E.g.
+  ## myContract.adjust(gas = 1000, value = 5.u256).myContractMethod()
+  let cp = genSym(nskLet, "cp")
+  result = quote do:
+    block:
+      let `cp` = copy(`s`)
+
+  for s in modifications:
+    s.expectKind(nnkExprEqExpr)
+    let fieldName = s[0]
+    let fieldVal = s[1]
+    result[1].add quote do:
+      `cp`.sender.`fieldName` = `fieldVal`
+  result[1].add(cp)
