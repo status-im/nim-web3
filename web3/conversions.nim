@@ -28,7 +28,10 @@ export
 template derefType(T: type): untyped =
   typeof(T()[])
 
+#------------------------------------------------------------------------------
 # eth_api_types
+#------------------------------------------------------------------------------
+
 SyncObject.useDefaultSerializationIn JrpcConv
 WithdrawalObject.useDefaultSerializationIn JrpcConv
 AccessTuple.useDefaultSerializationIn JrpcConv
@@ -45,7 +48,10 @@ derefType(BlockObject).useDefaultSerializationIn JrpcConv
 derefType(TransactionObject).useDefaultSerializationIn JrpcConv
 derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 
+#------------------------------------------------------------------------------
 # engine_api_types
+#------------------------------------------------------------------------------
+
 WithdrawalV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
@@ -65,12 +71,19 @@ GetPayloadV2Response.useDefaultSerializationIn JrpcConv
 GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 
-# execution types
+#------------------------------------------------------------------------------
+# execution_types
+#------------------------------------------------------------------------------
+
 ExecutionPayload.useDefaultSerializationIn JrpcConv
 PayloadAttributes.useDefaultSerializationIn JrpcConv
 GetPayloadResponse.useDefaultSerializationIn JrpcConv
 
 {.push gcsafe, raises: [].}
+
+#------------------------------------------------------------------------------
+# Private helpers
+#------------------------------------------------------------------------------
 
 template invalidQuantityPrefix(s: string): bool =
   # https://ethereum.org/en/developers/docs/apis/json-rpc/#hex-value-encoding
@@ -110,6 +123,15 @@ template toHexImpl(hex, pos: untyped) =
   while hex[pos] == '0' and pos < hex.high:
     inc pos
 
+func getEnumStringTable(enumType: typedesc): Table[string, enumType]
+    {.compileTime.} =
+  var res: Table[string, enumType]
+  # Not intended for enums with ordinal holes or repeated stringification
+  # strings.
+  for value in enumType:
+    res[$value] = value
+  res
+
 proc toHex(s: OutputStream, x: uint64) {.gcsafe, raises: [IOError].} =
   toHexImpl(hex, pos)
   write s, hex.toOpenArray(pos, static(hex.len - 1))
@@ -125,6 +147,107 @@ template wrapValueError(body: untyped) =
     body
   except ValueError as exc:
     r.raiseUnexpectedValue(exc.msg)
+
+func valid(hex: string): bool =
+  for x in hex:
+    if x notin HexDigits: return false
+  true
+
+proc writeHexValue(w: var JsonWriter, v: openArray[byte])
+      {.gcsafe, raises: [IOError].} =
+  w.stream.write "\"0x"
+  w.stream.writeHex v
+  w.stream.write "\""
+
+#------------------------------------------------------------------------------
+# Well, both rpc and chronicles share the same encoding of these types
+#------------------------------------------------------------------------------
+
+proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: DynamicBytes)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*[F: JrpcConv or DefaultFlavor, N](w: var JsonWriter[F], v: FixedBytes[N])
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: Address)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: TypedTransaction)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: RlpEncodedBytes)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: Quantity)
+      {.gcsafe, raises: [IOError].} =
+  w.stream.write "\"0x"
+  w.stream.toHex(distinctBase v)
+  w.stream.write "\""
+
+proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var DynamicBytes)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    val = fromHex(DynamicBytes, r.parseString())
+
+proc readValue*[F: JrpcConv or DefaultFlavor, N](r: var JsonReader[F], val: var FixedBytes[N])
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    val = fromHex(FixedBytes[N], r.parseString())
+
+proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Address)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    val = fromHex(Address, r.parseString())
+
+proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var TypedTransaction)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    let hexStr = r.parseString()
+    if hexStr != "0x":
+      # skip empty hex
+      val = TypedTransaction hexToSeqByte(hexStr)
+
+proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var RlpEncodedBytes)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    let hexStr = r.parseString()
+    if hexStr != "0x":
+      # skip empty hex
+      val = RlpEncodedBytes hexToSeqByte(hexStr)
+
+proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Quantity)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  let hexStr = r.parseString()
+  if hexStr.invalidQuantityPrefix:
+    r.raiseUnexpectedValue("Quantity value has invalid leading 0")
+  wrapValueError:
+    val = Quantity parseHexInt(hexStr)
+
+proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var PayloadExecutionStatus)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  const enumStrings = static: getEnumStringTable(PayloadExecutionStatus)
+
+  let tok = r.tokKind()
+  if tok != JsonValueKind.String:
+    r.raiseUnexpectedValue("Expect string but got=" & $tok)
+
+  try:
+    val = enumStrings[r.parseString()]
+  except KeyError:
+    r.raiseUnexpectedValue("Failed to parse PayloadExecutionStatus")
+
+proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: PayloadExecutionStatus)
+      {.gcsafe, raises: [IOError].} =
+  w.writeValue($v)
+
+#------------------------------------------------------------------------------
+# Exclusive to JrpcConv
+#------------------------------------------------------------------------------
 
 proc writeValue*(w: var JsonWriter[JrpcConv], val: UInt256)
       {.gcsafe, raises: [IOError].} =
@@ -145,72 +268,9 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var UInt256)
   wrapValueError:
     val = hexStr.parse(StUint[256], 16)
 
-proc writeHexValue(w: var JsonWriter[JrpcConv], v: openArray[byte])
-      {.gcsafe, raises: [IOError].} =
-  w.stream.write "\"0x"
-  w.stream.writeHex v
-  w.stream.write "\""
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: DynamicBytes)
-      {.gcsafe, raises: [IOError].} =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*[N](w: var JsonWriter[JrpcConv], v: FixedBytes[N])
-      {.gcsafe, raises: [IOError].} =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Address)
-      {.gcsafe, raises: [IOError].} =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: TypedTransaction)
-      {.gcsafe, raises: [IOError].} =
-  writeHexValue w, distinctBase(v)
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: RlpEncodedBytes)
-      {.gcsafe, raises: [IOError].} =
-  writeHexValue w, distinctBase(v)
-
 proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[byte])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, v
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Quantity)
-      {.gcsafe, raises: [IOError].} =
-  w.stream.write "\"0x"
-  w.stream.toHex(distinctBase v)
-  w.stream.write "\""
-
-proc readValue*(r: var JsonReader[JrpcConv], val: var DynamicBytes)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  wrapValueError:
-    val = fromHex(DynamicBytes, r.parseString())
-
-proc readValue*[N](r: var JsonReader[JrpcConv], val: var FixedBytes[N])
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  wrapValueError:
-    val = fromHex(FixedBytes[N], r.parseString())
-
-proc readValue*(r: var JsonReader[JrpcConv], val: var Address)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  wrapValueError:
-    val = fromHex(Address, r.parseString())
-
-proc readValue*(r: var JsonReader[JrpcConv], val: var TypedTransaction)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  wrapValueError:
-    let hexStr = r.parseString()
-    if hexStr != "0x":
-      # skip empty hex
-      val = TypedTransaction hexToSeqByte(hexStr)
-
-proc readValue*(r: var JsonReader[JrpcConv], val: var RlpEncodedBytes)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  wrapValueError:
-    let hexStr = r.parseString()
-    if hexStr != "0x":
-      # skip empty hex
-      val = RlpEncodedBytes hexToSeqByte(hexStr)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -219,19 +279,6 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
     if hexStr != "0x":
       # skip empty hex
       val = hexToSeqByte(hexStr)
-
-proc readValue*(r: var JsonReader[JrpcConv], val: var Quantity)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  let hexStr = r.parseString()
-  if hexStr.invalidQuantityPrefix:
-    r.raiseUnexpectedValue("Quantity value has invalid leading 0")
-  wrapValueError:
-    val = Quantity parseHexInt(hexStr)
-
-func valid(hex: string): bool =
-  for x in hex:
-    if x notin HexDigits: return false
-  true
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -260,32 +307,6 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: TxOrHash)
   case v.kind
   of tohHash: w.writeValue(v.hash)
   of tohTx: w.writeValue(v.tx)
-
-func getEnumStringTable(enumType: typedesc): Table[string, enumType]
-    {.compileTime.} =
-  var res: Table[string, enumType]
-  # Not intended for enums with ordinal holes or repeated stringification
-  # strings.
-  for value in enumType:
-    res[$value] = value
-  res
-
-proc readValue*(r: var JsonReader[JrpcConv], val: var PayloadExecutionStatus)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  const enumStrings = static: getEnumStringTable(PayloadExecutionStatus)
-
-  let tok = r.tokKind()
-  if tok != JsonValueKind.String:
-    r.raiseUnexpectedValue("Expect string but got=" & $tok)
-
-  try:
-    val = enumStrings[r.parseString()]
-  except KeyError:
-    r.raiseUnexpectedValue("Failed to parse PayloadExecutionStatus")
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: PayloadExecutionStatus)
-      {.gcsafe, raises: [IOError].} =
-  w.writeValue($v)
 
 proc readValue*[T](r: var JsonReader[JrpcConv], val: var SingleOrList[T])
        {.gcsafe, raises: [IOError, SerializationError].} =
