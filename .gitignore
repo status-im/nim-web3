@@ -16,4 +16,18 @@ node_modules
 nohup.out
 hardhat.config.js
 package-lock.json
+
+# Individual test executables
+all_tests
+test_contract_dsl
+test_contracts
+test_deposit_contract
+test_execution_api
+test_execution_debug_apis
+test_execution_types
+test_json_marshalling
+test_logs
 test_null_conversion
+test_primitives
+test_signed_tx
+test_string_decoder

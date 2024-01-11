@@ -42,6 +42,7 @@ ProofResponse.useDefaultSerializationIn JrpcConv
 FilterOptions.useDefaultSerializationIn JrpcConv
 EthSend.useDefaultSerializationIn JrpcConv
 EthCall.useDefaultSerializationIn JrpcConv
+FeeHistoryResult.useDefaultSerializationIn JrpcConv
 
 derefType(BlockHeader).useDefaultSerializationIn JrpcConv
 derefType(BlockObject).useDefaultSerializationIn JrpcConv
@@ -290,7 +291,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
       val = RtBlockIdentifier(kind: bidNumber, number: fromHex[uint64](hexStr))
     else:
       val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
-
+  
 proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
   case v.kind

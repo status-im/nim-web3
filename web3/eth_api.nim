@@ -35,10 +35,11 @@ createRpcSigsFromNim(RpcClient):
   proc eth_accounts(): seq[Address]
   proc eth_blockNumber(): Quantity
   proc eth_getBalance(data: Address, blockId: BlockIdentifier): UInt256
-  proc eth_getStorageAt(data: Address, slot: UInt256, blockId: BlockIdentifier): UInt256
+  proc eth_getStorageAt(data: Address, slot: UInt256, blockId: BlockIdentifier): FixedBytes[32]
   proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
   proc eth_getBlockTransactionCountByHash(data: BlockHash): Quantity
   proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
+  proc eth_getBlockReceipts(blockId: BlockIdentifier): Option[seq[ReceiptObject]]
   proc eth_getUncleCountByBlockHash(data: BlockHash): Quantity
   proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
   proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
@@ -47,7 +48,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_sendTransaction(obj: EthSend): TxHash
   proc eth_sendRawTransaction(data: seq[byte]): TxHash
   proc eth_call(call: EthCall, blockId: BlockIdentifier): seq[byte]
-  proc eth_estimateGas(call: EthCall, blockId: BlockIdentifier): Quantity
+  proc eth_estimateGas(call: EthCall): Quantity
   proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): AccessListResult
   proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
   proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
@@ -81,6 +82,16 @@ createRpcSigsFromNim(RpcClient):
     address: Address,
     slots: seq[UInt256],
     blockId: BlockIdentifier): ProofResponse
+
+  proc eth_feeHistory(
+    blockCount: Quantity,
+    newestBlock: BlockIdentifier,
+    rewardPercentiles: Option[seq[float64]]): FeeHistoryResult
+
+  proc debug_getRawBlock(blockId: BlockIdentifier): RlpEncodedBytes
+  proc debug_getRawHeader(blockId: BlockIdentifier): RlpEncodedBytes
+  proc debug_getRawReceipts(blockId: BlockIdentifier): seq[RlpEncodedBytes]
+  proc debug_getRawTransaction(data: TxHash): RlpEncodedBytes
 
 createSingleRpcSig(RpcClient, "eth_getJsonLogs"):
   proc eth_getLogs(filterOptions: FilterOptions): seq[JsonString]
