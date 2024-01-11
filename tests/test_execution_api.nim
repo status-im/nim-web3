@@ -93,14 +93,14 @@ suite "Ethereum execution api":
   for idx, item in testCases:
     let input = item.input
     let methodName = input.`method`
-    let (directory, fileName, ext) = splitFile(item.file)
+    let (_, fileName, ext) = splitFile(item.file)
 
     test methodName:
       proc doTest() {.async.} =
         let client = newRpcHttpClient()
         await client.connect("http://" & $srv.localAddress()[0])
         let response = await client.callWithParams(item)
-        let source = filename & ext
+        let source = fileName & ext
         if source in allowedToFail:
           check true
         else:

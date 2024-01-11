@@ -10,7 +10,6 @@
 import
   stint,
   eth/common,
-  stew/byteutils,
   json_rpc/rpcserver,
   ../../web3/conversions,
   ../../web3/eth_api_types,
