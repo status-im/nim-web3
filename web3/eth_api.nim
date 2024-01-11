@@ -39,6 +39,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
   proc eth_getBlockTransactionCountByHash(data: BlockHash): Quantity
   proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
+  proc eth_getBlockReceipts(blockId: BlockIdentifier): seq[ReceiptObject]
   proc eth_getUncleCountByBlockHash(data: BlockHash): Quantity
   proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
   proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
@@ -82,13 +83,15 @@ createRpcSigsFromNim(RpcClient):
     slots: seq[UInt256],
     blockId: BlockIdentifier): ProofResponse
 
-  # TODO: @tavurth
-  proc eth_feeHistory(paramA: string, paramB: string, paramC: seq[string]): UInt256
+  proc eth_feeHistory(
+    blockCount: Quantity,
+    newestBlock: BlockIdentifier,
+    rewardPercentiles: Option[seq[Quantity]]): FeeHistoryResult
 
-  proc debug_getRawBlock(address: string)
-  proc debug_getRawHeader(address: string)
-  proc debug_getRawReceipts(address: string)
-  proc debug_getRawTransaction(address: string)
+  proc debug_getRawBlock(blockId: BlockIdentifier): RlpEncodedBytes
+  proc debug_getRawHeader(blockId: BlockIdentifier): RlpEncodedBytes
+  proc debug_getRawReceipts(blockId: BlockIdentifier): RlpEncodedBytes
+  proc debug_getRawTransaction(data: TxHash): RlpEncodedBytes
 
 createSingleRpcSig(RpcClient, "eth_getJsonLogs"):
   proc eth_getLogs(filterOptions: FilterOptions): seq[JsonString]

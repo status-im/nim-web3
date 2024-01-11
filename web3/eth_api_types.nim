@@ -237,6 +237,14 @@ type
     of bidAlias:
       alias*: string
 
+  FeeHistoryReward* = array[2, Quantity]
+
+  FeeHistoryResult* = object
+    oldestBlock*: Quantity
+    baseFeePerGas*: seq[Quantity]
+    gasUsedRatio*: seq[float64]
+    reward*: seq[FeeHistoryReward]
+
 {.push raises: [].}
 
 func blockId*(n: BlockNumber): RtBlockIdentifier =
