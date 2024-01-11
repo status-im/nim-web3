@@ -48,7 +48,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_sendTransaction(obj: EthSend): TxHash
   proc eth_sendRawTransaction(data: seq[byte]): TxHash
   proc eth_call(call: EthCall, blockId: BlockIdentifier): seq[byte]
-  proc eth_estimateGas(call: EthCall, blockId: BlockIdentifier): Quantity
+  proc eth_estimateGas(call: EthCall): Quantity
   proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): AccessListResult
   proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
   proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
@@ -86,11 +86,11 @@ createRpcSigsFromNim(RpcClient):
   proc eth_feeHistory(
     blockCount: Quantity,
     newestBlock: BlockIdentifier,
-    rewardPercentiles: Option[seq[Quantity]]): FeeHistoryResult
+    rewardPercentiles: Option[seq[float64]]): FeeHistoryResult
 
   proc debug_getRawBlock(blockId: BlockIdentifier): RlpEncodedBytes
   proc debug_getRawHeader(blockId: BlockIdentifier): RlpEncodedBytes
-  proc debug_getRawReceipts(blockId: BlockIdentifier): RlpEncodedBytes
+  proc debug_getRawReceipts(blockId: BlockIdentifier): seq[RlpEncodedBytes]
   proc debug_getRawTransaction(data: TxHash): RlpEncodedBytes
 
 createSingleRpcSig(RpcClient, "eth_getJsonLogs"):

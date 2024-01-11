@@ -80,7 +80,6 @@ proc installHandlers*(server: RpcServer) =
 
   server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> Option[seq[ReceiptObject]]:
     var r: seq[ReceiptObject]
-    debugEcho "HHH: ", x.string
     if x == "null".JsonString:
       return none(seq[ReceiptObject])
     if x != "-1".JsonString:
@@ -88,49 +87,69 @@ proc installHandlers*(server: RpcServer) =
     return some(r)
 
   server.rpc("eth_getBlockByNumber") do(x: JsonString, blockId: RtBlockIdentifier, fullTransactions: bool) -> BlockObject:
-    var x: BlockObject
-    return x
+    var blk: BlockObject
+    if x != "-1".JsonString:
+      blk = JrpcConv.decode(x.string, BlockObject)
+    return blk
 
   server.rpc("eth_getBlockByHash") do(x: JsonString, data: BlockHash, fullTransactions: bool) -> BlockObject:
-    var x: BlockObject
-    return x
+    var blk: BlockObject
+    if x != "-1".JsonString:
+      blk = JrpcConv.decode(x.string, BlockObject)
+    return blk
 
   server.rpc("eth_getBalance") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> UInt256:
     if x != "-1".JsonString:
       result = JrpcConv.decode(x.string, UInt256)
-      
-  server.rpc("eth_feeHistory") do(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Option[seq[Quantity]]) -> FeeHistoryResult:
-    var x: FeeHistoryResult
-    return x
 
-  server.rpc("eth_estimateGas") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> Quantity:
-    return 19.Quantity
+  server.rpc("eth_feeHistory") do(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Option[seq[float64]]) -> FeeHistoryResult:
+    var fh: FeeHistoryResult
+    if x != "-1".JsonString:
+      fh = JrpcConv.decode(x.string, FeeHistoryResult)
+    return fh
+
+  server.rpc("eth_estimateGas") do(x: JsonString, call: EthCall) -> Quantity:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, Quantity)
 
   server.rpc("eth_createAccessList") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> AccessListResult:
     var z: AccessListResult
+    if x != "-1".JsonString:
+      z = JrpcConv.decode(x.string, AccessListResult)
     return z
 
   server.rpc("eth_chainId") do(x: JsonString, ) -> Quantity:
-    return 20.Quantity
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, Quantity)
 
   server.rpc("eth_call") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> seq[byte]:
-    return @[1.byte]
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, seq[byte])
 
-  server.rpc("eth_blockNumber") do(x: JsonString, ) -> Quantity:
-    return 21.Quantity
+  server.rpc("eth_blockNumber") do(x: JsonString) -> Quantity:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, Quantity)
 
   server.rpc("debug_getRawTransaction") do(x: JsonString, data: TxHash) -> RlpEncodedBytes:
-    var x = @[1.byte]
-    return x.RlpEncodedBytes
+    var res: seq[byte]
+    if x != "-1".JsonString:
+      res = JrpcConv.decode(x.string, seq[byte])
+    return res.RlpEncodedBytes
 
-  server.rpc("debug_getRawReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
-    var x = @[1.byte]
-    return x.RlpEncodedBytes
+  server.rpc("debug_getRawReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> seq[RlpEncodedBytes]:
+    var res: seq[RlpEncodedBytes]
+    if x != "-1".JsonString:
+      res = JrpcConv.decode(x.string, seq[RlpEncodedBytes])
+    return res
 
   server.rpc("debug_getRawHeader") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
-    var x = @[1.byte]
-    return x.RlpEncodedBytes
+    var res: seq[byte]
+    if x != "-1".JsonString:
+      res = JrpcConv.decode(x.string, seq[byte])
+    return res.RlpEncodedBytes
 
   server.rpc("debug_getRawBlock") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
-    var x = @[1.byte]
-    return x.RlpEncodedBytes
+    var res: seq[byte]
+    if x != "-1".JsonString:
+      res = JrpcConv.decode(x.string, seq[byte])
+    return res.RlpEncodedBytes
