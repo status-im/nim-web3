@@ -8,81 +8,129 @@
 # those terms.
 
 import
+  stint,
+  eth/common,
+  stew/byteutils,
   json_rpc/rpcserver,
-  ../../web3/conversions
+  ../../web3/conversions,
+  ../../web3/eth_api_types,
+  ../../web3/primitives as w3
+
+type
+  Hash256 = w3.Hash256
 
 proc installHandlers*(server: RpcServer) =
-  server.rpc("eth_syncing") do() -> bool:
+  server.rpc("eth_syncing") do(x: JsonString, ) -> bool:
     return false
 
-  server.rpc("eth_sendRawTransaction") do(data: seq[byte]) -> TxHash:
-    return false
+  server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> TxHash:
+    let tx = rlp.decode(data, Transaction)
+    let h = rlpHash(tx)
+    return TxHash(h.data)
 
-  server.rpc("eth_getTransactionReceipt") do(data: TxHash) -> ReceiptObject:
-    return false
+  server.rpc("eth_getTransactionReceipt") do(x: JsonString, data: TxHash) -> ReceiptObject:
+    var r: ReceiptObject
+    if x != "-1".JsonString:
+      r = JrpcConv.decode(x.string, ReceiptObject)
+    return r
 
-  server.rpc("eth_getTransactionByHash") do(data: TxHash) -> TransactionObject:
-    return false
+  server.rpc("eth_getTransactionByHash") do(x: JsonString, data: TxHash) -> TransactionObject:
+    var tx: TransactionObject
+    if x != "-1".JsonString:
+      tx = JrpcConv.decode(x.string, TransactionObject)
+    return tx
 
-  server.rpc("eth_getTransactionByBlockNumberAndIndex") do(blockId: BlockIdentifier, quantity: Quantity) -> TransactionObject:
-    return false
+  server.rpc("eth_getTransactionByBlockNumberAndIndex") do(x: JsonString, blockId: RtBlockIdentifier, quantity: Quantity) -> TransactionObject:
+    var tx: TransactionObject
+    if x != "-1".JsonString:
+      tx = JrpcConv.decode(x.string, TransactionObject)
+    return tx
 
-  server.rpc("eth_getTransactionByBlockHashAndIndex") do(data: Hash256, quantity: Quantity) -> TransactionObject:
-    return false
+  server.rpc("eth_getTransactionByBlockHashAndIndex") do(x: JsonString, data: Hash256, quantity: Quantity) -> TransactionObject:
+    var tx: TransactionObject
+    if x != "-1".JsonString:
+      tx = JrpcConv.decode(x.string, TransactionObject)
+    return tx
 
-  server.rpc("eth_getStorageAt") do(data: Address, slot: UInt256, blockId: BlockIdentifier) -> UInt256:
-    return false
+  server.rpc("eth_getTransactionCount") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> Quantity:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, Quantity)
 
-  server.rpc("eth_getProof") do(address: Address, slots: seq[UInt256], blockId: BlockIdentifier) -> ProofResponse:
-    return false
+  server.rpc("eth_getStorageAt") do(x: JsonString, data: Address, slot: UInt256, blockId: RtBlockIdentifier) -> FixedBytes[32]:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, FixedBytes[32])
 
-  server.rpc("eth_getCode") do(data: Address, blockId: BlockIdentifier) -> seq[byte]:
-    return false
+  server.rpc("eth_getProof") do(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier) -> ProofResponse:
+    var p: ProofResponse
+    if x != "-1".JsonString:
+      p = JrpcConv.decode(x.string, ProofResponse)
+    return p
 
-  server.rpc("eth_getBlockTransactionCountByNumber") do(blockId: BlockIdentifier) -> Quantity:
-    return false
+  server.rpc("eth_getCode") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> seq[byte]:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, seq[byte])
 
-  server.rpc("eth_getBlockTransactionCountByHash") do(data: BlockHash) -> Quantity:
-    return false
+  server.rpc("eth_getBlockTransactionCountByNumber") do(x: JsonString, blockId: RtBlockIdentifier) -> Quantity:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, Quantity)
 
-  server.rpc("eth_getBlockReceipts") do(blockId: BlockIdentifier) -> seq[ReceiptObject]:
-    return false
+  server.rpc("eth_getBlockTransactionCountByHash") do(x: JsonString, data: BlockHash) -> Quantity:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, Quantity)
 
-  server.rpc("eth_getBlockByNumber") do(blockId: BlockIdentifier, fullTransactions: bool) -> BlockObject:
-    return false
+  server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> Option[seq[ReceiptObject]]:
+    var r: seq[ReceiptObject]
+    debugEcho "HHH: ", x.string
+    if x == "null".JsonString:
+      return none(seq[ReceiptObject])
+    if x != "-1".JsonString:
+      r = JrpcConv.decode(x.string, seq[ReceiptObject])
+    return some(r)
 
-  server.rpc("eth_getBlockByHash") do(data: BlockHash, fullTransactions: bool) -> BlockObject:
-    return false
+  server.rpc("eth_getBlockByNumber") do(x: JsonString, blockId: RtBlockIdentifier, fullTransactions: bool) -> BlockObject:
+    var x: BlockObject
+    return x
 
-  server.rpc("eth_getBalance") do(data: Address, blockId: BlockIdentifier) -> UInt256:
-    return false
+  server.rpc("eth_getBlockByHash") do(x: JsonString, data: BlockHash, fullTransactions: bool) -> BlockObject:
+    var x: BlockObject
+    return x
 
-  server.rpc("eth_feeHistory") do(blockCount: Quantity, newestBlock: BlockIdentifier, rewardPercentiles: Option[seq[Quantity]]) -> FeeHistoryResult:
-    return false
+  server.rpc("eth_getBalance") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> UInt256:
+    if x != "-1".JsonString:
+      result = JrpcConv.decode(x.string, UInt256)
+      
+  server.rpc("eth_feeHistory") do(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Option[seq[Quantity]]) -> FeeHistoryResult:
+    var x: FeeHistoryResult
+    return x
 
-  server.rpc("eth_estimateGas") do(call: EthCall, blockId: BlockIdentifier) -> Quantity:
-    return false
+  server.rpc("eth_estimateGas") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> Quantity:
+    return 19.Quantity
 
-  server.rpc("eth_createAccessList") do(call: EthCall, blockId: BlockIdentifier) -> AccessListResult:
-    return false
+  server.rpc("eth_createAccessList") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> AccessListResult:
+    var z: AccessListResult
+    return z
 
-  server.rpc("eth_chainId") do() -> Quantity:
-    return false
+  server.rpc("eth_chainId") do(x: JsonString, ) -> Quantity:
+    return 20.Quantity
 
-  server.rpc("eth_call") do(call: EthCall, blockId: BlockIdentifier) -> seq[byte]:
-    return false
+  server.rpc("eth_call") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> seq[byte]:
+    return @[1.byte]
 
-  server.rpc("eth_blockNumber") do() -> Quantity:
-    return false
+  server.rpc("eth_blockNumber") do(x: JsonString, ) -> Quantity:
+    return 21.Quantity
 
-  server.rpc("debug_getRawTransaction") do(data: TxHash) -> RlpEncodedBytes:
-    return false
+  server.rpc("debug_getRawTransaction") do(x: JsonString, data: TxHash) -> RlpEncodedBytes:
+    var x = @[1.byte]
+    return x.RlpEncodedBytes
 
-  server.rpc("debug_getRawReceipts") do(blockId: BlockIdentifier) -> RlpEncodedBytes:
-    return false
+  server.rpc("debug_getRawReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
+    var x = @[1.byte]
+    return x.RlpEncodedBytes
 
-  server.rpc("debug_getRawHeader") do(blockId: BlockIdentifier) -> RlpEncodedBytes:
-    return false
+  server.rpc("debug_getRawHeader") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
+    var x = @[1.byte]
+    return x.RlpEncodedBytes
 
-  server.rpc("debug_getRawBlock ") doblockId: BlockIdentifier() -> RlpEncodedBytes:
-    return false
+  server.rpc("debug_getRawBlock") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
+    var x = @[1.byte]
+    return x.RlpEncodedBytes

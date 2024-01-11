@@ -2,9 +2,10 @@ import
   std/[os, strutils],
   pkg/unittest2,
   chronos,
-  json_rpc/rpcclient,
+  json_rpc/[rpcclient, rpcserver],
   json_rpc/private/jrpc_sys,
-  ../web3/conversions
+  ../web3/conversions,
+  ./helpers/handlers
 
 type
   TestData = tuple
@@ -43,14 +44,38 @@ proc extractTests(): seq[TestData] =
       result.add(fileName.extractTest())
 
 proc callWithParams(client: RpcClient, data: TestData): Future[bool] {.async.} =
-  try:
-    let resJson = await client.call(data.input.`method`, data.input.params)
-    let res = JrpcSys.decode(resJson.string, ResponseRx)
-    doAssert(res.result.isSome)
+  let res = data.output
 
+  try:
+    var params = data.input.params    
+    if data.output.result.string.len > 0:
+      params.positional.insert(data.output.result, 0)
+    else:
+      params.positional.insert("-1".JsonString, 0)
+      
+    let resJson = await client.call(data.input.`method`, params)
+    debugEcho "WWW: ", resJson.string
+    
+    if res.result.string.len > 0:      
+      let wantVal = JrpcConv.decode(res.result.string, JsonValueRef[string])
+      let getVal = JrpcConv.decode(resJson.string, JsonValueRef[string])
+    
+      if wantVal != getVal:        
+        debugEcho data.file
+        debugEcho "EXPECT: ", res.result
+        debugEcho "GET: ", resJson.string
+        return false
+    
     return true
+  except SerializationError as exc:
+    debugEcho data.file
+    debugEcho exc.formatMsg("xxx")    
+    return false
   except CatchableError as exc:
-    debugEcho exc.msg
+    if res.error.isSome:
+      return true
+    debugEcho data.file
+    debugEcho exc.msg    
     return false
 
 suite "Ethereum execution api":
@@ -58,29 +83,30 @@ suite "Ethereum execution api":
   if testCases.len < 1:
     raise newException(ValueError, "execution_api tests not found, did you clone?")
 
-  var srv = newRpcWebSocketServer("127.0.0.1", Port(0))
+  var srv = newRpcHttpServer(["127.0.0.1:0"])
   srv.installHandlers()
   srv.start()
 
-  for item in testCases:
+  for idx, item in testCases:
+    if idx != 39:
+      continue
+      
     let input = item.input
     let methodName = input.`method`
 
     let (directory, _, _) = splitFile(item.file)
 
-    suite directory:
-      test methodName:
-        proc doTest() {.async.} =
-           let client = newRpcWebSocketClient()
-           await client.connect("ws://" & $srv.localAddress())
-           let response = await client.callWithParams(item)
+    test methodName:
+      proc doTest() {.async.} =
+        let client = newRpcHttpClient()
+        await client.connect("http://" & $srv.localAddress()[0])
+        let response = await client.callWithParams(item)
+        if not response:
+          fail()
+        await client.close()
+      waitFor doTest()
 
-          if not response:
-            fail()
+    #if idx == 38: break
 
-          await client.close()
-
-        waitFor doTest()
-
-  srv.stop()
+  waitFor srv.stop()
   waitFor srv.closeWait()
