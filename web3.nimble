@@ -8,7 +8,7 @@
 # those terms.
 
 mode        = ScriptMode.Verbose
-version     = "0.2.4"
+version     = "0.3.0"
 author      = "Status Research & Development GmbH"
 description = "This is the humble begginings of library similar to web3.[js|py]"
 license     = "MIT or Apache License 2.0"
