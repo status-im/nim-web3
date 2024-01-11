@@ -163,48 +163,50 @@ proc writeHexValue(w: var JsonWriter, v: openArray[byte])
 # Well, both rpc and chronicles share the same encoding of these types
 #------------------------------------------------------------------------------
 
-proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: DynamicBytes)
+type CommonJsonFlavors = JrpcConv | DefaultFlavor
+
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: DynamicBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: JrpcConv or DefaultFlavor, N](w: var JsonWriter[F], v: FixedBytes[N])
+proc writeValue*[F: CommonJsonFlavors, N](w: var JsonWriter[F], v: FixedBytes[N])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: Address)
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: Address)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: TypedTransaction)
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: TypedTransaction)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: RlpEncodedBytes)
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: Quantity)
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: Quantity)
       {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
   w.stream.write "\""
 
-proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var DynamicBytes)
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicBytes)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(DynamicBytes, r.parseString())
 
-proc readValue*[F: JrpcConv or DefaultFlavor, N](r: var JsonReader[F], val: var FixedBytes[N])
+proc readValue*[F: CommonJsonFlavors, N](r: var JsonReader[F], val: var FixedBytes[N])
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(FixedBytes[N], r.parseString())
 
-proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Address)
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Address)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(Address, r.parseString())
 
-proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var TypedTransaction)
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var TypedTransaction)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     let hexStr = r.parseString()
@@ -212,7 +214,7 @@ proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Typ
       # skip empty hex
       val = TypedTransaction hexToSeqByte(hexStr)
 
-proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var RlpEncodedBytes)
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var RlpEncodedBytes)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     let hexStr = r.parseString()
@@ -220,7 +222,7 @@ proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Rlp
       # skip empty hex
       val = RlpEncodedBytes hexToSeqByte(hexStr)
 
-proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Quantity)
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
@@ -228,7 +230,7 @@ proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Qua
   wrapValueError:
     val = Quantity parseHexInt(hexStr)
 
-proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var PayloadExecutionStatus)
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   const enumStrings = static: getEnumStringTable(PayloadExecutionStatus)
 
@@ -241,7 +243,7 @@ proc readValue*[F: JrpcConv or DefaultFlavor](r: var JsonReader[F], val: var Pay
   except KeyError:
     r.raiseUnexpectedValue("Failed to parse PayloadExecutionStatus")
 
-proc writeValue*[F: JrpcConv or DefaultFlavor](w: var JsonWriter[F], v: PayloadExecutionStatus)
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: PayloadExecutionStatus)
       {.gcsafe, raises: [IOError].} =
   w.writeValue($v)
 
