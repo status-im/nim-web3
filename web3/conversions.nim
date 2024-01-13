@@ -154,6 +154,10 @@ func valid(hex: string): bool =
   if hex.len >= 2:
     if hex[0] == '0' and hex[1] in {'x', 'X'}:
       start = 2
+    else:
+      return false
+  else:
+    return false
 
   for i in start..<hex.len:
     let x = hex[i]
@@ -329,6 +333,7 @@ proc readValue*[T](r: var JsonReader[JrpcConv], val: var SingleOrList[T])
     r.readValue(val.list)
   of JsonValueKind.Null:
     val = SingleOrList[T](kind: slkNull)
+    r.parseNull()
   else:
     r.raiseUnexpectedValue("TopicOrList unexpected token kind =" & $tok)
 

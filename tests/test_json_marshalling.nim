@@ -194,3 +194,18 @@ suite "JSON-RPC Quantity":
     let c = JrpcConv.decode(x, RtBlockIdentifier)
     check c.kind == bidNumber
     check c.number == 77
+
+    let d = JrpcConv.decode("\"10\"", RtBlockIdentifier)
+    check d.kind == bidAlias
+    check d.alias == "10"
+      
+    expect JsonReaderError:
+      let d = JrpcConv.decode("10", RtBlockIdentifier)
+      discard d
+
+  test "check address or list":
+    let a = AddressOrList(kind: slkNull)
+    let x = JrpcConv.encode(a)
+    let c = JrpcConv.decode(x, AddressOrList)
+    check c.kind == slkNull
+
