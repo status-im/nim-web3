@@ -150,7 +150,13 @@ template wrapValueError(body: untyped) =
     r.raiseUnexpectedValue(exc.msg)
 
 func valid(hex: string): bool =
-  for x in hex:
+  var start = 0
+  if hex.len >= 2:
+    if hex[0] == '0' and hex[1] in {'x', 'X'}:
+      start = 2
+
+  for i in start..<hex.len:
+    let x = hex[i]
     if x notin HexDigits: return false
   true
 

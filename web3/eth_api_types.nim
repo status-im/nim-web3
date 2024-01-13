@@ -271,3 +271,6 @@ proc `source=`*(c: var EthCall, a: Option[Address]) =
 
 func source*(c: EthCall): Option[Address] =
   c.`from`
+
+template `==`*(a, b: RlpEncodedBytes): bool =
+  distinctBase(a) == distinctBase(b)

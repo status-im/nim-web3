@@ -187,3 +187,10 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ExecutionPayload)
     checkRandomObject(PayloadAttributes)
     checkRandomObject(GetPayloadResponse)
+
+  test "check blockId":
+    let a = RtBlockIdentifier(kind: bidNumber, number: 77.uint64)
+    let x = JrpcConv.encode(a)
+    let c = JrpcConv.decode(x, RtBlockIdentifier)
+    check c.kind == bidNumber
+    check c.number == 77
