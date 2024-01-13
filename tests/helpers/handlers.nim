@@ -19,8 +19,8 @@ type
   Hash256 = w3.Hash256
 
 proc installHandlers*(server: RpcServer) =
-  server.rpc("eth_syncing") do(x: JsonString, ) -> bool:
-    return false
+  server.rpc("eth_syncing") do(x: JsonString, ) -> SyncingStatus:
+    return SyncingStatus(syncing: false)
 
   server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> TxHash:
     let tx = rlp.decode(data, Transaction)

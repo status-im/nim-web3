@@ -27,7 +27,7 @@ createRpcSigsFromNim(RpcClient):
   proc net_peerCount(): Quantity
   proc net_listening(): bool
   proc eth_protocolVersion(): string
-  proc eth_syncing(): SyncObject
+  proc eth_syncing(): SyncingStatus
   proc eth_coinbase(): Address
   proc eth_mining(): bool
   proc eth_hashrate(): Quantity

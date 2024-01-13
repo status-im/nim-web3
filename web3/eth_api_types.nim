@@ -20,6 +20,10 @@ type
     currentBlock*: Quantity
     highestBlock*: Quantity
 
+  SyncingStatus* = object
+    syncing*: bool
+    syncObject*: SyncObject
+
   HistoricExtraData* = DynamicBytes[0, 4096]
     ## In the current specs, the maximum is 32, but historically this value was
     ## used as Clique metadata which is dynamic in lenght and exceeds 32 bytes.

@@ -291,7 +291,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
       val = RtBlockIdentifier(kind: bidNumber, number: fromHex[uint64](hexStr))
     else:
       val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
-  
+
 proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
   case v.kind
@@ -332,6 +332,25 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: SingleOrList)
   of slkNull: w.writeValue(JsonString("null"))
   of slkSingle: w.writeValue(v.single)
   of slkList: w.writeValue(v.list)
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var SyncingStatus)
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  let tok = r.tokKind()
+  case tok
+  of JsonValueKind.Bool:
+    val = SyncingStatus(syncing: r.parseBool())
+  of JsonValueKind.Object:
+    val = SyncingStatus(syncing: true)
+    r.readValue(val.syncObject)
+  else:
+    r.raiseUnexpectedValue("SyncingStatus unexpected token kind =" & $tok)
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: SyncingStatus)
+      {.gcsafe, raises: [IOError].} =
+  if not v.syncing:
+    w.writeValue(false)
+  else:
+    w.writeValue(v.syncObject)
 
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(v.uint64)
