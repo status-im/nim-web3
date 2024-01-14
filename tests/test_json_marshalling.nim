@@ -198,7 +198,7 @@ suite "JSON-RPC Quantity":
     let d = JrpcConv.decode("\"10\"", RtBlockIdentifier)
     check d.kind == bidAlias
     check d.alias == "10"
-      
+
     expect JsonReaderError:
       let d = JrpcConv.decode("10", RtBlockIdentifier)
       discard d
@@ -209,3 +209,13 @@ suite "JSON-RPC Quantity":
     let c = JrpcConv.decode(x, AddressOrList)
     check c.kind == slkNull
 
+  test "quantity parser and writer":
+    let a = JrpcConv.decode("\"0x016345785d8a0000\"", Quantity)
+    check a.uint64 == 100_000_000_000_000_000'u64
+    let b = JrpcConv.encode(a)
+    check b.string == "\"0x16345785d8a0000\""
+
+    let x = JrpcConv.decode("\"0xFFFF_FFFF_FFFF_FFFF\"", Quantity)
+    check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF_FFFF'u64
+    let y = JrpcConv.encode(x)
+    check y.string == "\"0xffffffffffffffff\""

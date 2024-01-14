@@ -117,8 +117,9 @@ template toHexImpl(hex, pos: untyped) =
     dec pos
     hex[pos] = c
 
-  for _ in 0 ..< 8:
+  for _ in 0 ..< 16:
     prepend(hexChars[int(n and 0xF)])
+    if n == 0: break
     n = n shr 4
 
   while hex[pos] == '0' and pos < hex.high:
@@ -239,7 +240,7 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("Quantity value has invalid leading 0")
   wrapValueError:
-    val = Quantity parseHexInt(hexStr)
+    val = Quantity fromHex[uint64](hexStr)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
