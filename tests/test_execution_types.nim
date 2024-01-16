@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -66,12 +66,12 @@ suite "Execution types tests":
 
   test "payload version":
     var badv31 = payload
-    badv31.excessBlobGas = none(Quantity)
+    badv31.blobGasUsed = none(Quantity)
     var badv32 = payload
-    badv32.blobGasUsed = none(Quantity)
+    badv32.excessBlobGas = none(Quantity)
     var v2 = payload
-    v2.excessBlobGas = none(Quantity)
     v2.blobGasUsed = none(Quantity)
+    v2.excessBlobGas = none(Quantity)
     var v1 = v2
     v1.withdrawals = none(seq[WithdrawalV1])
     check badv31.version == Version.V2
@@ -134,4 +134,3 @@ suite "Execution types tests":
 
     let v1 = response.V1
     check v1 == v1.getPayloadResponse.V1
-
