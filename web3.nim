@@ -110,7 +110,7 @@ proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
       s.pendingEvents.add(par)
 
   ok()
-  
+
 proc newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
   result.subscriptions = initTable[string, Subscription]()
@@ -443,6 +443,7 @@ proc createMutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: t
   assert(sender.gas > 0)
   let h = await sendData(sender.web3, sender.contractAddress, sender.defaultAccount, data, sender.value, sender.gas, sender.gasPrice, sender.chainId)
   let receipt = await sender.web3.getMinedTransactionReceipt(h)
+  discard receipt
 
 proc createImmutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: typedesc, data: sink seq[byte]): Future[ReturnType] {.async.} =
   let response = await callAux(sender.web3, sender.contractAddress, sender.defaultAccount, data, sender.value, sender.gas, sender.blockNumber)

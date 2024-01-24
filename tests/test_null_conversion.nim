@@ -82,7 +82,7 @@ suite "Null conversion":
     var resForkchoiceUpdatedResponse: ForkchoiceUpdatedResponse
     var resTransitionConfigurationV1: TransitionConfigurationV1
 
-    for item in @["null", "\"\"", "\"0x\"", "\"0x_\"", ""]:
+    for item in @["\"\"", "\"0x\"", "\"0x_\"", ""]:
       template format(str: string): string =
         str.replace("{item}", item)
 
@@ -90,6 +90,14 @@ suite "Null conversion":
       should_be_value_error(forkchoiceStateV1.format(), resForkchoiceStateV1)
       should_be_value_error(forkchoiceUpdatedResponse.format(), resForkchoiceUpdatedResponse)
       should_be_value_error(transitionConfigurationV1.format(), resTransitionConfigurationV1)
+
+    template setNull(str: string): string =
+      str.replace("{item}", "null")
+
+    should_not_error(payloadAttributesV1.setNull(), resPayloadAttributesV1)
+    should_not_error(forkchoiceStateV1.setNull(), resForkchoiceStateV1)
+    should_not_error(forkchoiceUpdatedResponse.setNull(), resForkchoiceUpdatedResponse)
+    should_not_error(transitionConfigurationV1.setNull(), resTransitionConfigurationV1)
 
   ## If different status types can have branching logic
   ## we should cover each status type with different null ops

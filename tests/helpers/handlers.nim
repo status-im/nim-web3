@@ -18,8 +18,12 @@ import
 type
   Hash256 = w3.Hash256
 
+func decodeFromString(x: JsonString, T: type): T =
+  let jsonBytes = JrpcConv.decode(x.string, string)
+  result = JrpcConv.decode(jsonBytes, T)
+
 proc installHandlers*(server: RpcServer) =
-  server.rpc("eth_syncing") do(x: JsonString, ) -> SyncingStatus:
+  server.rpc("eth_syncing") do(x: JsonString) -> SyncingStatus:
     return SyncingStatus(syncing: false)
 
   server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> TxHash:
@@ -30,130 +34,128 @@ proc installHandlers*(server: RpcServer) =
   server.rpc("eth_getTransactionReceipt") do(x: JsonString, data: TxHash) -> ReceiptObject:
     var r: ReceiptObject
     if x != "-1".JsonString:
-      r = JrpcConv.decode(x.string, ReceiptObject)
+      r = decodeFromString(x, ReceiptObject)
     return r
 
   server.rpc("eth_getTransactionByHash") do(x: JsonString, data: TxHash) -> TransactionObject:
     var tx: TransactionObject
     if x != "-1".JsonString:
-      tx = JrpcConv.decode(x.string, TransactionObject)
+      tx = decodeFromString(x, TransactionObject)
     return tx
 
   server.rpc("eth_getTransactionByBlockNumberAndIndex") do(x: JsonString, blockId: RtBlockIdentifier, quantity: Quantity) -> TransactionObject:
     var tx: TransactionObject
     if x != "-1".JsonString:
-      tx = JrpcConv.decode(x.string, TransactionObject)
+      tx = decodeFromString(x, TransactionObject)
     return tx
 
   server.rpc("eth_getTransactionByBlockHashAndIndex") do(x: JsonString, data: Hash256, quantity: Quantity) -> TransactionObject:
     var tx: TransactionObject
     if x != "-1".JsonString:
-      tx = JrpcConv.decode(x.string, TransactionObject)
+      tx = decodeFromString(x, TransactionObject)
     return tx
 
   server.rpc("eth_getTransactionCount") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> Quantity:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, Quantity)
+      result = decodeFromString(x, Quantity)
 
   server.rpc("eth_getStorageAt") do(x: JsonString, data: Address, slot: UInt256, blockId: RtBlockIdentifier) -> FixedBytes[32]:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, FixedBytes[32])
+      result = decodeFromString(x, FixedBytes[32])
 
   server.rpc("eth_getProof") do(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier) -> ProofResponse:
     var p: ProofResponse
     if x != "-1".JsonString:
-      p = JrpcConv.decode(x.string, ProofResponse)
+      p = decodeFromString(x, ProofResponse)
     return p
 
   server.rpc("eth_getCode") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> seq[byte]:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, seq[byte])
+      result = decodeFromString(x, seq[byte])
 
   server.rpc("eth_getBlockTransactionCountByNumber") do(x: JsonString, blockId: RtBlockIdentifier) -> Quantity:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, Quantity)
+      result = decodeFromString(x, Quantity)
 
   server.rpc("eth_getBlockTransactionCountByHash") do(x: JsonString, data: BlockHash) -> Quantity:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, Quantity)
+      result = decodeFromString(x, Quantity)
 
   when NimMajor >= 2:
     server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> JsonString:
       # TODO: cannot prove obj is not nil
-      return x
+      let jsonBytes = JrpcConv.decode(x.string, string)
+      return jsonBytes.JsonString
   else:
-    server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> Option[seq[ReceiptObject]]:    
-      if x == "null".JsonString:
-        var n: Option[seq[ReceiptObject]]
-        return n
+    server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> Option[seq[ReceiptObject]]:
       if x != "-1".JsonString:
-        let r = JrpcConv.decode(x.string, seq[ReceiptObject])
-        return some(r)
+        let r = decodeFromString(x, Option[seq[ReceiptObject]])
+        return r
 
   server.rpc("eth_getBlockByNumber") do(x: JsonString, blockId: RtBlockIdentifier, fullTransactions: bool) -> BlockObject:
     var blk: BlockObject
     if x != "-1".JsonString:
-      blk = JrpcConv.decode(x.string, BlockObject)
+      blk = decodeFromString(x, BlockObject)
     return blk
 
   server.rpc("eth_getBlockByHash") do(x: JsonString, data: BlockHash, fullTransactions: bool) -> BlockObject:
     var blk: BlockObject
     if x != "-1".JsonString:
-      blk = JrpcConv.decode(x.string, BlockObject)
+      blk = decodeFromString(x, BlockObject)
     return blk
 
   server.rpc("eth_getBalance") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> UInt256:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, UInt256)
+      result = decodeFromString(x, UInt256)
 
   server.rpc("eth_feeHistory") do(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Option[seq[float64]]) -> FeeHistoryResult:
     var fh: FeeHistoryResult
     if x != "-1".JsonString:
-      fh = JrpcConv.decode(x.string, FeeHistoryResult)
+      fh = decodeFromString(x, FeeHistoryResult)
     return fh
 
   server.rpc("eth_estimateGas") do(x: JsonString, call: EthCall) -> Quantity:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, Quantity)
+      result = decodeFromString(x, Quantity)
 
   server.rpc("eth_createAccessList") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> AccessListResult:
     var z: AccessListResult
     if x != "-1".JsonString:
-      z = JrpcConv.decode(x.string, AccessListResult)
+      z = decodeFromString(x, AccessListResult)
     return z
 
   server.rpc("eth_chainId") do(x: JsonString, ) -> Quantity:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, Quantity)
+      result = decodeFromString(x, Quantity)
 
   server.rpc("eth_call") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> seq[byte]:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, seq[byte])
+      result = decodeFromString(x, seq[byte])
 
   server.rpc("eth_blockNumber") do(x: JsonString) -> Quantity:
     if x != "-1".JsonString:
-      result = JrpcConv.decode(x.string, Quantity)
+      result = decodeFromString(x, Quantity)
 
   server.rpc("debug_getRawTransaction") do(x: JsonString, data: TxHash) -> RlpEncodedBytes:
     var res: seq[byte]
     if x != "-1".JsonString:
-      res = JrpcConv.decode(x.string, seq[byte])
+      res = decodeFromString(x, seq[byte])
     return res.RlpEncodedBytes
 
   server.rpc("debug_getRawReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> seq[RlpEncodedBytes]:
     var res: seq[RlpEncodedBytes]
     if x != "-1".JsonString:
-      res = JrpcConv.decode(x.string, seq[RlpEncodedBytes])
+      res = decodeFromString(x, seq[RlpEncodedBytes])
     return res
 
   server.rpc("debug_getRawHeader") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
     var res: seq[byte]
     if x != "-1".JsonString:
-      res = JrpcConv.decode(x.string, seq[byte])
+      res = decodeFromString(x, seq[byte])
     return res.RlpEncodedBytes
 
   server.rpc("debug_getRawBlock") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
     var res: seq[byte]
     if x != "-1".JsonString:
-      res = JrpcConv.decode(x.string, seq[byte])
+      res = decodeFromString(x, seq[byte])
     return res.RlpEncodedBytes
