@@ -49,7 +49,8 @@ proc callWithParams(client: RpcClient, data: TestData): Future[bool] {.async.} =
   try:
     var params = data.input.params
     if data.output.result.string.len > 0:
-      params.positional.insert(data.output.result, 0)
+      let jsonBytes = JrpcConv.encode(data.output.result.string)
+      params.positional.insert(jsonBytes.JsonString, 0)
     else:
       params.positional.insert("-1".JsonString, 0)
 
@@ -92,7 +93,7 @@ suite "Ethereum execution api":
 
   for idx, item in testCases:
     let input = item.input
-    let methodName = input.`method`    
+    let methodName = input.`method`
 
     test methodName:
       let (_, fileName, ext) = splitFile(item.file)
@@ -105,6 +106,6 @@ suite "Ethereum execution api":
       else:
         check response
       waitFor client.close()
-      
+
   waitFor srv.stop()
   waitFor srv.closeWait()
