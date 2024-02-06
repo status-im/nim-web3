@@ -258,9 +258,9 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
 proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
-                  fromBlock = none(RtBlockIdentifier),
-                  toBlock = none(RtBlockIdentifier),
-                  blockHash = none(BlockHash)): Future[seq[JsonString]] =
+                 fromBlock = none(RtBlockIdentifier),
+                 toBlock = none(RtBlockIdentifier),
+                 blockHash = none(BlockHash)): Future[seq[JsonString]] =
 
   var options = FilterOptions(
     address: AddressOrList(kind: slkSingle, single: s.contractAddress),
@@ -279,11 +279,11 @@ proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
 
 proc getJsonLogs*[TContract](s: Sender[TContract],
                   EventName: type,
-                  fromBlock= none(RtBlockIdentifier),
+                  fromBlock = none(RtBlockIdentifier),
                   toBlock = none(RtBlockIdentifier),
                   blockHash = none(BlockHash)): Future[seq[JsonString]] {.inline.} =
   mixin eventTopic
-  getJsonLogs(s.sender, eventTopic(EventName))
+  getJsonLogs(s.sender, eventTopic(EventName), fromBlock, toBlock, blockHash)
 
 proc nextNonce*(web3: Web3): Future[Quantity] {.async.} =
   if web3.lastKnownNonce.isSome:
