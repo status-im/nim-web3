@@ -44,6 +44,9 @@ createRpcSigsFromNim(RpcClient):
   # TODO: Investigate why nim v2 cannot instantiate generic functions
   # with oneof params `blockId: BlockIdentifier` and and return type
   # Opt[seq[ReceiptObject]], this is a regression after all
+  when false:
+    proc eth_getBlockReceipts(blockId: BlockIdentifier): Opt[seq[ReceiptObject]]
+
   proc eth_getBlockReceipts(blockId: string): Opt[seq[ReceiptObject]]
   proc eth_getBlockReceipts(blockId: BlockNumber): Opt[seq[ReceiptObject]]
   proc eth_getBlockReceipts(blockId: RtBlockIdentifier): Opt[seq[ReceiptObject]]

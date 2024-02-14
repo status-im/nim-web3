@@ -5,7 +5,9 @@ import
   json_rpc/[rpcclient, rpcserver],
   json_rpc/private/jrpc_sys,
   ../web3/conversions,
-  ./helpers/handlers
+  ./helpers/handlers,
+  ../web3/eth_api,
+  results
 
 type
   TestData = tuple
@@ -106,6 +108,26 @@ suite "Ethereum execution api":
       else:
         check response
       waitFor client.close()
+
+  waitFor srv.stop()
+  waitFor srv.closeWait()
+
+proc setupMethods(server: RpcServer) =
+  server.rpc("eth_getBlockReceipts") do(blockId: RtBlockIdentifier) -> Opt[seq[ReceiptObject]]:
+    var res: seq[ReceiptObject]
+    return Opt.some(res)
+
+suite "Test eth api":
+  var srv = newRpcHttpServer(["127.0.0.1:0"])
+  srv.setupMethods()
+  srv.start()
+
+  test "eth_getBlockReceipts generic functions":
+    let client = newRpcHttpClient()
+    waitFor client.connect("http://" & $srv.localAddress()[0])
+    let res = waitFor client.eth_getBlockReceipts(blockId("latest"))
+    check res.isSome
+    waitFor client.close()
 
   waitFor srv.stop()
   waitFor srv.closeWait()
