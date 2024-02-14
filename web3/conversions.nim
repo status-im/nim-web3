@@ -14,6 +14,7 @@ import
   faststreams/textio,
   json_rpc/jsonmarshal,
   json_serialization/std/options,
+  json_serialization/stew/results,
   json_serialization,
   ./primitives,
   ./engine_api_types,
@@ -363,6 +364,26 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: SyncingStatus)
     w.writeValue(false)
   else:
     w.writeValue(v.syncObject)
+
+# Somehow nim2 refuse to generate automatically
+proc readValue*(r: var JsonReader[JrpcConv], val: var Opt[seq[ReceiptObject]])
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  mixin readValue
+
+  if r.tokKind == JsonValueKind.Null:
+    reset val
+    r.parseNull()
+  else:
+    val.ok r.readValue(seq[ReceiptObject])
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+
+  if v.isOk:
+    w.writeValue v.get
+  else:
+    w.writeValue JsonString("null")
 
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(v.uint64)

@@ -39,7 +39,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
   proc eth_getBlockTransactionCountByHash(data: BlockHash): Quantity
   proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
-  proc eth_getBlockReceipts(blockId: BlockIdentifier): Option[seq[ReceiptObject]]
+  proc eth_getBlockReceipts(blockId: BlockIdentifier): Opt[seq[ReceiptObject]]
   proc eth_getUncleCountByBlockHash(data: BlockHash): Quantity
   proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
   proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
