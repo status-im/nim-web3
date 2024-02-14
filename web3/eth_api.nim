@@ -11,6 +11,7 @@
 import
   std/[json, options],
   json_serialization/std/[options],
+  json_serialization/stew/results,
   json_rpc/[client, jsonmarshal],
   stint,
   ./conversions,
@@ -39,7 +40,14 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
   proc eth_getBlockTransactionCountByHash(data: BlockHash): Quantity
   proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
-  proc eth_getBlockReceipts(blockId: BlockIdentifier): Opt[seq[ReceiptObject]]
+
+  # TODO: Investigate why nim v2 cannot instantiate generic functions
+  # with oneof params `blockId: BlockIdentifier` and and return type
+  # Opt[seq[ReceiptObject]], this is a regression after all
+  proc eth_getBlockReceipts(blockId: string): Opt[seq[ReceiptObject]]
+  proc eth_getBlockReceipts(blockId: BlockNumber): Opt[seq[ReceiptObject]]
+  proc eth_getBlockReceipts(blockId: RtBlockIdentifier): Opt[seq[ReceiptObject]]
+
   proc eth_getUncleCountByBlockHash(data: BlockHash): Quantity
   proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
   proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
