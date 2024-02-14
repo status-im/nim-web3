@@ -81,16 +81,10 @@ proc installHandlers*(server: RpcServer) =
     if x != "-1".JsonString:
       result = decodeFromString(x, Quantity)
 
-  when NimMajor >= 2:
-    server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> JsonString:
-      # TODO: cannot prove obj is not nil
-      let jsonBytes = JrpcConv.decode(x.string, string)
-      return jsonBytes.JsonString
-  else:
-    server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> Option[seq[ReceiptObject]]:
-      if x != "-1".JsonString:
-        let r = decodeFromString(x, Option[seq[ReceiptObject]])
-        return r
+  server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> Opt[seq[ReceiptObject]]:
+    if x != "-1".JsonString:
+      let r = decodeFromString(x, Opt[seq[ReceiptObject]])
+      return r
 
   server.rpc("eth_getBlockByNumber") do(x: JsonString, blockId: RtBlockIdentifier, fullTransactions: bool) -> BlockObject:
     var blk: BlockObject
