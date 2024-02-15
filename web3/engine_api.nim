@@ -37,7 +37,6 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV2_exact(payloadId: PayloadID): GetPayloadV2ResponseExact
   proc engine_getPayloadV3(payloadId: PayloadID): GetPayloadV3Response
   proc engine_getPayloadV4(payloadId: PayloadID): GetPayloadV4Response
-  proc engine_exchangeTransitionConfigurationV1(transitionConfiguration: TransitionConfigurationV1): TransitionConfigurationV1
   proc engine_getPayloadBodiesByHashV1(hashes: seq[BlockHash]): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
 
