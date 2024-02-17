@@ -10,7 +10,7 @@
 mode        = ScriptMode.Verbose
 version     = "0.3.2"
 author      = "Status Research & Development GmbH"
-description = "This is the humble beginnings of library similar to web3.[js|py]"
+description = "These are the humble beginnings of library similar to web3.[js|py]"
 license     = "MIT or Apache License 2.0"
 
 ### Dependencies
@@ -42,3 +42,5 @@ proc test(args, path: string) =
 ### tasks
 task test, "Run all tests":
   test "", "tests/all_tests.nim"
+  if (NimMajor, NimMinor) > (1, 6):
+    test "--mm:refc", "tests/all_tests.nim"
