@@ -147,6 +147,7 @@ type
     v*: Quantity                                     # ECDSA recovery id
     r*: UInt256                                      # ECDSA signature r
     s*: UInt256                                      # ECDSA signature s
+    yParity*: Option[Quantity]                       # ECDSA y parity, none for Legacy, same as v for >= Tx2930
     `type`*: Option[Quantity]                        # EIP-2718, with 0x0 for Legacy
     chainId*: Option[Quantity]                       # EIP-159
     accessList*: Option[seq[AccessTuple]]            # EIP-2930
