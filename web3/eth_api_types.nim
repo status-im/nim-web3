@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Copyright (c) 2019-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -130,7 +130,6 @@ type
 
   AccessListResult* = object
     accessList*: seq[AccessTuple]
-    error*: string
     gasUsed*: Quantity
 
   TransactionObject* = ref object                    # A transaction object, or null when no transaction was found:

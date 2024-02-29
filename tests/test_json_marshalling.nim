@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -213,9 +213,14 @@ suite "JSON-RPC Quantity":
     let a = JrpcConv.decode("\"0x016345785d8a0000\"", Quantity)
     check a.uint64 == 100_000_000_000_000_000'u64
     let b = JrpcConv.encode(a)
-    check b.string == "\"0x16345785d8a0000\""
+    check b == "\"0x16345785d8a0000\""
 
     let x = JrpcConv.decode("\"0xFFFF_FFFF_FFFF_FFFF\"", Quantity)
     check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF_FFFF'u64
     let y = JrpcConv.encode(x)
-    check y.string == "\"0xffffffffffffffff\""
+    check y == "\"0xffffffffffffffff\""
+
+  test "AccessListResult":
+    var z: AccessListResult
+    let w = JrpcConv.encode(z)
+    check w == """{"accessList":[],"gasUsed":"0x0"}"""
