@@ -198,7 +198,7 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: Quantity)
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: Quantity | BlockNumber)
       {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
