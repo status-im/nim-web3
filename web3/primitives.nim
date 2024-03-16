@@ -37,17 +37,22 @@ type
 template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
 
-template `==`*(a, b: Quantity | BlockNumber): bool =
-  distinctBase(a) == distinctBase(b)
-
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
   distinctBase(a) == distinctBase(b)
 
 func `==`*(a, b: Address): bool {.inline.} =
   distinctBase(a) == distinctBase(b)
 
-template `<=`*(a, b: Quantity | BlockNumber): bool =
-  distinctBase(a) == distinctBase(b)
+template ethQuantity(typ: type) {.dirty.} =
+  func `+`*(a: typ, b: distinctBase(typ)): typ {.borrow.}
+  func `-`*(a: typ, b: distinctBase(typ)): typ {.borrow.}
+
+  func `<`*(a, b: typ): bool {.borrow.}
+  func `<=`*(a, b: typ): bool {.borrow.}
+  func `==`*(a, b: typ): bool {.borrow.}
+
+ethQuantity Quantity
+ethQuantity BlockNumber
 
 func hash*[N](bytes: FixedBytes[N]): Hash =
   hash(distinctBase bytes)
