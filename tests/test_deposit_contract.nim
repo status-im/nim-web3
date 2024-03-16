@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -43,7 +43,7 @@ suite "Deposit contract":
 
       var fut = newFuture[void]()
 
-      let options = FilterOptions(fromBlock: some(blockId(0)))
+      let options = FilterOptions(fromBlock: some(blockId(0.BlockNumber)))
       let s = await ns.subscribe(DepositEvent, options) do (
           pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8])
           {.raises: [], gcsafe.}:
