@@ -86,7 +86,7 @@ type
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
-    number*: Quantity                           # the block number. null when its pending block.
+    number*: BlockNumber                        # the block number. null when its pending block.
     hash*: Hash256                              # hash of the block. null when its pending block.
     parentHash*: Hash256                        # hash of the parent block.
     sha3Uncles*: Hash256                        # SHA3 of the uncles data in the block.
@@ -136,7 +136,7 @@ type
     hash*: TxHash                                    # hash of the transaction.
     nonce*: Quantity                                 # TODO: Is int? the number of transactions made by the sender prior to this one.
     blockHash*: Option[BlockHash]                    # hash of the block where this transaction was in. null when its pending.
-    blockNumber*: Option[Quantity]                   # block number where this transaction was in. null when its pending.
+    blockNumber*: Option[BlockNumber]                # block number where this transaction was in. null when its pending.
     transactionIndex*: Option[Quantity]              # integer of the transactions index position in the block. null when its pending.
     `from`*: Address                                 # address of the sender.
     to*: Option[Address]                             # address of the receiver. null when its a contract creation transaction.
@@ -160,7 +160,7 @@ type
     transactionHash*: TxHash            # hash of the transaction.
     transactionIndex*: Quantity         # integer of the transactions index position in the block.
     blockHash*: BlockHash               # hash of the block where this transaction was in.
-    blockNumber*: Quantity              # block number where this transaction was in.
+    blockNumber*: BlockNumber           # block number where this transaction was in.
     `from`*: Address                    # address of the sender.
     to*: Option[Address]                # address of the receiver. null when its a contract creation transaction.
     cumulativeGasUsed*: Quantity        # the total amount of gas used when this transaction was executed in the block.
@@ -205,7 +205,7 @@ type
     transactionIndex*: Option[Quantity] # integer of the transactions index position log was created from. null when its pending log.
     transactionHash*: Option[TxHash]    # hash of the transactions this log was created from. null when its pending log.
     blockHash*: Option[BlockHash]       # hash of the block where this log was in. null when its pending. null when its pending log.
-    blockNumber*: Option[Quantity]      # the block number where this log was in. null when its pending. null when its pending log.
+    blockNumber*: Option[BlockNumber]   # the block number where this log was in. null when its pending. null when its pending log.
     address*: Address                   # address from which this log originated.
     data*: seq[byte]                    # contains one or more 32 Bytes non-indexed arguments of the log.
     topics*: seq[Topic]                 # array of 0 to 4 32 Bytes DATA of indexed log arguments.
@@ -228,7 +228,7 @@ type
     storageHash*: StorageHash
     storageProof*: seq[StorageProof]
 
-  BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
+  BlockIdentifier* = string | BlockNumber | RtBlockIdentifier
 
   BlockIdentifierKind* = enum
     bidNumber

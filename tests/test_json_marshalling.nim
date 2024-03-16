@@ -27,10 +27,10 @@ proc rand[M,N](_: type DynamicBytes[M,N]): DynamicBytes[M,N] =
 proc rand(_: type Address): Address =
   discard randomBytes(distinctBase result)
 
-proc rand(_: type Quantity): Quantity =
+proc rand[T: Quantity | BlockNumber](_: type T): T =
   var res: array[8, byte]
   discard randomBytes(res)
-  result = Quantity(uint64.fromBytesBE(res))
+  result = T(uint64.fromBytesBE(res))
 
 proc rand(_: type RlpEncodedBytes): RlpEncodedBytes =
   discard randomBytes(distinctBase result)
@@ -57,7 +57,7 @@ proc rand(_: type UInt256): UInt256 =
   result = UInt256.fromBytesBE(x)
 
 proc rand(_: type RtBlockIdentifier): RtBlockIdentifier =
-  RtBlockIdentifier(kind: bidNumber, number: rand(Quantity).uint64)
+  RtBlockIdentifier(kind: bidNumber, number: rand(BlockNumber))
 
 proc rand(_: type PayloadExecutionStatus): PayloadExecutionStatus =
   var x: array[1, byte]
@@ -98,32 +98,37 @@ template checkRandomObject(T: type) =
 
 suite "JSON-RPC Quantity":
   test "Valid":
-    for (validQuantityStr, validQuantity) in [
-        ("0x0", Quantity 0),
-        ("0x123", Quantity 291),
-        ("0x1234", Quantity 4660)]:
-      let validQuantityJson = JrpcConv.encode(validQuantityStr)
-      let resQuantity = JrpcConv.decode(validQuantityJson, Quantity)
-      let resUInt256 = JrpcConv.decode(validQuantityJson, UInt256)
-      let resUInt256Ref = JrpcConv.decode(validQuantityJson, ref UInt256)
+    template checkType(typeName: typedesc): untyped =
+      for (validStr, validValue) in [
+          ("0x0", typeName 0),
+          ("0x123", typeName 291),
+          ("0x1234", typeName 4660)]:
+        let
+          validJson = JrpcConv.encode(validStr)
+          res = JrpcConv.decode(validJson, typeName)
+          resUInt256 = JrpcConv.decode(validJson, UInt256)
+          resUInt256Ref = JrpcConv.decode(validJson, ref UInt256)
 
-      check:
-        JrpcConv.decode(validQuantityJson, Quantity) == validQuantity
-        JrpcConv.encode(validQuantity) == validQuantityJson
-        resQuantity == validQuantity
-        resUInt256 == validQuantity.distinctBase.u256
-        resUInt256Ref[] == validQuantity.distinctBase.u256
+        check:
+          JrpcConv.decode(validJson, typeName) == validValue
+          JrpcConv.encode(validValue) == validJson
+          res == validValue
+          resUInt256 == validValue.distinctBase.u256
+          resUInt256Ref[] == validValue.distinctBase.u256
 
-  test "Invalid Quantity/UInt256/ref UInt256":
+    checkType(Quantity)
+    checkType(BlockNumber)
+
+  test "Invalid Quantity/BlockNumber/UInt256/ref UInt256":
     # TODO once https://github.com/status-im/nimbus-eth2/pull/3850 addressed,
     # re-add "0x0400" test case as invalid.
     for invalidStr in [
         "", "1234", "01234", "x1234", "0x", "ff"]:
       template checkInvalids(typeName: untyped) =
-        var resQuantity: `typeName`
+        var res: `typeName`
         try:
           let jsonBytes = JrpcConv.encode(invalidStr)
-          resQuantity = JrpcConv.decode(jsonBytes, `typeName`)
+          res = JrpcConv.decode(jsonBytes, `typeName`)
           echo `typeName`, " ", invalidStr
           check: false
         except SerializationError:
@@ -132,6 +137,7 @@ suite "JSON-RPC Quantity":
           check: false
 
       checkInvalids(Quantity)
+      checkInvalids(BlockNumber)
       checkInvalids(UInt256)
       checkInvalids(ref UInt256)
 
@@ -189,11 +195,11 @@ suite "JSON-RPC Quantity":
     checkRandomObject(GetPayloadResponse)
 
   test "check blockId":
-    let a = RtBlockIdentifier(kind: bidNumber, number: 77.uint64)
+    let a = RtBlockIdentifier(kind: bidNumber, number: 77.BlockNumber)
     let x = JrpcConv.encode(a)
     let c = JrpcConv.decode(x, RtBlockIdentifier)
     check c.kind == bidNumber
-    check c.number == 77
+    check c.number == 77.BlockNumber
 
     let d = JrpcConv.decode("\"10\"", RtBlockIdentifier)
     check d.kind == bidAlias
@@ -210,15 +216,20 @@ suite "JSON-RPC Quantity":
     check c.kind == slkNull
 
   test "quantity parser and writer":
-    let a = JrpcConv.decode("\"0x016345785d8a0000\"", Quantity)
-    check a.uint64 == 100_000_000_000_000_000'u64
-    let b = JrpcConv.encode(a)
-    check b == "\"0x16345785d8a0000\""
+    template checkType(typeName: typedesc): untyped =
+      block:
+        let a = JrpcConv.decode("\"0x016345785d8a0000\"", typeName)
+        check a.uint64 == 100_000_000_000_000_000'u64
+        let b = JrpcConv.encode(a)
+        check b == "\"0x16345785d8a0000\""
 
-    let x = JrpcConv.decode("\"0xFFFF_FFFF_FFFF_FFFF\"", Quantity)
-    check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF_FFFF'u64
-    let y = JrpcConv.encode(x)
-    check y == "\"0xffffffffffffffff\""
+        let x = JrpcConv.decode("\"0xFFFF_FFFF_FFFF_FFFF\"", typeName)
+        check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF_FFFF'u64
+        let y = JrpcConv.encode(x)
+        check y == "\"0xffffffffffffffff\""
+
+    checkType(Quantity)
+    checkType(BlockNumber)
 
   test "AccessListResult":
     var z: AccessListResult

@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -213,8 +213,9 @@ suite "Contracts":
         receipt = await web3.deployContract(MetaCoinCode)
         cc = receipt.contractAddress.get
 
-      let deployedAtBlock = distinctBase(receipt.blockNumber)
-      echo "Deployed MetaCoin contract: ", cc, " at block ", deployedAtBlock
+      let deployedAtBlock = receipt.blockNumber
+      echo "Deployed MetaCoin contract: ", cc, " at block ",
+        distinctBase(deployedAtBlock)
 
       let ns = web3.contractSender(MetaCoin, cc)
 
@@ -225,7 +226,8 @@ suite "Contracts":
           fromAddr, toAddr: Address, value: UInt256)
           {.raises: [], gcsafe.}:
         try:
-          echo "onTransfer: ", fromAddr, " transferred ", value.toHex, " to ", toAddr
+          echo "onTransfer: ", fromAddr, " transferred ", value.toHex,
+            " to ", toAddr
           inc notificationsReceived
           assert(fromAddr == web3.defaultAccount)
           assert((notificationsReceived == 1 and value == 50.u256) or
@@ -238,12 +240,15 @@ suite "Contracts":
 
       let balNow = await ns.getBalance(web3.defaultAccount).call()
       echo "getbalance (now): ", balNow.toHex
-      let balNew = await ns.getBalance(web3.defaultAccount).call(blockNumber = deployedAtBlock)
+      let balNew = await ns.getBalance(web3.defaultAccount).call(
+        blockNumber = deployedAtBlock)
       echo "getbalance (after creation): ", balNew.toHex
 
-      # Let's try to get the balance at a point in time where the contract was not deployed yet:
+      # Let's try to get the balance at a point in time where the contract
+      # was not deployed yet:
       try:
-        let balFirst = await ns.getBalance(web3.defaultAccount).call(blockNumber = 1'u64)
+        let balFirst = await ns.getBalance(web3.defaultAccount).call(
+          blockNumber = 1.BlockNumber)
         echo "getbalance (first block): ", balFirst.toHex
       except CatchableError as err:
         echo "getbalance (first block): ", err.msg
@@ -261,7 +266,7 @@ suite "Contracts":
       echo "transfers: ", await ns.getJsonLogs(
         Transfer,
         fromBlock = some(blockId(deployedAtBlock)),
-        toBlock = some(blockId(1000'u64)))
+        toBlock = some(blockId(1000.BlockNumber)))
 
       await notifFut
       await s.unsubscribe()

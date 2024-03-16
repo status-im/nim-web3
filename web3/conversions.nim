@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Copyright (c) 2019-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -198,8 +198,9 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: Quantity | BlockNumber)
-      {.gcsafe, raises: [IOError].} =
+proc writeValue*[F: CommonJsonFlavors](
+    w: var JsonWriter[F], v: Quantity | BlockNumber
+) {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
   w.stream.write "\""
@@ -242,6 +243,11 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
     r.raiseUnexpectedValue("Quantity value has invalid leading 0")
   wrapValueError:
     val = Quantity fromHex[uint64](hexStr)
+
+proc readValue*[F: CommonJsonFlavors](
+    r: var JsonReader[F],
+    val: var BlockNumber) {.gcsafe, raises: [IOError, JsonReaderError].} =
+  r.readValue(distinctBase(val, recursive = false))
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -300,7 +306,8 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
   let hexStr = r.parseString()
   wrapValueError:
     if valid(hexStr):
-      val = RtBlockIdentifier(kind: bidNumber, number: fromHex[uint64](hexStr))
+      val = RtBlockIdentifier(
+        kind: bidNumber, number: BlockNumber fromHex[uint64](hexStr))
     else:
       val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
 
@@ -385,7 +392,7 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
   else:
     w.writeValue JsonString("null")
 
-func `$`*(v: Quantity): string {.inline.} =
+func `$`*(v: Quantity | BlockNumber): string {.inline.} =
   encodeQuantity(v.uint64)
 
 func `$`*(v: TypedTransaction): string {.inline.} =
