@@ -50,7 +50,7 @@ type
     gas*: uint64
     gasPrice*: int
     chainId*: Option[ChainId]
-    blockNumber*: uint64
+    blockNumber*: BlockNumber
 
   Sender*[T] = ContractInstance[T, Web3SenderImpl]
   AsyncSender*[T] = ContractInstance[T, Web3AsyncSenderImpl]
@@ -447,8 +447,13 @@ proc createMutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: t
   let receipt = await sender.web3.getMinedTransactionReceipt(h)
   discard receipt
 
-proc createImmutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: typedesc, data: sink seq[byte]): Future[ReturnType] {.async.} =
-  let response = await callAux(sender.web3, sender.contractAddress, sender.defaultAccount, data, sender.value, sender.gas, sender.blockNumber)
+proc createImmutableContractInvocation*(
+    sender: Web3AsyncSenderImpl,
+    ReturnType: typedesc,
+    data: sink seq[byte]): Future[ReturnType] {.async.} =
+  let response = await callAux(
+    sender.web3, sender.contractAddress, sender.defaultAccount, data,
+    sender.value, sender.gas, sender.blockNumber)
   if response.len > 0:
     discard decode(response, 0, 0, result)
   else:
