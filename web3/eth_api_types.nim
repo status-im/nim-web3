@@ -86,7 +86,7 @@ type
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
-    number*: Quantity                           # the block number. null when its pending block.
+    number*: BlockNumber                        # the block number. null when its pending block.
     hash*: Hash256                              # hash of the block. null when its pending block.
     parentHash*: Hash256                        # hash of the parent block.
     sha3Uncles*: Hash256                        # SHA3 of the uncles data in the block.
