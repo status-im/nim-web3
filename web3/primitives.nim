@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2023 Status Research & Development GmbH
+# Copyright (c) 2023-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -25,8 +25,8 @@ type
   TxHash* = FixedBytes[32]
   Hash256* = FixedBytes[32]
   BlockHash* = FixedBytes[32]
-  BlockNumber* = uint64
   Quantity* = distinct uint64
+  BlockNumber* = distinct Quantity
 
   CodeHash* = FixedBytes[32]
   StorageHash* = FixedBytes[32]
@@ -38,6 +38,9 @@ template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
 
 template `==`*(a, b: Quantity): bool =
+  distinctBase(a) == distinctBase(b)
+
+template `==`*(a, b: BlockNumber): bool =
   distinctBase(a) == distinctBase(b)
 
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =

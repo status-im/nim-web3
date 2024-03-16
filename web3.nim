@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Copyright (c) 2019-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -354,13 +354,14 @@ proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            gasPrice = 0): Future[TxHash] =
   sendData(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, some(chainId))
 
-proc callAux(web3: Web3,
-              contractAddress: Address,
-              defaultAccount: Address,
-              data: seq[byte],
-              value = 0.u256,
-              gas = 3000000'u64,
-              blockNumber = high(uint64)): Future[seq[byte]] {.async.} =
+proc callAux(
+    web3: Web3,
+    contractAddress: Address,
+    defaultAccount: Address,
+    data: seq[byte],
+    value = 0.u256,
+    gas = 3000000'u64,
+    blockNumber = high(BlockNumber)): Future[seq[byte]] {.async.} =
   var cc: EthCall
   cc.data = some(data)
   cc.source = some(defaultAccount)
@@ -368,15 +369,16 @@ proc callAux(web3: Web3,
   cc.gas = some(Quantity(gas))
   cc.value = some(value)
   result =
-    if blockNumber != high(uint64):
+    if blockNumber != high(BlockNumber):
       await web3.provider.eth_call(cc, blockId(blockNumber))
     else:
       await web3.provider.eth_call(cc, "latest")
 
-proc call*[T](c: ContractInvocation[T, Web3SenderImpl],
-              value = 0.u256,
-              gas = 3000000'u64,
-              blockNumber = high(uint64)): Future[T] {.async.} =
+proc call*[T](
+    c: ContractInvocation[T, Web3SenderImpl],
+    value = 0.u256,
+    gas = 3000000'u64,
+    blockNumber = high(BlockNumber)): Future[T] {.async.} =
   let response = await callAux(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
   if response.len > 0:
     discard decode(response, 0, 0, result)
