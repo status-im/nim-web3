@@ -111,7 +111,7 @@ suite "JSON-RPC Quantity":
 
         check:
           JrpcConv.decode(validJson, typeName) == validValue
-          JrpcConv.encode(valid) == validJson
+          JrpcConv.encode(validValue) == validJson
           res == validValue
           resUInt256 == validValue.distinctBase.u256
           resUInt256Ref[] == validValue.distinctBase.u256

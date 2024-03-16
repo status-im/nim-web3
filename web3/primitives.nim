@@ -46,6 +46,9 @@ template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
 func `==`*(a, b: Address): bool {.inline.} =
   distinctBase(a) == distinctBase(b)
 
+template `<=`*(a, b: Quantity | BlockNumber): bool =
+  distinctBase(a) == distinctBase(b)
+
 func hash*[N](bytes: FixedBytes[N]): Hash =
   hash(distinctBase bytes)
 
