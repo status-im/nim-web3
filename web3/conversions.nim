@@ -198,15 +198,12 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: Quantity)
-      {.gcsafe, raises: [IOError].} =
+proc writeValue*[F: CommonJsonFlavors](
+    w: var JsonWriter[F], v: Quantity|BlockNumber
+) {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
   w.stream.write "\""
-
-proc writeValue*[F: CommonJsonFlavors](
-    w: var JsonWriter[F], v: BlockNumber) {.gcsafe, raises: [IOError].} =
-  w.writeValue(distinctBase(v))
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicBytes)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -250,7 +247,7 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
 proc readValue*[F: CommonJsonFlavors](
     r: var JsonReader[F],
     val: var BlockNumber) {.gcsafe, raises: [IOError, JsonReaderError].} =
-  r.readValue(distinctBase(val))
+  r.readValue(distinctBase(val, recursive = false))
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -395,11 +392,8 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
   else:
     w.writeValue JsonString("null")
 
-func `$`*(v: Quantity): string {.inline.} =
+func `$`*(v: Quantity|BlockNumber): string {.inline.} =
   encodeQuantity(v.uint64)
-
-func `$`*(v: BlockNumber): string {.inline.} =
-  $(distinctBase(v))
 
 func `$`*(v: TypedTransaction): string {.inline.} =
   "0x" & distinctBase(v).toHex
