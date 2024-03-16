@@ -199,7 +199,7 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
   writeHexValue w, distinctBase(v)
 
 proc writeValue*[F: CommonJsonFlavors](
-    w: var JsonWriter[F], v: Quantity|BlockNumber
+    w: var JsonWriter[F], v: Quantity | BlockNumber
 ) {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
@@ -392,7 +392,7 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
   else:
     w.writeValue JsonString("null")
 
-func `$`*(v: Quantity|BlockNumber): string {.inline.} =
+func `$`*(v: Quantity | BlockNumber): string {.inline.} =
   encodeQuantity(v.uint64)
 
 func `$`*(v: TypedTransaction): string {.inline.} =

@@ -37,7 +37,7 @@ type
 template `==`*[N](a, b: FixedBytes[N]): bool =
   distinctBase(a) == distinctBase(b)
 
-template `==`*(a, b: Quantity|BlockNumber): bool =
+template `==`*(a, b: Quantity | BlockNumber): bool =
   distinctBase(a) == distinctBase(b)
 
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =

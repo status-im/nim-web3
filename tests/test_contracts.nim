@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -266,7 +266,7 @@ suite "Contracts":
       echo "transfers: ", await ns.getJsonLogs(
         Transfer,
         fromBlock = some(blockId(deployedAtBlock)),
-        toBlock = some(blockId(1000'u64)))
+        toBlock = some(blockId(1000.BlockNumber)))
 
       await notifFut
       await s.unsubscribe()

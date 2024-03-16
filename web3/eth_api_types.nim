@@ -228,7 +228,7 @@ type
     storageHash*: StorageHash
     storageProof*: seq[StorageProof]
 
-  BlockIdentifier* = string|BlockNumber|RtBlockIdentifier
+  BlockIdentifier* = string | BlockNumber | RtBlockIdentifier
 
   BlockIdentifierKind* = enum
     bidNumber
