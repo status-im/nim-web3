@@ -438,8 +438,15 @@ proc createMutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typede
 proc createImmutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typedesc, data: sink seq[byte]): ContractInvocation[ReturnType, Web3SenderImpl] {.inline.} =
   ContractInvocation[ReturnType, Web3SenderImpl](sender: sender, data: data)
 
-proc contractInstance*(web3: Web3, T: typedesc, toAddress: Address): AsyncSender[T] =
-  AsyncSender[T](sender: Web3AsyncSenderImpl(web3: web3, contractAddress: toAddress, defaultAccount: web3.defaultAccount, gas: 3000000, blockNumber: uint64.high))
+proc contractInstance*(
+    web3: Web3, T: typedesc, toAddress: Address): AsyncSender[T] =
+  AsyncSender[T](
+    sender: Web3AsyncSenderImpl(
+      web3: web3,
+      contractAddress: toAddress,
+      defaultAccount: web3.defaultAccount,
+      gas: 3000000,
+      blockNumber: BlockNumber.high))
 
 proc createMutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: typedesc, data: sink seq[byte]) {.async.} =
   assert(sender.gas > 0)
