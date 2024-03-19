@@ -108,11 +108,11 @@ proc installHandlers*(server: RpcServer) =
       fh = decodeFromString(x, FeeHistoryResult)
     return fh
 
-  server.rpc("eth_estimateGas") do(x: JsonString, call: EthCall) -> Quantity:
+  server.rpc("eth_estimateGas") do(x: JsonString, call: TransactionArgs) -> Quantity:
     if x != "-1".JsonString:
       result = decodeFromString(x, Quantity)
 
-  server.rpc("eth_createAccessList") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> AccessListResult:
+  server.rpc("eth_createAccessList") do(x: JsonString, call: TransactionArgs, blockId: RtBlockIdentifier) -> AccessListResult:
     var z: AccessListResult
     if x != "-1".JsonString:
       z = decodeFromString(x, AccessListResult)
@@ -122,7 +122,7 @@ proc installHandlers*(server: RpcServer) =
     if x != "-1".JsonString:
       result = decodeFromString(x, Quantity)
 
-  server.rpc("eth_call") do(x: JsonString, call: EthCall, blockId: RtBlockIdentifier) -> seq[byte]:
+  server.rpc("eth_call") do(x: JsonString, call: TransactionArgs, blockId: RtBlockIdentifier) -> seq[byte]:
     if x != "-1".JsonString:
       result = decodeFromString(x, seq[byte])
 

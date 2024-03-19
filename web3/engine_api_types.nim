@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2023 Status Research & Development GmbH
+# Copyright (c) 2022-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -14,10 +14,6 @@ import
 
 export
   options, stint, primitives
-
-const
-  # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/engine/cancun.md#blobsbundlev1
-  fieldElementsPerBlob = 4096
 
 type
   TypedTransaction* = distinct seq[byte]
@@ -118,10 +114,6 @@ type
     ExecutionPayloadV1 |
     ExecutionPayloadV2 |
     ExecutionPayloadV3
-
-  KZGCommitment* = FixedBytes[48]
-  KZGProof* = FixedBytes[48]
-  Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
   # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object

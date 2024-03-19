@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2023 Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -46,14 +46,13 @@ suite "Signed transactions":
       privateKey = PrivateKey.fromHex("0x4646464646464646464646464646464646464646464646464646464646464646").tryGet()
       publicKey = privateKey.toPublicKey()
       address = publicKey.toCanonicalAddress()
-    var tx: EthSend
+    var tx: TransactionArgs
     tx.nonce = some(Quantity(9))
-    tx.`from` = Address(address)
+    tx.`from` = some(Address(address))
     tx.value = some(1000000000000000000.u256)
     tx.to = some(Address(hexToByteArray[20]("0x3535353535353535353535353535353535353535")))
     tx.gas = some(Quantity(21000'u64))
     tx.gasPrice = some(Quantity(20000000000'i64))
-    tx.data = @[]
 
     let txBytes = encodeTransaction(tx, privateKey, ChainId(1))
     let txHex = "0x" & txBytes.toHex
@@ -71,8 +70,8 @@ suite "Signed transactions":
       let pk = PrivateKey.random(theRNG[])
       let acc = Address(toCanonicalAddress(pk.toPublicKey()))
 
-      var tx: EthSend
-      tx.`from` = accounts[0]
+      var tx: TransactionArgs
+      tx.`from` = some(accounts[0])
       tx.value = some(ethToWei(10.u256))
       tx.to = some(acc)
       tx.gasPrice = some(gasPrice)

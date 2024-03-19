@@ -7,9 +7,9 @@ import
 
 proc deployContract*(web3: Web3, code: string, gasPrice = 0): Future[ReceiptObject] {.async.} =
   var code = code
-  var tr: EthSend
-  tr.`from` = web3.defaultAccount
-  tr.data = hexToSeqByte(code)
+  var tr: TransactionArgs
+  tr.`from` = some(web3.defaultAccount)
+  tr.data = some(hexToSeqByte(code))
   tr.gas = Quantity(3000000).some
   if gasPrice != 0:
     tr.gasPrice = some(gasPrice.Quantity)

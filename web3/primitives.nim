@@ -14,6 +14,10 @@ import
 export
   hashes, options, typetraits
 
+const
+  # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/engine/cancun.md#blobsbundlev1
+  fieldElementsPerBlob = 4096
+
 type
   FixedBytes*[N: static[int]] = distinct array[N, byte]
 
@@ -31,6 +35,10 @@ type
   CodeHash* = FixedBytes[32]
   StorageHash* = FixedBytes[32]
   VersionedHash* = FixedBytes[32]
+
+  KZGCommitment* = FixedBytes[48]
+  KZGProof* = FixedBytes[48]
+  Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
 {.push raises: [].}
 
