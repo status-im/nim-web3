@@ -291,3 +291,6 @@ func payload*(args: TransactionArgs): seq[byte] =
     return args.input.get
   if args.data.isSome:
     return args.data.get
+
+func isEIP4844*(args: TransactionArgs): bool =
+  args.maxFeePerBlobGas.isSome or args.blobVersionedHashes.isSome
