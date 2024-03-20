@@ -163,8 +163,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(StorageProof)
     checkRandomObject(ProofResponse)
     checkRandomObject(FilterOptions)
-    checkRandomObject(EthSend)
-    checkRandomObject(EthCall)
+    checkRandomObject(TransactionArgs)
 
     checkRandomObject(BlockHeader)
     checkRandomObject(BlockObject)
@@ -235,3 +234,10 @@ suite "JSON-RPC Quantity":
     var z: AccessListResult
     let w = JrpcConv.encode(z)
     check w == """{"accessList":[],"gasUsed":"0x0"}"""
+
+  test "AccessListResult with error":
+    let z = AccessListResult(
+      error: some("error")
+    )
+    let w = JrpcConv.encode(z)
+    check w == """{"accessList":[],"error":"error","gasUsed":"0x0"}"""

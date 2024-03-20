@@ -31,28 +31,34 @@ type
     ## setting. Downstream libraries that want to enforce the up-to-date limit are
     ## expected to do this on their own.
 
-  EthSend* = object
-    `from`*: Address             # the address the transaction is sent from.
-    to*: Option[Address]         # (optional when creating new contract) the address the transaction is directed to.
-    gas*: Option[Quantity]       # (optional, default: 90000) integer of the gas provided for the transaction execution. It will return unused gas.
-    gasPrice*: Option[Quantity]  # (optional, default: To-Be-Determined) integer of the gasPrice used for each paid gas.
-    value*: Option[UInt256]      # (optional) integer of the value sent with this transaction.
-    data*: seq[byte]             # the compiled code of a contract OR the hash of the invoked method signature and encoded parameters.
-                                 # For details see Ethereum Contract ABI.
-    nonce*: Option[Quantity]     # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
-
-  # TODO: Both `EthSend` and `EthCall` are super outdated, according to new spec
-  # those should be merged into one type `GenericTransaction` with a lot more fields
-  # see: https://github.com/ethereum/execution-apis/blob/main/src/schemas/transaction.yaml#L244
-  EthCall* = object
+  TransactionArgs* = object
     `from`*: Option[Address]    # (optional) The address the transaction is sent from.
     to*: Option[Address]        # The address the transaction is directed to.
     gas*: Option[Quantity]      # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
     gasPrice*: Option[Quantity] # (optional) Integer of the gasPrice used for each paid gas.
-    value*: Option[UInt256]     # (optional) Integer of the value sent with this transaction.
-    data*: Option[seq[byte]]    # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
     maxFeePerGas*: Option[Quantity]         # (optional) MaxFeePerGas is the maximum fee per gas offered, in wei.
     maxPriorityFeePerGas*: Option[Quantity] # (optional) MaxPriorityFeePerGas is the maximum miner tip per gas offered, in wei.
+    value*: Option[UInt256]     # (optional) Integer of the value sent with this transaction.
+    nonce*: Option[Quantity]    # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
+
+    # We accept "data" and "input" for backwards-compatibility reasons.
+    # "input" is the newer name and should be preferred by clients.
+    # Issue detail: https://github.com/ethereum/go-ethereum/issues/15628
+    data*: Option[seq[byte]]    # (optional) Hash of the method signature and encoded parameters. For details see Ethereum Contract ABI.
+    input*: Option[seq[byte]]
+
+    # Introduced by EIP-2930.
+    accessList*: Option[seq[AccessTuple]]
+    chainId*: Option[Quantity]
+
+    # EIP-4844
+    maxFeePerBlobGas*: Option[UInt256]
+    blobVersionedHashes*: Option[seq[Hash256]]
+
+    # EIP-4844 blob side car
+    blobs*: Option[Blob]
+    commitments*: Option[KZGCommitment]
+    proofs*: Option[KZGProof]
 
   ## A block header object
   BlockHeader* = ref object
@@ -130,6 +136,7 @@ type
 
   AccessListResult* = object
     accessList*: seq[AccessTuple]
+    error*: Option[string]
     gasUsed*: Quantity
 
   TransactionObject* = ref object                    # A transaction object, or null when no transaction was found:
@@ -251,11 +258,14 @@ type
 
 {.push raises: [].}
 
+func blockId*(n: uint64): RtBlockIdentifier =
+  RtBlockIdentifier(kind: bidNumber, number: BlockNumber n)
+
 func blockId*(n: BlockNumber): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: n)
 
 func blockId*(b: BlockObject): RtBlockIdentifier =
-  RtBlockIdentifier(kind: bidNumber, number: BlockNumber b.number)
+  RtBlockIdentifier(kind: bidNumber, number: b.number)
 
 func blockId*(a: string): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidAlias, alias: a)
@@ -266,11 +276,21 @@ func txOrHash*(hash: TxHash): TxOrHash =
 func txOrHash*(tx: TransactionObject): TxOrHash =
   TxOrHash(kind: tohTx, tx: tx)
 
-proc `source=`*(c: var EthCall, a: Option[Address]) =
+proc `source=`*(c: var TransactionArgs, a: Option[Address]) =
   c.`from` = a
 
-func source*(c: EthCall): Option[Address] =
+func source*(c: TransactionArgs): Option[Address] =
   c.`from`
 
 template `==`*(a, b: RlpEncodedBytes): bool =
   distinctBase(a) == distinctBase(b)
+
+func payload*(args: TransactionArgs): seq[byte] =
+  # Retrieves the transaction calldata. `input` field is preferred.
+  if args.input.isSome:
+    return args.input.get
+  if args.data.isSome:
+    return args.data.get
+
+func isEIP4844*(args: TransactionArgs): bool =
+  args.maxFeePerBlobGas.isSome or args.blobVersionedHashes.isSome

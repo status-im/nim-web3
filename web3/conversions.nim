@@ -41,8 +41,7 @@ LogObject.useDefaultSerializationIn JrpcConv
 StorageProof.useDefaultSerializationIn JrpcConv
 ProofResponse.useDefaultSerializationIn JrpcConv
 FilterOptions.useDefaultSerializationIn JrpcConv
-EthSend.useDefaultSerializationIn JrpcConv
-EthCall.useDefaultSerializationIn JrpcConv
+TransactionArgs.useDefaultSerializationIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
 
 derefType(BlockHeader).useDefaultSerializationIn JrpcConv

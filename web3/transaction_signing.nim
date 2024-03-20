@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Copyright (c) 2019-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -39,7 +39,7 @@ func signTransactionEip155(tr: var Transaction, pk: PrivateKey) =
 
   tr.V = int64(v) + int64(chainId) * 2 + 35
 
-func encodeTransaction*(s: EthSend, pk: PrivateKey): seq[byte] =
+func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxLegacy)
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
@@ -49,11 +49,11 @@ func encodeTransaction*(s: EthSend, pk: PrivateKey): seq[byte] =
   if s.value.isSome:
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
-  tr.payload = s.data
+  tr.payload = s.payload
   signTransaction(tr, pk)
   return rlp.encode(tr)
 
-func encodeTransaction*(s: EthSend, pk: PrivateKey, chainId: ChainId): seq[byte] =
+func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] =
   var tr = Transaction(txType: TxLegacy, chainId: chainId)
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
@@ -63,6 +63,6 @@ func encodeTransaction*(s: EthSend, pk: PrivateKey, chainId: ChainId): seq[byte]
   if s.value.isSome:
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
-  tr.payload = s.data
+  tr.payload = s.payload
   signTransactionEip155(tr, pk)
   return rlp.encode(tr)

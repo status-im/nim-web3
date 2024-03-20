@@ -294,7 +294,7 @@ proc nextNonce*(web3: Web3): Future[Quantity] {.async.} =
     result = await web3.provider.eth_getTransactionCount(fromAddress, "latest")
     web3.lastKnownNonce = some result
 
-proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
+proc send*(web3: Web3, c: TransactionArgs): Future[TxHash] {.async.} =
   if web3.privateKey.isSome():
     var cc = c
     if cc.nonce.isNone:
@@ -304,7 +304,7 @@ proc send*(web3: Web3, c: EthSend): Future[TxHash] {.async.} =
   else:
     return await web3.provider.eth_sendTransaction(c)
 
-proc send*(web3: Web3, c: EthSend, chainId: ChainId): Future[TxHash] {.async.} =
+proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[TxHash] {.async.} =
   doAssert(web3.privateKey.isSome())
   var cc = c
   if cc.nonce.isNone:
@@ -326,9 +326,9 @@ proc sendData(web3: Web3,
     nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
             else: none(Quantity)
 
-    cc = EthSend(
-      data: data,
-      `from`: defaultAccount,
+    cc = TransactionArgs(
+      data: some(data),
+      `from`: some(defaultAccount),
       to: some(contractAddress),
       gas: some(Quantity(gas)),
       value: some(value),
@@ -362,7 +362,7 @@ proc callAux(
     value = 0.u256,
     gas = 3000000'u64,
     blockNumber = high(BlockNumber)): Future[seq[byte]] {.async.} =
-  var cc: EthCall
+  var cc: TransactionArgs
   cc.data = some(data)
   cc.source = some(defaultAccount)
   cc.to = some(contractAddress)
@@ -408,7 +408,7 @@ proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 30
 
 # Set up a JsonRPC call to send a transaction
 # The idea here is to let the Web3 object contain the RPC calls, then allow the
-# above DSL to create helpers to create the EthSend object and perform the
+# above DSL to create helpers to create the TransactionArgs object and perform the
 # transaction. The current idea is to make all this reduce to something like:
 # var
 #   w3 = initWeb3("127.0.0.1", 8545)
@@ -420,7 +420,7 @@ proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 30
 #   )
 # If the address of the contract on the chain should be part of the DSL or
 # dynamically registered is still not decided.
-#var cc: EthSend
+#var cc: TransactionArgs
 #cc.source = [0x78.byte, 0x0b, 0xc7, 0xb4, 0x05, 0x59, 0x41, 0xc2, 0xcb, 0x0e, 0xe1, 0x05, 0x10, 0xe3, 0xfc, 0x83, 0x7e, 0xb0, 0x93, 0xc1]
 #cc.to = some([0x0a.byte, 0x78, 0xc0, 0x8F, 0x31, 0x4E, 0xB2, 0x5A, 0x35, 0x1B, 0xfB, 0xA9, 0x03,0x21, 0xa6, 0x96, 0x04, 0x74, 0xbD, 0x79])
 #cc.data = "0x90b98a11000000000000000000000000e375b6fb6d0bf0d86707884f3952fee3977251FE0000000000000000000000000000000000000000000000000000000000000258"
@@ -467,9 +467,9 @@ proc createImmutableContractInvocation*(
     raise newException(CatchableError, "No response from the Web3 provider")
 
 proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Address] {.async.} =
-  var tr: EthSend
-  tr.`from` = web3.defaultAccount
-  tr.data = data
+  var tr: TransactionArgs
+  tr.`from` = some(web3.defaultAccount)
+  tr.data = some(data)
   tr.gas = Quantity(30000000).some
   if gasPrice != 0:
     tr.gasPrice = some(gasPrice.Quantity)

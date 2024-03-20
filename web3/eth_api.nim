@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2023 Status Research & Development GmbH
+# Copyright (c) 2019-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
 #    http://www.apache.org/licenses/LICENSE-2.0)
@@ -44,6 +44,7 @@ createRpcSigsFromNim(RpcClient):
   # TODO: Investigate why nim v2 cannot instantiate generic functions
   # with oneof params `blockId: BlockIdentifier` and and return type
   # Opt[seq[ReceiptObject]], this is a regression after all
+  # https://github.com/nim-lang/Nim/issues/23310
   when false:
     proc eth_getBlockReceipts(blockId: BlockIdentifier): Opt[seq[ReceiptObject]]
 
@@ -55,12 +56,12 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
   proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
   proc eth_sign(address: Address, data: seq[byte]): seq[byte]
-  proc eth_signTransaction(data: EthSend): seq[byte]
-  proc eth_sendTransaction(obj: EthSend): TxHash
+  proc eth_signTransaction(args: TransactionArgs): seq[byte]
+  proc eth_sendTransaction(args: TransactionArgs): TxHash
   proc eth_sendRawTransaction(data: seq[byte]): TxHash
-  proc eth_call(call: EthCall, blockId: BlockIdentifier): seq[byte]
-  proc eth_estimateGas(call: EthCall): Quantity
-  proc eth_createAccessList(call: EthCall, blockId: BlockIdentifier): AccessListResult
+  proc eth_call(args: TransactionArgs, blockId: BlockIdentifier): seq[byte]
+  proc eth_estimateGas(args: TransactionArgs): Quantity
+  proc eth_createAccessList(args: TransactionArgs, blockId: BlockIdentifier): AccessListResult
   proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
   proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
   proc eth_getTransactionByHash(data: TxHash): TransactionObject
