@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2023 Status Research & Development GmbH
+# Copyright (c) 2023-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -61,7 +61,7 @@ type
 {.push raises: [].}
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.blobGasUsed.isSome and payload.excessBlobGas.isSome:
+  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -77,7 +77,7 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  if res.blobsBundle.isSome and res.shouldOverrideBuilder.isSome:
+  if res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
     Version.V3
   elif res.blockValue.isSome:
     Version.V2
@@ -240,8 +240,8 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     blockHash: p.blockHash,
     transactions: p.transactions,
     withdrawals: p.withdrawals.get,
-    blobGasUsed: p.blobGasUsed.get,
-    excessBlobGas: p.excessBlobGas.get
+    blobGasUsed: p.blobGasUsed.get(0.Quantity),
+    excessBlobGas: p.excessBlobGas.get(0.Quantity)
   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -371,8 +371,8 @@ func V3*(res: GetPayloadResponse): GetPayloadV3Response =
   GetPayloadV3Response(
     executionPayload: res.executionPayload.V3,
     blockValue: res.blockValue.get,
-    blobsBundle: res.blobsBundle.get,
-    shouldOverrideBuilder: res.shouldOverrideBuilder.get
+    blobsBundle: res.blobsBundle.get(BlobsBundleV1()),
+    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false)
   )
 
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
