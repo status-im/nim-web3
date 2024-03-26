@@ -74,11 +74,20 @@ suite "Execution types tests":
     v2.excessBlobGas = none(Quantity)
     var v1 = v2
     v1.withdrawals = none(seq[WithdrawalV1])
-    check badv31.version == Version.V2
-    check badv32.version == Version.V2
+    check badv31.version == Version.V3
+    check badv32.version == Version.V3
     check v2.version == Version.V2
     check v1.version == Version.V1
     check payload.version == Version.V3
+
+    let v31 = badv31.V3
+    check v31.excessBlobGas == payload.excessBlobGas.get
+    check v31.blobGasUsed == 0.Quantity
+
+    let v32 = badv32.V3
+    check v32.excessBlobGas == 0.Quantity
+    check v32.blobGasUsed == payload.blobGasUsed.get
+
 
   test "attr version":
     var v2 = attr
@@ -99,11 +108,19 @@ suite "Execution types tests":
     v2.shouldOverrideBuilder = none(bool)
     var v1 = v2
     v1.blockValue = none(UInt256)
-    check badv31.version == Version.V2
-    check badv32.version == Version.V2
+    check badv31.version == Version.V3
+    check badv32.version == Version.V3
     check v2.version == Version.V2
     check v1.version == Version.V1
     check response.version == Version.V3
+
+    let v31 = badv31.V3
+    check v31.blobsBundle == BlobsBundleV1()
+    check v31.shouldOverrideBuilder == response.shouldOverrideBuilder.get
+
+    let v32 = badv32.V3
+    check v32.blobsBundle == response.blobsBundle.get
+    check v32.shouldOverrideBuilder == false
 
   test "ExecutionPayload roundtrip":
     let v3 = payload.V3
