@@ -248,7 +248,7 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#response-1
   GetPayloadV4Response* = object
-    executionPayload*: ExecutionPayloadV3
+    executionPayload*: ExecutionPayloadV4
     blockValue*: UInt256
     blobsBundle*: BlobsBundleV1
     shouldOverrideBuilder*: bool
