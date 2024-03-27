@@ -64,6 +64,19 @@ suite "Execution types tests":
       shouldOverrideBuilder: some(false),
     )
 
+    deposit = DepositReceiptV1(
+      pubkey: FixedBytes[48].conv(1),
+      withdrawalCredentials: FixedBytes[32].conv(3),
+      amount: 5.Quantity,
+      signature: FixedBytes[96].conv(7),
+      index: 9.Quantity
+    )
+
+    exit = ExitV1(
+      sourceAddress: address(7),
+      validatorPublicKey: FixedBytes[48].conv(9)
+    )
+
   test "payload version":
     var badv31 = payload
     badv31.blobGasUsed = none(Quantity)
@@ -151,3 +164,38 @@ suite "Execution types tests":
 
     let v1 = response.V1
     check v1 == v1.getPayloadResponse.V1
+
+  test "payload version 4":
+    var v4 = payload
+    v4.depositReceipts = some(@[deposit])
+    v4.exits = some(@[exit])
+    check v4.version == Version.V4
+
+    var bad41 = v4
+    bad41.depositReceipts = none(seq[DepositReceiptV1])
+    check bad41.version == Version.V4
+
+    var bad42 = v4
+    bad42.exits = none(seq[ExitV1])
+    check bad42.version == Version.V4
+
+    let v41 = bad41.V4
+    check v41.depositReceipts == newSeq[DepositReceiptV1]()
+    check v41.exits == v4.exits.get
+
+    let v42 = bad42.V4
+    check v42.depositReceipts == v4.depositReceipts.get
+    check v42.exits == newSeq[ExitV1]()
+
+    # roundtrip
+    let v4p = v4.V4
+    check v4p == v4p.executionPayload.V4
+
+    # response version 4
+    var resv4 = response
+    resv4.executionPayload = v4
+    check resv4.version == Version.V4
+
+    # response roundtrip
+    let rv3p = resv4.V4
+    check rv3p == rv3p.getPayloadResponse.V4
