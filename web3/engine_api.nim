@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2023 Status Research & Development GmbH
+# Copyright (c) 2022-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -28,6 +28,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_newPayloadV1(payload: ExecutionPayloadV1): PayloadStatusV1
   proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: FixedBytes[32]): PayloadStatusV1
+  proc engine_newPayloadV4(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: FixedBytes[32]): PayloadStatusV1
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV1]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV2]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Option[PayloadAttributesV3]): ForkchoiceUpdatedResponse
@@ -35,6 +36,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV2(payloadId: PayloadID): GetPayloadV2Response
   proc engine_getPayloadV2_exact(payloadId: PayloadID): GetPayloadV2ResponseExact
   proc engine_getPayloadV3(payloadId: PayloadID): GetPayloadV3Response
+  proc engine_getPayloadV4(payloadId: PayloadID): GetPayloadV4Response
   proc engine_exchangeTransitionConfigurationV1(transitionConfiguration: TransitionConfigurationV1): TransitionConfigurationV1
   proc engine_getPayloadBodiesByHashV1(hashes: seq[BlockHash]): seq[Option[ExecutionPayloadBodyV1]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Option[ExecutionPayloadBodyV1]]

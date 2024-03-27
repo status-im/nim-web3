@@ -25,6 +25,19 @@ type
     address*: Address
     amount*: Quantity
 
+  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#depositreceiptv1
+  DepositReceiptV1* = object
+    pubkey*: FixedBytes[48]
+    withdrawalCredentials*: FixedBytes[32]
+    amount*: Quantity
+    signature*: FixedBytes[96]
+    index*: Quantity
+
+  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#exitv1
+  ExitV1* = object
+    sourceAddress*: Address
+    validatorPublicKey*: FixedBytes[48]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#executionpayloadv1
   ExecutionPayloadV1* = object
     parentHash*: Hash256
@@ -110,10 +123,33 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
+  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#executionpayloadv4
+  ExecutionPayloadV4* = object
+    parentHash*: Hash256
+    feeRecipient*: Address
+    stateRoot*: Hash256
+    receiptsRoot*: Hash256
+    logsBloom*: FixedBytes[256]
+    prevRandao*: FixedBytes[32]
+    blockNumber*: Quantity
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    timestamp*: Quantity
+    extraData*: DynamicBytes[0, 32]
+    baseFeePerGas*: UInt256
+    blockHash*: Hash256
+    transactions*: seq[TypedTransaction]
+    withdrawals*: seq[WithdrawalV1]
+    blobGasUsed*: Quantity
+    excessBlobGas*: Quantity
+    depositReceipts*: seq[DepositReceiptV1]
+    exits*: seq[ExitV1]
+
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
     ExecutionPayloadV2 |
-    ExecutionPayloadV3
+    ExecutionPayloadV3 |
+    ExecutionPayloadV4
 
   # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object
@@ -210,10 +246,18 @@ type
     blobsBundle*: BlobsBundleV1
     shouldOverrideBuilder*: bool
 
+  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#response-1
+  GetPayloadV4Response* = object
+    executionPayload*: ExecutionPayloadV3
+    blockValue*: UInt256
+    blobsBundle*: BlobsBundleV1
+    shouldOverrideBuilder*: bool
+
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
     GetPayloadV2Response |
-    GetPayloadV3Response
+    GetPayloadV3Response |
+    GetPayloadV4Response
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/common.md#errors

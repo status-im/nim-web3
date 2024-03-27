@@ -54,10 +54,13 @@ derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 #------------------------------------------------------------------------------
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
+DepositReceiptV1.useDefaultSerializationIn JrpcConv
+ExitV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
+ExecutionPayloadV4.useDefaultSerializationIn JrpcConv
 BlobsBundleV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadBodyV1.useDefaultSerializationIn JrpcConv
 PayloadAttributesV1.useDefaultSerializationIn JrpcConv
@@ -71,6 +74,7 @@ TransitionConfigurationV1.useDefaultSerializationIn JrpcConv
 GetPayloadV2Response.useDefaultSerializationIn JrpcConv
 GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
+GetPayloadV4Response.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # execution_types

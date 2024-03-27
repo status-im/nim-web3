@@ -73,7 +73,7 @@ type
     data*: seq[byte]
     sender*: TSender
 
-proc getValue(params: RequestParamsRx, field: string, FieldType: type):
+func getValue(params: RequestParamsRx, field: string, FieldType: type):
         Result[FieldType, string] {.gcsafe, raises: [].} =
   try:
     for param in params.named:
@@ -86,7 +86,7 @@ proc getValue(params: RequestParamsRx, field: string, FieldType: type):
   except CatchableError as exc:
     return err(exc.msg)
 
-proc toJsonString(params: RequestParamsRx):
+func toJsonString(params: RequestParamsRx):
        Result[JsonString, string] {.gcsafe, raises: [].} =
   try:
     let res = JrpcSys.encode(params.toTx)
@@ -111,7 +111,7 @@ proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
 
   ok()
 
-proc newWeb3*(provider: RpcClient): Web3 =
+func newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
   result.subscriptions = initTable[string, Subscription]()
   let w3 = result
@@ -221,7 +221,7 @@ proc subscribeForLogs*(w: Web3, options: FilterOptions,
   else:
     result.historicalEventsProcessed = true
 
-proc addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Topic): FilterOptions =
+func addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Topic): FilterOptions =
   result = options
   if result.address.kind == slkNull:
     result.address = AddressOrList(kind: slkSingle, single: address)
@@ -429,16 +429,16 @@ proc exec*[T](c: ContractInvocation[T, Web3SenderImpl], value = 0.u256, gas = 30
 #let response = waitFor w3.eth.eth_sendTransaction(cc)
 #echo response
 
-proc contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
+func contractSender*(web3: Web3, T: typedesc, toAddress: Address): Sender[T] =
   Sender[T](sender: Web3SenderImpl(web3: web3, contractAddress: toAddress))
 
-proc createMutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typedesc, data: sink seq[byte]): ContractInvocation[ReturnType, Web3SenderImpl] {.inline.} =
+func createMutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typedesc, data: sink seq[byte]): ContractInvocation[ReturnType, Web3SenderImpl] {.inline.} =
   ContractInvocation[ReturnType, Web3SenderImpl](sender: sender, data: data)
 
-proc createImmutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typedesc, data: sink seq[byte]): ContractInvocation[ReturnType, Web3SenderImpl] {.inline.} =
+func createImmutableContractInvocation*(sender: Web3SenderImpl, ReturnType: typedesc, data: sink seq[byte]): ContractInvocation[ReturnType, Web3SenderImpl] {.inline.} =
   ContractInvocation[ReturnType, Web3SenderImpl](sender: sender, data: data)
 
-proc contractInstance*(
+func contractInstance*(
     web3: Web3, T: typedesc, toAddress: Address): AsyncSender[T] =
   AsyncSender[T](
     sender: Web3AsyncSenderImpl(
@@ -499,7 +499,7 @@ proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async.} 
 proc subscribe*[TContract](s: Sender[TContract], t: typedesc, cb: proc): Future[Subscription] {.inline.} =
   subscribe(s, t, FilterOptions(), cb, SubscriptionErrorHandler nil)
 
-proc copy[T](s: AsyncSender[T]): AsyncSender[T] =
+func copy[T](s: AsyncSender[T]): AsyncSender[T] =
   result = s
   result.sender.new()
   result.sender[] = s.sender[]
