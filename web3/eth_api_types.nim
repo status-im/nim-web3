@@ -250,10 +250,13 @@ type
 
   FeeHistoryReward* = array[2, Quantity]
 
+  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/eth/fee_market.yaml#L50
   FeeHistoryResult* = object
     oldestBlock*: Quantity
     baseFeePerGas*: seq[Quantity]
+    baseFeePerBlobGas*: seq[Quantity]
     gasUsedRatio*: seq[float64]
+    blobGasUsedRatio*: seq[float64]
     reward*: seq[FeeHistoryReward]
 
 {.push raises: [].}
