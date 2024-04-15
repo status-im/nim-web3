@@ -248,16 +248,16 @@ type
     of bidAlias:
       alias*: string
 
-  FeeHistoryReward* = array[2, Quantity]
+  FeeHistoryReward* = seq[UInt256]
 
   # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/eth/fee_market.yaml#L50
   FeeHistoryResult* = object
     oldestBlock*: Quantity
-    baseFeePerGas*: seq[Quantity]
-    baseFeePerBlobGas*: seq[Quantity]
+    baseFeePerGas*: seq[UInt256]
+    baseFeePerBlobGas*: seq[UInt256]
     gasUsedRatio*: seq[float64]
     blobGasUsedRatio*: seq[float64]
-    reward*: seq[FeeHistoryReward]
+    reward*: Option[seq[FeeHistoryReward]]
 
 {.push raises: [].}
 
