@@ -153,3 +153,11 @@ proc installHandlers*(server: RpcServer) =
     if x != "-1".JsonString:
       res = decodeFromString(x, seq[byte])
     return res.RlpEncodedBytes
+
+  server.rpc("eth_blobBaseFee") do(x: JsonString) -> Quantity:
+    if x != "-1".JsonString:
+      return decodeFromString(x, Quantity)
+
+  server.rpc("eth_getLogs") do(x: JsonString, filterOptions: FilterOptions) -> seq[LogObject]:
+    if x != "-1".JsonString:
+      return decodeFromString(x, seq[LogObject])
