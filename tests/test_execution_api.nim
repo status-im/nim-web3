@@ -12,6 +12,7 @@ import
 type
   TestData = tuple
     file: string
+    description: string
     input: RequestTx
     output: ResponseRx
 
@@ -82,13 +83,37 @@ func toTx(req: RequestRx): RequestTx =
   )
 
 proc extractTest(fileName: string): TestData {.raises: [IOError, SerializationError].} =
-  let
-    lines = readFile(fileName).split("\n")
-    input = lines[0].strip()
-    output = lines[1].strip()
+  let lines = readFile(fileName).split("\n")
+  var
+    description = ""
+    input = ""
+    output = ""
+  for line in lines:
+    if line == "":
+      continue
+    if line.startsWith("// "):
+      if description == "":
+        description = line.strip()
+      else:
+        description = description & " " & line.strip()
+    elif line.startsWith(">> "):
+      if input != "":
+        raise (ref IOError)(msg: "Test contains multiple inputs: " & fileName)
+      input = line
+    elif line.startsWith("<< "):
+      if output != "":
+        raise (ref IOError)(msg: "Test contains multiple outputs: " & fileName)
+      output = line
+  if input == "":
+    raise (ref IOError)(msg: "Test contains no input: " & fileName)
+  if output == "":
+    raise (ref IOError)(msg: "Test contains no output: " & fileName)
+  input = input.strip()
+  output = output.strip()
 
   return (
     file: fileName,
+    description: description,
     input: JrpcSys.decode(input, RequestRx).toTx,
     output: JrpcSys.decode(output, ResponseRx),
   )
@@ -117,6 +142,7 @@ proc callWithParams(client: RpcClient, data: TestData): Future[bool] {.async.} =
 
       if not compareValue(wantVal, getVal):
         debugEcho data.file
+        debugEcho data.description
         debugEcho "EXPECT: ", res.result
         debugEcho "GET: ", resJson.string
         return false
@@ -147,6 +173,7 @@ suite "Ethereum execution api":
   srv.start()
 
   for idx, item in testCases:
+    checkpoint item.file & ": " & item.description
     let input = item.input
     let methodName = input.`method`
 
