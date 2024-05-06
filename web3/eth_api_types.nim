@@ -55,10 +55,10 @@ type
     maxFeePerBlobGas*: Option[UInt256]
     blobVersionedHashes*: Option[seq[Hash256]]
 
-    # EIP-4844 blob side car
-    blobs*: Option[Blob]
-    commitments*: Option[KZGCommitment]
-    proofs*: Option[KZGProof]
+    # EIP-4844 blob sidecars
+    blobs*: Option[seq[Blob]]
+    commitments*: Option[seq[KZGCommitment]]
+    proofs*: Option[seq[KZGProof]]
 
   ## A block header object
   BlockHeader* = ref object
