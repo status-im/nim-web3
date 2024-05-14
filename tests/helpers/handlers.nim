@@ -27,7 +27,7 @@ proc installHandlers*(server: RpcServer) =
     return SyncingStatus(syncing: false)
 
   server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> TxHash:
-    let tx = rlp.decode(data, Transaction)
+    let tx = rlp.decode(data, PooledTransaction)
     let h = rlpHash(tx)
     return TxHash(h.data)
 
