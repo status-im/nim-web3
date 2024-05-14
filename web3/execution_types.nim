@@ -35,7 +35,7 @@ type
     blobGasUsed*: Option[Quantity]
     excessBlobGas*: Option[Quantity]
     depositReceipts*: Option[seq[DepositReceiptV1]]
-    exits*: Option[seq[ExitV1]]
+    exits*: Option[seq[WithdrawalRequestV1]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -273,7 +273,7 @@ func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
     blobGasUsed: p.blobGasUsed.get(0.Quantity),
     excessBlobGas: p.excessBlobGas.get(0.Quantity),
     depositReceipts: p.depositReceipts.get(newSeq[DepositReceiptV1]()),
-    exits: p.exits.get(newSeq[ExitV1]())
+    exits: p.exits.get(newSeq[WithdrawalRequestV1]())
   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -462,4 +462,3 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
     blobsBundle: some(x.blobsBundle),
     shouldOverrideBuilder: some(x.shouldOverrideBuilder)
   )
-
