@@ -72,7 +72,7 @@ suite "Execution types tests":
       index: 9.Quantity
     )
 
-    exit = ExitV1(
+    exit = WithdrawalRequestV1(
       sourceAddress: address(7),
       validatorPublicKey: FixedBytes[48].conv(9)
     )
@@ -176,7 +176,7 @@ suite "Execution types tests":
     check bad41.version == Version.V4
 
     var bad42 = v4
-    bad42.exits = none(seq[ExitV1])
+    bad42.exits = none(seq[WithdrawalRequestV1])
     check bad42.version == Version.V4
 
     let v41 = bad41.V4
@@ -185,7 +185,7 @@ suite "Execution types tests":
 
     let v42 = bad42.V4
     check v42.depositReceipts == v4.depositReceipts.get
-    check v42.exits == newSeq[ExitV1]()
+    check v42.exits == newSeq[WithdrawalRequestV1]()
 
     # roundtrip
     let v4p = v4.V4

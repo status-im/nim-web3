@@ -25,7 +25,7 @@ type
     address*: Address
     amount*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#depositreceiptv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#depositrequestv1
   DepositReceiptV1* = object
     pubkey*: FixedBytes[48]
     withdrawalCredentials*: FixedBytes[32]
@@ -33,10 +33,11 @@ type
     signature*: FixedBytes[96]
     index*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#exitv1
-  ExitV1* = object
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#withdrawalrequestv1
+  WithdrawalRequestV1* = object
     sourceAddress*: Address
     validatorPublicKey*: FixedBytes[48]
+    amount*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#executionpayloadv1
   ExecutionPayloadV1* = object
@@ -123,7 +124,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#executionpayloadv4
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#executionpayloadv4
   ExecutionPayloadV4* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -143,7 +144,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
     depositReceipts*: seq[DepositReceiptV1]
-    exits*: seq[ExitV1]
+    exits*: seq[WithdrawalRequestV1]
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
