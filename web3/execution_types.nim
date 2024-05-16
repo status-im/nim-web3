@@ -272,8 +272,8 @@ func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
     withdrawals: p.withdrawals.get,
     blobGasUsed: p.blobGasUsed.get(0.Quantity),
     excessBlobGas: p.excessBlobGas.get(0.Quantity),
-    depositReceipts: p.depositReceipts.get(newSeq[DepositReceiptV1]()),
-    exits: p.exits.get(newSeq[WithdrawalRequestV1]())
+    depositRequests: p.depositReceipts.get(newSeq[DepositReceiptV1]()),
+    withdrawalRequests: p.exits.get(newSeq[WithdrawalRequestV1]())
   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -390,8 +390,8 @@ func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
     withdrawals: some(p.withdrawals),
     blobGasUsed: some(p.blobGasUsed),
     excessBlobGas: some(p.excessBlobGas),
-    depositReceipts: some(p.depositReceipts),
-    exits: some(p.exits)
+    depositReceipts: some(p.depositRequests),
+    exits: some(p.withdrawalRequests)
   )
 
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =

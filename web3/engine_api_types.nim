@@ -143,8 +143,13 @@ type
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
-    depositReceipts*: seq[DepositReceiptV1]
-    exits*: seq[WithdrawalRequestV1]
+
+    # https://github.com/ethereum/consensus-specs/pull/3757
+    # https://github.com/ethereum/execution-apis/pull/544
+    # mainly for devnet-0
+    depositRequests*: seq[DepositReceiptV1]
+
+    withdrawalRequests*: seq[WithdrawalRequestV1]
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |

@@ -180,12 +180,12 @@ suite "Execution types tests":
     check bad42.version == Version.V4
 
     let v41 = bad41.V4
-    check v41.depositReceipts == newSeq[DepositReceiptV1]()
-    check v41.exits == v4.exits.get
+    check v41.depositRequests == newSeq[DepositReceiptV1]()
+    check v41.withdrawalRequests == v4.exits.get
 
     let v42 = bad42.V4
-    check v42.depositReceipts == v4.depositReceipts.get
-    check v42.exits == newSeq[WithdrawalRequestV1]()
+    check v42.depositRequests == v4.depositReceipts.get
+    check v42.withdrawalRequests == newSeq[WithdrawalRequestV1]()
 
     # roundtrip
     let v4p = v4.V4
