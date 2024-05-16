@@ -12,6 +12,8 @@ import
   stint,
   primitives
 
+from ./eth_api_types import AccessTuple
+
 export
   options, stint, primitives
 
@@ -124,6 +126,29 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
+  # https://eips.ethereum.org/EIPS/eip-6493
+  TransactionPayload* = object
+    `type`*: Option[Quantity]
+    chainId*: Option[Quantity]
+    nonce*: Option[Quantity]
+    maxFeePerGas*: Option[UInt256]
+    gas*: Option[Quantity]
+    to*: Option[Address]
+    value*: Option[UInt256]
+    input*: Option[seq[byte]]
+    accessList*: Option[seq[AccessTuple]]
+    maxPriorityFeePerGas*: Option[UInt256]
+    maxFeePerBlobGas*: Option[UInt256]
+    blobVersionedHashes*: Option[seq[FixedBytes[32]]]
+
+  TransactionSignature* = object
+    `from`*: Option[Address]
+    ecdsaSignature*: Option[FixedBytes[65]]
+
+  Transaction* = object
+    payload*: TransactionPayload
+    signature*: TransactionSignature
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#executionpayloadv4
   ExecutionPayloadV4* = object
     parentHash*: Hash256
@@ -139,7 +164,7 @@ type
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
     blockHash*: Hash256
-    transactions*: seq[TypedTransaction]
+    transactions*: seq[Transaction]
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity

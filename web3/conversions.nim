@@ -53,6 +53,10 @@ derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 # engine_api_types
 #------------------------------------------------------------------------------
 
+TransactionPayload.useDefaultSerializationIn JrpcConv
+TransactionSignature.useDefaultSerializationIn JrpcConv
+Transaction.useDefaultSerializationIn JrpcConv
+
 WithdrawalV1.useDefaultSerializationIn JrpcConv
 DepositReceiptV1.useDefaultSerializationIn JrpcConv
 WithdrawalRequestV1.useDefaultSerializationIn JrpcConv

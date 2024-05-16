@@ -253,28 +253,28 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     excessBlobGas: p.excessBlobGas.get(0.Quantity)
   )
 
-func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
-  ExecutionPayloadV4(
-    parentHash: p.parentHash,
-    feeRecipient: p.feeRecipient,
-    stateRoot: p.stateRoot,
-    receiptsRoot: p.receiptsRoot,
-    logsBloom: p.logsBloom,
-    prevRandao: p.prevRandao,
-    blockNumber: p.blockNumber,
-    gasLimit: p.gasLimit,
-    gasUsed: p.gasUsed,
-    timestamp: p.timestamp,
-    extraData: p.extraData,
-    baseFeePerGas: p.baseFeePerGas,
-    blockHash: p.blockHash,
-    transactions: p.transactions,
-    withdrawals: p.withdrawals.get,
-    blobGasUsed: p.blobGasUsed.get(0.Quantity),
-    excessBlobGas: p.excessBlobGas.get(0.Quantity),
-    depositRequests: p.depositReceipts.get(newSeq[DepositReceiptV1]()),
-    withdrawalRequests: p.exits.get(newSeq[WithdrawalRequestV1]())
-  )
+# func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
+#   ExecutionPayloadV4(
+#     parentHash: p.parentHash,
+#     feeRecipient: p.feeRecipient,
+#     stateRoot: p.stateRoot,
+#     receiptsRoot: p.receiptsRoot,
+#     logsBloom: p.logsBloom,
+#     prevRandao: p.prevRandao,
+#     blockNumber: p.blockNumber,
+#     gasLimit: p.gasLimit,
+#     gasUsed: p.gasUsed,
+#     timestamp: p.timestamp,
+#     extraData: p.extraData,
+#     baseFeePerGas: p.baseFeePerGas,
+#     blockHash: p.blockHash,
+#     transactions: p.transactions,
+#     withdrawals: p.withdrawals.get,
+#     blobGasUsed: p.blobGasUsed.get(0.Quantity),
+#     excessBlobGas: p.excessBlobGas.get(0.Quantity),
+#     depositRequests: p.depositReceipts.get(newSeq[DepositReceiptV1]()),
+#     withdrawalRequests: p.exits.get(newSeq[WithdrawalRequestV1]())
+#   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
   ExecutionPayloadV1(
@@ -371,28 +371,28 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
     excessBlobGas: some(p.excessBlobGas)
   )
 
-func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
-  ExecutionPayload(
-    parentHash: p.parentHash,
-    feeRecipient: p.feeRecipient,
-    stateRoot: p.stateRoot,
-    receiptsRoot: p.receiptsRoot,
-    logsBloom: p.logsBloom,
-    prevRandao: p.prevRandao,
-    blockNumber: p.blockNumber,
-    gasLimit: p.gasLimit,
-    gasUsed: p.gasUsed,
-    timestamp: p.timestamp,
-    extraData: p.extraData,
-    baseFeePerGas: p.baseFeePerGas,
-    blockHash: p.blockHash,
-    transactions: p.transactions,
-    withdrawals: some(p.withdrawals),
-    blobGasUsed: some(p.blobGasUsed),
-    excessBlobGas: some(p.excessBlobGas),
-    depositReceipts: some(p.depositRequests),
-    exits: some(p.withdrawalRequests)
-  )
+# func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
+#   ExecutionPayload(
+#     parentHash: p.parentHash,
+#     feeRecipient: p.feeRecipient,
+#     stateRoot: p.stateRoot,
+#     receiptsRoot: p.receiptsRoot,
+#     logsBloom: p.logsBloom,
+#     prevRandao: p.prevRandao,
+#     blockNumber: p.blockNumber,
+#     gasLimit: p.gasLimit,
+#     gasUsed: p.gasUsed,
+#     timestamp: p.timestamp,
+#     extraData: p.extraData,
+#     baseFeePerGas: p.baseFeePerGas,
+#     blockHash: p.blockHash,
+#     transactions: p.transactions,
+#     withdrawals: some(p.withdrawals),
+#     blobGasUsed: some(p.blobGasUsed),
+#     excessBlobGas: some(p.excessBlobGas),
+#     depositReceipts: some(p.depositRequests),
+#     exits: some(p.withdrawalRequests)
+#   )
 
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
   ExecutionPayload(
@@ -430,13 +430,13 @@ func V3*(res: GetPayloadResponse): GetPayloadV3Response =
     shouldOverrideBuilder: res.shouldOverrideBuilder.get(false)
   )
 
-func V4*(res: GetPayloadResponse): GetPayloadV4Response =
-  GetPayloadV4Response(
-    executionPayload: res.executionPayload.V4,
-    blockValue: res.blockValue.get,
-    blobsBundle: res.blobsBundle.get(BlobsBundleV1()),
-    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false)
-  )
+# func V4*(res: GetPayloadResponse): GetPayloadV4Response =
+#   GetPayloadV4Response(
+#     executionPayload: res.executionPayload.V4,
+#     blockValue: res.blockValue.get,
+#     blobsBundle: res.blobsBundle.get(BlobsBundleV1()),
+#     shouldOverrideBuilder: res.shouldOverrideBuilder.get(false)
+#   )
 
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
   GetPayloadResponse(executionPayload: x.executionPayload)
@@ -455,10 +455,10 @@ func getPayloadResponse*(x: GetPayloadV3Response): GetPayloadResponse =
     shouldOverrideBuilder: some(x.shouldOverrideBuilder)
   )
 
-func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
-  GetPayloadResponse(
-    executionPayload: x.executionPayload.executionPayload,
-    blockValue: some(x.blockValue),
-    blobsBundle: some(x.blobsBundle),
-    shouldOverrideBuilder: some(x.shouldOverrideBuilder)
-  )
+# func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
+#   GetPayloadResponse(
+#     executionPayload: x.executionPayload.executionPayload,
+#     blockValue: some(x.blockValue),
+#     blobsBundle: some(x.blobsBundle),
+#     shouldOverrideBuilder: some(x.shouldOverrideBuilder)
+#   )
