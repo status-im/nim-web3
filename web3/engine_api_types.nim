@@ -127,18 +127,21 @@ type
     excessBlobGas*: Quantity
 
   # https://eips.ethereum.org/EIPS/eip-6493
+  TransactionFeesPerGas* = object
+    regular*: Option[UInt256]
+    blob*: Option[UInt256]
+
   TransactionPayload* = object
     `type`*: Option[Quantity]
     chainId*: Option[Quantity]
     nonce*: Option[Quantity]
-    maxFeePerGas*: Option[UInt256]
+    maxFeesPerGas*: Option[TransactionFeesPerGas]
     gas*: Option[Quantity]
     to*: Option[Address]
     value*: Option[UInt256]
     input*: Option[seq[byte]]
     accessList*: Option[seq[AccessTuple]]
-    maxPriorityFeePerGas*: Option[UInt256]
-    maxFeePerBlobGas*: Option[UInt256]
+    maxPriorityFeesPerGas*: Option[TransactionFeesPerGas]
     blobVersionedHashes*: Option[seq[FixedBytes[32]]]
 
   TransactionSignature* = object
