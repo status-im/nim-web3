@@ -75,6 +75,7 @@ GetPayloadV2Response.useDefaultSerializationIn JrpcConv
 GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
+ClientVersionV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # execution_types

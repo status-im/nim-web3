@@ -44,6 +44,9 @@ createRpcSigsFromNim(RpcClient):
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
 
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#engine_getclientversionv1
+  proc engine_getClientVersionV1(version: ClientVersionV1): seq[ClientVersionV1]
+
   # convenience apis
   proc engine_newPayloadV1(payload: ExecutionPayload): PayloadStatusV1
   proc engine_newPayloadV2(payload: ExecutionPayload): PayloadStatusV1
@@ -135,3 +138,9 @@ template exchangeCapabilities*(
     rpcClient: RpcClient,
     methods: seq[string]): Future[seq[string]] =
   engine_exchangeCapabilities(rpcClient, methods)
+  
+template getClientVersion*(
+    rpcClient: RpcClient,
+    version: ClientVersionV1): Future[seq[ClientVersionV1]] =
+  engine_getClientVersionV1(rpcClient, version)
+  

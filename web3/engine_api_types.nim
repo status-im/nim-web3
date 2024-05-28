@@ -265,6 +265,13 @@ type
     GetPayloadV3Response |
     GetPayloadV4Response
 
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#engine_getclientversionv1
+  ClientVersionV1* = object
+    code*: string # e.g. NB or BU
+    name*: string # Human-readable name of the client, e.g. Lighthouse or go-ethereum
+    version*: string #  the version string of the current implementation e.g. v4.6.0 or 1.0.0-alpha.1 or 1.0.0+20130313144700
+    commit*: FixedBytes[4]
+
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/common.md#errors
   engineApiParseError* = -32700
