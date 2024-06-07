@@ -50,10 +50,14 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
-  signTransaction(tr, pk)
+  if s.chainId.isSome():
+    tr.chainId = ChainId(s.chainId.get)
+    signTransactionEip155(tr, pk)
+  else:
+    signTransaction(tr, pk)
   return rlp.encode(tr)
 
-func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] =
+func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] {.deprecated: "Provide chainId in TransactionArgs".} =
   var tr = Transaction(txType: TxLegacy, chainId: chainId)
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
