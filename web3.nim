@@ -304,7 +304,7 @@ proc send*(web3: Web3, c: TransactionArgs): Future[TxHash] {.async.} =
   else:
     return await web3.provider.eth_sendTransaction(c)
 
-proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[TxHash] {.async.} =
+proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[TxHash] {.deprecated: "Provide chainId in TransactionArgs", async.} =
   doAssert(web3.privateKey.isSome())
   var cc = c
   if cc.nonce.isNone:
@@ -325,6 +325,8 @@ proc sendData(web3: Web3,
                else: none(Quantity)
     nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
             else: none(Quantity)
+    chainId = if chainId.isSome(): some(Quantity(chainId.get))
+              else: none(Quantity)
 
     cc = TransactionArgs(
       data: some(data),
@@ -334,12 +336,10 @@ proc sendData(web3: Web3,
       value: some(value),
       nonce: nonce,
       gasPrice: gasPrice,
+      chainId: chainId
     )
 
-  if chainId.isNone:
-    return await web3.send(cc)
-  else:
-    return await web3.send(cc, chainId.get)
+  return await web3.send(cc)
 
 proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            value = 0.u256,
