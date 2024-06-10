@@ -8,8 +8,9 @@
 # those terms.
 
 import
-  std/[options, json, tables, uri, macros],
+  std/[json, tables, uri, macros],
   stint, httputils, chronos,
+  results,
   json_rpc/[rpcclient, jsonmarshal],
   json_rpc/private/jrpc_sys,
   eth/keys,
@@ -34,8 +35,8 @@ type
     provider*: RpcClient
     subscriptions*: Table[string, Subscription]
     defaultAccount*: Address
-    privateKey*: Option[PrivateKey]
-    lastKnownNonce*: Option[Quantity]
+    privateKey*: Opt[PrivateKey]
+    lastKnownNonce*: Opt[Quantity]
     onDisconnect*: proc() {.gcsafe, raises: [].}
 
   Web3SenderImpl = ref object
@@ -49,7 +50,7 @@ type
     value*: UInt256
     gas*: uint64
     gasPrice*: int
-    chainId*: Option[ChainId]
+    chainId*: Opt[ChainId]
     blockNumber*: BlockNumber
 
   Sender*[T] = ContractInstance[T, Web3SenderImpl]
@@ -182,7 +183,7 @@ proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async.} =
     echo "Caught exception in getHistoricalEvents: ", e.msg
     echo e.getStackTrace()
 
-proc subscribe*(w: Web3, name: string, options: Option[FilterOptions],
+proc subscribe*(w: Web3, name: string, options: Opt[FilterOptions],
                 eventHandler: SubscriptionEventHandler,
                 errorHandler: SubscriptionErrorHandler): Future[Subscription]
                {.async.} =
@@ -215,7 +216,7 @@ proc subscribeForLogs*(w: Web3, options: FilterOptions,
                        errorHandler: SubscriptionErrorHandler,
                        withHistoricEvents = true): Future[Subscription]
                       {.async.} =
-  result = await subscribe(w, "logs", some(options), logsHandler, errorHandler)
+  result = await subscribe(w, "logs", Opt.some(options), logsHandler, errorHandler)
   if withHistoricEvents:
     discard getHistoricalEvents(result, options)
   else:
@@ -249,7 +250,7 @@ proc subscribeForBlockHeaders*(w: Web3,
 
   # `nil` options so that we skip sending an empty `{}` object as an extra argument
   # to geth for `newHeads`: https://github.com/ethereum/go-ethereum/issues/21588
-  result = await subscribe(w, "newHeads", none(FilterOptions), eventHandler, errorHandler)
+  result = await subscribe(w, "newHeads", Opt.none(FilterOptions), eventHandler, errorHandler)
   result.historicalEventsProcessed = true
 
 proc unsubscribe*(s: Subscription): Future[void] {.async.} =
@@ -258,9 +259,9 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
 proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
-                 fromBlock = none(RtBlockIdentifier),
-                 toBlock = none(RtBlockIdentifier),
-                 blockHash = none(BlockHash)): Future[seq[JsonString]] =
+                 fromBlock = Opt.none(RtBlockIdentifier),
+                 toBlock = Opt.none(RtBlockIdentifier),
+                 blockHash = Opt.none(BlockHash)): Future[seq[JsonString]] =
 
   var options = FilterOptions(
     address: AddressOrList(kind: slkSingle, single: s.contractAddress),
@@ -279,9 +280,9 @@ proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
 
 proc getJsonLogs*[TContract](s: Sender[TContract],
                   EventName: type,
-                  fromBlock = none(RtBlockIdentifier),
-                  toBlock = none(RtBlockIdentifier),
-                  blockHash = none(BlockHash)): Future[seq[JsonString]] {.inline.} =
+                  fromBlock = Opt.none(RtBlockIdentifier),
+                  toBlock = Opt.none(RtBlockIdentifier),
+                  blockHash = Opt.none(BlockHash)): Future[seq[JsonString]] {.inline.} =
   mixin eventTopic
   getJsonLogs(s.sender, eventTopic(EventName), fromBlock, toBlock, blockHash)
 
@@ -292,13 +293,13 @@ proc nextNonce*(web3: Web3): Future[Quantity] {.async.} =
   else:
     let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress.Address
     result = await web3.provider.eth_getTransactionCount(fromAddress, "latest")
-    web3.lastKnownNonce = some result
+    web3.lastKnownNonce = Opt.some result
 
 proc send*(web3: Web3, c: TransactionArgs): Future[TxHash] {.async.} =
   if web3.privateKey.isSome():
     var cc = c
     if cc.nonce.isNone:
-      cc.nonce = some(await web3.nextNonce())
+      cc.nonce = Opt.some(await web3.nextNonce())
     let t = encodeTransaction(cc, web3.privateKey.get())
     return await web3.provider.eth_sendRawTransaction(t)
   else:
@@ -308,7 +309,7 @@ proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[TxHash] {.d
   doAssert(web3.privateKey.isSome())
   var cc = c
   if cc.nonce.isNone:
-    cc.nonce = some(await web3.nextNonce())
+    cc.nonce = Opt.some(await web3.nextNonce())
   let t = encodeTransaction(cc, web3.privateKey.get(), chainId)
   return await web3.provider.eth_sendRawTransaction(t)
 
@@ -319,21 +320,21 @@ proc sendData(web3: Web3,
               value: UInt256,
               gas: uint64,
               gasPrice: int,
-              chainId = none(ChainId)): Future[TxHash] {.async.} =
+              chainId = Opt.none(ChainId)): Future[TxHash] {.async.} =
   let
-    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: some(gasPrice.Quantity)
-               else: none(Quantity)
-    nonce = if web3.privateKey.isSome(): some(await web3.nextNonce())
-            else: none(Quantity)
-    chainId = if chainId.isSome(): some(Quantity(chainId.get))
-              else: none(Quantity)
+    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: Opt.some(gasPrice.Quantity)
+               else: Opt.none(Quantity)
+    nonce = if web3.privateKey.isSome(): Opt.some(await web3.nextNonce())
+            else: Opt.none(Quantity)
+    chainId = if chainId.isSome(): Opt.some(Quantity(chainId.get))
+              else: Opt.none(Quantity)
 
     cc = TransactionArgs(
-      data: some(data),
-      `from`: some(defaultAccount),
-      to: some(contractAddress),
-      gas: some(Quantity(gas)),
-      value: some(value),
+      data: Opt.some(data),
+      `from`: Opt.some(defaultAccount),
+      to: Opt.some(contractAddress),
+      gas: Opt.some(Quantity(gas)),
+      value: Opt.some(value),
       nonce: nonce,
       gasPrice: gasPrice,
       chainId: chainId
@@ -345,14 +346,16 @@ proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            value = 0.u256,
            gas = 3000000'u64,
            gasPrice = 0): Future[TxHash] =
-  sendData(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, gasPrice)
+  sendData(c.sender.web3, c.sender.contractAddress,
+    c.sender.web3.defaultAccount, c.data, value, gas, gasPrice)
 
 proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            chainId: ChainId,
            value = 0.u256,
            gas = 3000000'u64,
            gasPrice = 0): Future[TxHash] =
-  sendData(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, some(chainId))
+  sendData(c.sender.web3, c.sender.contractAddress,
+    c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, some(chainId))
 
 proc callAux(
     web3: Web3,
@@ -363,11 +366,11 @@ proc callAux(
     gas = 3000000'u64,
     blockNumber = high(BlockNumber)): Future[seq[byte]] {.async.} =
   var cc: TransactionArgs
-  cc.data = some(data)
-  cc.source = some(defaultAccount)
-  cc.to = some(contractAddress)
-  cc.gas = some(Quantity(gas))
-  cc.value = some(value)
+  cc.data = Opt.some(data)
+  cc.source = Opt.some(defaultAccount)
+  cc.to = Opt.some(contractAddress)
+  cc.gas = Opt.some(Quantity(gas))
+  cc.value = Opt.some(value)
   result =
     if blockNumber != high(BlockNumber):
       await web3.provider.eth_call(cc, blockId(blockNumber))
@@ -379,7 +382,8 @@ proc call*[T](
     value = 0.u256,
     gas = 3000000'u64,
     blockNumber = high(BlockNumber)): Future[T] {.async.} =
-  let response = await callAux(c.sender.web3, c.sender.contractAddress, c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
+  let response = await callAux(c.sender.web3, c.sender.contractAddress,
+    c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
   if response.len > 0:
     discard decode(response, 0, 0, result)
   else:
@@ -468,11 +472,11 @@ proc createImmutableContractInvocation*(
 
 proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Address] {.async.} =
   var tr: TransactionArgs
-  tr.`from` = some(web3.defaultAccount)
-  tr.data = some(data)
-  tr.gas = Quantity(30000000).some
+  tr.`from` = Opt.some(web3.defaultAccount)
+  tr.data = Opt.some(data)
+  tr.gas = Opt.some Quantity(30000000)
   if gasPrice != 0:
-    tr.gasPrice = some(gasPrice.Quantity)
+    tr.gasPrice = Opt.some(gasPrice.Quantity)
 
   let h = await web3.send(tr)
   let r = await web3.getMinedTransactionReceipt(h)

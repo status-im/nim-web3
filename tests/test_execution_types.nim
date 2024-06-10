@@ -38,17 +38,17 @@ suite "Execution types tests":
       baseFeePerGas: 12.u256,
       blockHash: h256(13),
       transactions: @[TypedTransaction.conv(14)],
-      withdrawals: some(@[wd]),
-      blobGasUsed: some(15.Quantity),
-      excessBlobGas: some(16.Quantity),
+      withdrawals: Opt.some(@[wd]),
+      blobGasUsed: Opt.some(15.Quantity),
+      excessBlobGas: Opt.some(16.Quantity),
     )
 
     attr = PayloadAttributes(
       timestamp: 1.Quantity,
       prevRandao: h256(2),
       suggestedFeeRecipient: address(3),
-      withdrawals: some(@[wd]),
-      parentBeaconBlockRoot: some(h256(4)),
+      withdrawals: Opt.some(@[wd]),
+      parentBeaconBlockRoot: Opt.some(h256(4)),
     )
 
     blobs = BlobsBundleV1(
@@ -59,9 +59,9 @@ suite "Execution types tests":
 
     response = GetPayloadResponse(
       executionPayload: payload,
-      blockValue: some(1.u256),
-      blobsBundle: some(blobs),
-      shouldOverrideBuilder: some(false),
+      blockValue: Opt.some(1.u256),
+      blobsBundle: Opt.some(blobs),
+      shouldOverrideBuilder: Opt.some(false),
     )
 
     deposit = DepositReceiptV1(
@@ -79,14 +79,14 @@ suite "Execution types tests":
 
   test "payload version":
     var badv31 = payload
-    badv31.blobGasUsed = none(Quantity)
+    badv31.blobGasUsed = Opt.none(Quantity)
     var badv32 = payload
-    badv32.excessBlobGas = none(Quantity)
+    badv32.excessBlobGas = Opt.none(Quantity)
     var v2 = payload
-    v2.blobGasUsed = none(Quantity)
-    v2.excessBlobGas = none(Quantity)
+    v2.blobGasUsed = Opt.none(Quantity)
+    v2.excessBlobGas = Opt.none(Quantity)
     var v1 = v2
-    v1.withdrawals = none(seq[WithdrawalV1])
+    v1.withdrawals = Opt.none(seq[WithdrawalV1])
     check badv31.version == Version.V3
     check badv32.version == Version.V3
     check v2.version == Version.V2
@@ -104,23 +104,23 @@ suite "Execution types tests":
 
   test "attr version":
     var v2 = attr
-    v2.parentBeaconBlockRoot = none(Hash256)
+    v2.parentBeaconBlockRoot = Opt.none(Hash256)
     var v1 = v2
-    v1.withdrawals = none(seq[WithdrawalV1])
+    v1.withdrawals = Opt.none(seq[WithdrawalV1])
     check attr.version == Version.V3
     check v2.version == Version.V2
     check v1.version == Version.V1
 
   test "response version":
     var badv31 = response
-    badv31.blobsBundle = none(BlobsBundleV1)
+    badv31.blobsBundle = Opt.none(BlobsBundleV1)
     var badv32 = response
-    badv32.shouldOverrideBuilder = none(bool)
+    badv32.shouldOverrideBuilder = Opt.none(bool)
     var v2 = response
-    v2.blobsBundle = none(BlobsBundleV1)
-    v2.shouldOverrideBuilder = none(bool)
+    v2.blobsBundle = Opt.none(BlobsBundleV1)
+    v2.shouldOverrideBuilder = Opt.none(bool)
     var v1 = v2
-    v1.blockValue = none(UInt256)
+    v1.blockValue = Opt.none(UInt256)
     check badv31.version == Version.V3
     check badv32.version == Version.V3
     check v2.version == Version.V2
@@ -167,16 +167,16 @@ suite "Execution types tests":
 
   test "payload version 4":
     var v4 = payload
-    v4.depositReceipts = some(@[deposit])
-    v4.exits = some(@[exit])
+    v4.depositReceipts = Opt.some(@[deposit])
+    v4.exits = Opt.some(@[exit])
     check v4.version == Version.V4
 
     var bad41 = v4
-    bad41.depositReceipts = none(seq[DepositReceiptV1])
+    bad41.depositReceipts = Opt.none(seq[DepositReceiptV1])
     check bad41.version == Version.V4
 
     var bad42 = v4
-    bad42.exits = none(seq[WithdrawalRequestV1])
+    bad42.exits = Opt.none(seq[WithdrawalRequestV1])
     check bad42.version == Version.V4
 
     let v41 = bad41.V4

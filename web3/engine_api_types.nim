@@ -8,12 +8,13 @@
 # those terms.
 
 import
-  std/[options, typetraits],
+  std/typetraits,
   stint,
-  primitives
+  primitives,
+  results
 
 export
-  options, stint, primitives
+  results, stint, primitives
 
 type
   TypedTransaction* = distinct seq[byte]
@@ -102,7 +103,7 @@ type
     baseFeePerGas*: UInt256
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
-    withdrawals*: Option[seq[WithdrawalV1]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
 
   # https://github.com/ethereum/execution-apis/blob/fe8e13c288c592ec154ce25c534e26cb7ce0530d/src/engine/cancun.md#executionpayloadv3
   ExecutionPayloadV3* = object
@@ -169,7 +170,7 @@ type
   #   https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadbodiesbyrangev1
   ExecutionPayloadBodyV1* = object
     transactions*: seq[TypedTransaction]
-    withdrawals*: Option[seq[WithdrawalV1]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
@@ -197,7 +198,7 @@ type
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
-    withdrawals*: Option[seq[WithdrawalV1]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
 
   SomePayloadAttributes* =
     PayloadAttributesV1 |
@@ -214,8 +215,8 @@ type
 
   PayloadStatusV1* = object
     status*: PayloadExecutionStatus
-    latestValidHash*: Option[BlockHash]
-    validationError*: Option[string]
+    latestValidHash*: Opt[BlockHash]
+    validationError*: Opt[string]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
@@ -228,7 +229,7 @@ type
 
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatusV1
-    payloadId*: Option[PayloadID]
+    payloadId*: Opt[PayloadID]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#transitionconfigurationv1
   TransitionConfigurationV1* = object

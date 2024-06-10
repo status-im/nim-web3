@@ -8,9 +8,10 @@
 # those terms.
 
 import
-  std/[options, json],
+  std/json,
   pkg/unittest2,
   chronos, stint,
+  results,
   ../web3,
   ./helpers/utils
 
@@ -265,8 +266,8 @@ suite "Contracts":
 
       echo "transfers: ", await ns.getJsonLogs(
         Transfer,
-        fromBlock = some(blockId(deployedAtBlock)),
-        toBlock = some(blockId(1000.BlockNumber)))
+        fromBlock = Opt.some(blockId(deployedAtBlock)),
+        toBlock = Opt.some(blockId(1000.BlockNumber)))
 
       await notifFut
       await s.unsubscribe()

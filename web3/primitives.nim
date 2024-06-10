@@ -8,11 +8,15 @@
 # those terms.
 
 import
-  std/[options, hashes, typetraits],
-  stint, stew/[byteutils, results]
+  std/[hashes, typetraits],
+  stint,
+  stew/byteutils,
+  results
 
 export
-  hashes, options, typetraits
+  hashes,
+  typetraits,
+  results
 
 const
   # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/engine/cancun.md#blobsbundlev1

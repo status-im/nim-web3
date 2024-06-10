@@ -79,6 +79,14 @@ proc rand[T](_: type seq[T]): seq[T] =
 proc rand[T](_: type SingleOrList[T]): SingleOrList[T] =
   SingleOrList[T](kind: slkSingle, single: rand(T))
 
+proc rand[X](T: type Opt[X]): T =
+  var x: array[1, byte]
+  discard randomBytes(x)
+  if x[0] > 127:
+    result = Opt.some(rand(X))
+  else:
+    result = Opt.none(X)
+
 proc rand[X: object](T: type X): T =
   result = T()
   for field in fields(result):
@@ -237,7 +245,7 @@ suite "JSON-RPC Quantity":
 
   test "AccessListResult with error":
     let z = AccessListResult(
-      error: some("error")
+      error: Opt.some("error")
     )
     let w = JrpcConv.encode(z)
     check w == """{"accessList":[],"error":"error","gasUsed":"0x0"}"""

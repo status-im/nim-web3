@@ -13,7 +13,6 @@ import
   stew/byteutils,
   faststreams/textio,
   json_rpc/jsonmarshal,
-  json_serialization/std/options,
   json_serialization/stew/results,
   json_serialization,
   ./primitives,
@@ -22,7 +21,7 @@ import
   ./execution_types
 
 export
-  options,
+  results,
   json_serialization,
   jsonmarshal
 

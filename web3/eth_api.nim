@@ -9,8 +9,7 @@
 # according to those terms.
 
 import
-  std/[json, options],
-  json_serialization/std/[options],
+  std/json,
   json_serialization/stew/results,
   json_rpc/[client, jsonmarshal],
   stint,
@@ -99,7 +98,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_feeHistory(
     blockCount: Quantity,
     newestBlock: BlockIdentifier,
-    rewardPercentiles: Option[seq[float64]]): FeeHistoryResult
+    rewardPercentiles: Opt[seq[float64]]): FeeHistoryResult
 
   proc debug_getRawBlock(blockId: BlockIdentifier): RlpEncodedBytes
   proc debug_getRawHeader(blockId: BlockIdentifier): RlpEncodedBytes

@@ -8,9 +8,10 @@
 # those terms.
 
 import
-  std/[options, json],
+  std/json,
   pkg/unittest2,
   chronos, stint,
+  results,
   ../web3,
   ./helpers/utils,
   ./helpers/primitives_utils,
@@ -43,7 +44,7 @@ suite "Deposit contract":
 
       var fut = newFuture[void]()
 
-      let options = FilterOptions(fromBlock: some(blockId(0.BlockNumber)))
+      let options = FilterOptions(fromBlock: Opt.some(blockId(0.BlockNumber)))
       let s = await ns.subscribe(DepositEvent, options) do (
           pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8])
           {.raises: [], gcsafe.}:
