@@ -1,5 +1,5 @@
 import
-  std/[macros, strutils, options],
+  std/[macros, strutils],
   nimcrypto/keccak,
   json_serialization,
   ./[encoding, eth_api_types],
@@ -114,7 +114,7 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
           result.add EventInput(name: $arg, typ: typ)
 
   var
-    constructor: Option[ConstructorObject]
+    constructor: Opt[ConstructorObject]
     functions: seq[FunctionObject]
     events: seq[EventObject]
   for procdef in body:
@@ -137,7 +137,7 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
       doAssert(not ((ispure or isview) and ispayable),
         "can't be both `pure` or `view` while being `payable`")
       if isconstructor:
-        constructor = some(ConstructorObject(
+        constructor = Opt.some(ConstructorObject(
           stateMutability: if ispure: pure elif isview: view elif ispayable: payable else: nonpayable,
           inputs: parseInputs(procdef[3]),
           outputs: parseOutputs(procdef[3][0])

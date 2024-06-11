@@ -31,29 +31,29 @@ type
     baseFeePerGas*: UInt256
     blockHash*: Hash256
     transactions*: seq[TypedTransaction]
-    withdrawals*: Option[seq[WithdrawalV1]]
-    blobGasUsed*: Option[Quantity]
-    excessBlobGas*: Option[Quantity]
-    depositReceipts*: Option[seq[DepositReceiptV1]]
-    exits*: Option[seq[WithdrawalRequestV1]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
+    blobGasUsed*: Opt[Quantity]
+    excessBlobGas*: Opt[Quantity]
+    depositReceipts*: Opt[seq[DepositReceiptV1]]
+    exits*: Opt[seq[WithdrawalRequestV1]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
-    withdrawals*: Option[seq[WithdrawalV1]]
-    parentBeaconBlockRoot*: Option[FixedBytes[32]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
+    parentBeaconBlockRoot*: Opt[FixedBytes[32]]
 
   SomeOptionalPayloadAttributes* =
-    Option[PayloadAttributesV1] |
-    Option[PayloadAttributesV2] |
-    Option[PayloadAttributesV3]
+    Opt[PayloadAttributesV1] |
+    Opt[PayloadAttributesV2] |
+    Opt[PayloadAttributesV3]
 
   GetPayloadResponse* = object
     executionPayload*: ExecutionPayload
-    blockValue*: Option[UInt256]
-    blobsBundle*: Option[BlobsBundleV1]
-    shouldOverrideBuilder*: Option[bool]
+    blockValue*: Opt[UInt256]
+    blobsBundle*: Opt[BlobsBundleV1]
+    shouldOverrideBuilder*: Opt[bool]
 
   Version* {.pure.} = enum
     V1
@@ -125,20 +125,20 @@ func V3*(attr: PayloadAttributes): PayloadAttributesV3 =
     parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get
   )
 
-func V1*(attr: Option[PayloadAttributes]): Option[PayloadAttributesV1] =
+func V1*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV1] =
   if attr.isNone:
-    return none(PayloadAttributesV1)
-  some(attr.get.V1)
+    return Opt.none(PayloadAttributesV1)
+  Opt.some(attr.get.V1)
 
-func V2*(attr: Option[PayloadAttributes]): Option[PayloadAttributesV2] =
+func V2*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV2] =
   if attr.isNone:
-    return none(PayloadAttributesV2)
-  some(attr.get.V2)
+    return Opt.none(PayloadAttributesV2)
+  Opt.some(attr.get.V2)
 
-func V3*(attr: Option[PayloadAttributes]): Option[PayloadAttributesV3] =
+func V3*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV3] =
   if attr.isNone:
-    return none(PayloadAttributesV3)
-  some(attr.get.V3)
+    return Opt.none(PayloadAttributesV3)
+  Opt.some(attr.get.V3)
 
 func payloadAttributes*(attr: PayloadAttributesV1): PayloadAttributes =
   PayloadAttributes(
@@ -152,7 +152,7 @@ func payloadAttributes*(attr: PayloadAttributesV2): PayloadAttributes =
     timestamp: attr.timestamp,
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
-    withdrawals: some(attr.withdrawals)
+    withdrawals: Opt.some(attr.withdrawals)
   )
 
 func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
@@ -160,21 +160,21 @@ func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
     timestamp: attr.timestamp,
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
-    withdrawals: some(attr.withdrawals),
-    parentBeaconBlockRoot: some(attr.parentBeaconBlockRoot)
+    withdrawals: Opt.some(attr.withdrawals),
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot)
   )
 
-func payloadAttributes*(x: Option[PayloadAttributesV1]): Option[PayloadAttributes] =
-  if x.isNone: none(PayloadAttributes)
-  else: some(payloadAttributes x.get)
+func payloadAttributes*(x: Opt[PayloadAttributesV1]): Opt[PayloadAttributes] =
+  if x.isNone: Opt.none(PayloadAttributes)
+  else: Opt.some(payloadAttributes x.get)
 
-func payloadAttributes*(x: Option[PayloadAttributesV2]): Option[PayloadAttributes] =
-  if x.isNone: none(PayloadAttributes)
-  else: some(payloadAttributes x.get)
+func payloadAttributes*(x: Opt[PayloadAttributesV2]): Opt[PayloadAttributes] =
+  if x.isNone: Opt.none(PayloadAttributes)
+  else: Opt.some(payloadAttributes x.get)
 
-func payloadAttributes*(x: Option[PayloadAttributesV3]): Option[PayloadAttributes] =
-  if x.isNone: none(PayloadAttributes)
-  else: some(payloadAttributes x.get)
+func payloadAttributes*(x: Opt[PayloadAttributesV3]): Opt[PayloadAttributes] =
+  if x.isNone: Opt.none(PayloadAttributes)
+  else: Opt.some(payloadAttributes x.get)
 
 func V1V2*(p: ExecutionPayload): ExecutionPayloadV1OrV2 =
   ExecutionPayloadV1OrV2(
@@ -347,7 +347,7 @@ func executionPayload*(p: ExecutionPayloadV2): ExecutionPayload =
     baseFeePerGas: p.baseFeePerGas,
     blockHash: p.blockHash,
     transactions: p.transactions,
-    withdrawals: some(p.withdrawals)
+    withdrawals: Opt.some(p.withdrawals)
   )
 
 func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
@@ -366,9 +366,9 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
     baseFeePerGas: p.baseFeePerGas,
     blockHash: p.blockHash,
     transactions: p.transactions,
-    withdrawals: some(p.withdrawals),
-    blobGasUsed: some(p.blobGasUsed),
-    excessBlobGas: some(p.excessBlobGas)
+    withdrawals: Opt.some(p.withdrawals),
+    blobGasUsed: Opt.some(p.blobGasUsed),
+    excessBlobGas: Opt.some(p.excessBlobGas)
   )
 
 func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
@@ -387,11 +387,11 @@ func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
     baseFeePerGas: p.baseFeePerGas,
     blockHash: p.blockHash,
     transactions: p.transactions,
-    withdrawals: some(p.withdrawals),
-    blobGasUsed: some(p.blobGasUsed),
-    excessBlobGas: some(p.excessBlobGas),
-    depositReceipts: some(p.depositRequests),
-    exits: some(p.withdrawalRequests)
+    withdrawals: Opt.some(p.withdrawals),
+    blobGasUsed: Opt.some(p.blobGasUsed),
+    excessBlobGas: Opt.some(p.excessBlobGas),
+    depositReceipts: Opt.some(p.depositRequests),
+    exits: Opt.some(p.withdrawalRequests)
   )
 
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
@@ -444,21 +444,21 @@ func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
 func getPayloadResponse*(x: GetPayloadV2Response): GetPayloadResponse =
   GetPayloadResponse(
     executionPayload: x.executionPayload.executionPayload,
-    blockValue: some(x.blockValue)
+    blockValue: Opt.some(x.blockValue)
   )
 
 func getPayloadResponse*(x: GetPayloadV3Response): GetPayloadResponse =
   GetPayloadResponse(
     executionPayload: x.executionPayload.executionPayload,
-    blockValue: some(x.blockValue),
-    blobsBundle: some(x.blobsBundle),
-    shouldOverrideBuilder: some(x.shouldOverrideBuilder)
+    blockValue: Opt.some(x.blockValue),
+    blobsBundle: Opt.some(x.blobsBundle),
+    shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder)
   )
 
 func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
   GetPayloadResponse(
     executionPayload: x.executionPayload.executionPayload,
-    blockValue: some(x.blockValue),
-    blobsBundle: some(x.blobsBundle),
-    shouldOverrideBuilder: some(x.shouldOverrideBuilder)
+    blockValue: Opt.some(x.blockValue),
+    blobsBundle: Opt.some(x.blobsBundle),
+    shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder)
   )

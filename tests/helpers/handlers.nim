@@ -102,7 +102,7 @@ proc installHandlers*(server: RpcServer) =
     if x != "-1".JsonString:
       result = decodeFromString(x, UInt256)
 
-  server.rpc("eth_feeHistory") do(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Option[seq[float64]]) -> FeeHistoryResult:
+  server.rpc("eth_feeHistory") do(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Opt[seq[float64]]) -> FeeHistoryResult:
     var fh: FeeHistoryResult
     if x != "-1".JsonString:
       fh = decodeFromString(x, FeeHistoryResult)

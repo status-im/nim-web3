@@ -8,9 +8,9 @@
 # those terms.
 
 import
-  std/[options],
   pkg/unittest2,
   chronos, stint,
+  results,
   eth/keys,
   eth/common/eth_types,
   stew/byteutils,
@@ -47,12 +47,12 @@ suite "Signed transactions":
       publicKey = privateKey.toPublicKey()
       address = publicKey.toCanonicalAddress()
     var tx: TransactionArgs
-    tx.nonce = some(Quantity(9))
-    tx.`from` = some(Address(address))
-    tx.value = some(1000000000000000000.u256)
-    tx.to = some(Address(hexToByteArray[20]("0x3535353535353535353535353535353535353535")))
-    tx.gas = some(Quantity(21000'u64))
-    tx.gasPrice = some(Quantity(20000000000'i64))
+    tx.nonce = Opt.some(Quantity(9))
+    tx.`from` = Opt.some(Address(address))
+    tx.value = Opt.some(1000000000000000000.u256)
+    tx.to = Opt.some(Address(hexToByteArray[20]("0x3535353535353535353535353535353535353535")))
+    tx.gas = Opt.some(Quantity(21000'u64))
+    tx.gasPrice = Opt.some(Quantity(20000000000'i64))
 
     let txBytes = encodeTransaction(tx, privateKey, ChainId(1))
     let txHex = "0x" & txBytes.toHex
@@ -71,10 +71,10 @@ suite "Signed transactions":
       let acc = Address(toCanonicalAddress(pk.toPublicKey()))
 
       var tx: TransactionArgs
-      tx.`from` = some(accounts[0])
-      tx.value = some(ethToWei(10.u256))
-      tx.to = some(acc)
-      tx.gasPrice = some(gasPrice)
+      tx.`from` = Opt.some(accounts[0])
+      tx.value = Opt.some(ethToWei(10.u256))
+      tx.to = Opt.some(acc)
+      tx.gasPrice = Opt.some(gasPrice)
 
       # Send 10 eth to acc
       discard await web3.send(tx)
@@ -82,10 +82,10 @@ suite "Signed transactions":
       assert(balance == ethToWei(10.u256))
 
       # Send 5 eth back
-      web3.privateKey = some(pk)
-      tx.value = some(ethToWei(5.u256))
-      tx.to = some(accounts[0])
-      tx.gas = some(Quantity(3000000))
+      web3.privateKey = Opt.some(pk)
+      tx.value = Opt.some(ethToWei(5.u256))
+      tx.to = Opt.some(accounts[0])
+      tx.gas = Opt.some(Quantity(3000000))
 
       discard await web3.send(tx)
       balance = await web3.provider.eth_getBalance(acc, "latest")

@@ -25,6 +25,7 @@ requires "json_serialization"
 requires "nimcrypto"
 requires "stew"
 requires "stint"
+requires "results"
 
 ### Helper functions
 proc test(args, path: string) =

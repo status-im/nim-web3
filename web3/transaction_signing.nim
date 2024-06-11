@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  options,
+  results,
   eth_api_types, stint,
   eth/[common, keys, rlp], eth/common/transaction
 
@@ -22,11 +22,11 @@ func signTransaction(tr: var Transaction, pk: PrivateKey) =
   tr.R = fromBytesBE(UInt256, r.toOpenArray(0, 31))
   tr.S = fromBytesBE(UInt256, r.toOpenArray(32, 63))
 
-  tr.V = int64(v) + 27 # TODO! Complete this
+  tr.V = uint64(v) + 27 # TODO! Complete this
 
 func signTransactionEip155(tr: var Transaction, pk: PrivateKey) =
   let chainId = tr.chainId
-  tr.V = int64(chainId) * 2 + 35
+  tr.V = uint64(chainId) * 2 + 35
 
   let h = tr.txHashNoSignature
   let s = sign(pk, SkMessage(h.data))
@@ -37,14 +37,14 @@ func signTransactionEip155(tr: var Transaction, pk: PrivateKey) =
   tr.R = fromBytesBE(UInt256, r.toOpenArray(0, 31))
   tr.S = fromBytesBE(UInt256, r.toOpenArray(32, 63))
 
-  tr.V = int64(v) + int64(chainId) * 2 + 35
+  tr.V = uint64(v) + uint64(chainId) * 2 + 35
 
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxLegacy)
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
   if s.to.isSome:
-    tr.to = some(EthAddress(s.to.get))
+    tr.to = Opt.some(EthAddress(s.to.get))
 
   if s.value.isSome:
     tr.value = s.value.get
@@ -62,7 +62,7 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): s
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
   if s.to.isSome:
-    tr.to = some(EthAddress(s.to.get))
+    tr.to = Opt.some(EthAddress(s.to.get))
 
   if s.value.isSome:
     tr.value = s.value.get
