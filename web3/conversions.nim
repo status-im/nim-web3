@@ -13,7 +13,6 @@ import
   stew/byteutils,
   faststreams/textio,
   json_rpc/jsonmarshal,
-  json_serialization/std/options,
   json_serialization/stew/results,
   json_serialization,
   ./primitives,
@@ -22,7 +21,7 @@ import
   ./execution_types
 
 export
-  options,
+  results,
   json_serialization,
   jsonmarshal
 
@@ -80,6 +79,7 @@ GetPayloadV2Response.useDefaultSerializationIn JrpcConv
 GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
+ClientVersionV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # execution_types

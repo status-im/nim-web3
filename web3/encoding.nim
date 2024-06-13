@@ -58,8 +58,9 @@ func decode*(input: openarray[byte], baseOffset, offset: int, to: var Address): 
 func encodeDynamic(v: openArray[byte]): seq[byte] =
   result = encode(v.len.u256)
   result.add(v)
-  for i in 0 ..< (v.len mod 32):
-    result.add(0)
+  let pad = v.len mod 32
+  if pad != 0:
+    result.setLen(result.len + 32 - pad)
 
 func encode*(x: DynamicBytes): seq[byte] {.inline.} =
   encodeDynamic(distinctBase x)
@@ -157,9 +158,9 @@ func encode*[T](x: openarray[T]): seq[byte] =
   when isDynamicType(T):
     result.setLen((1 + x.len) * 32)
     for i in 0 ..< x.len:
-      let offset = result.len
+      let offset = result.len - 32
       result &= encode(x[i])
-      result[i .. i + 31] = encode(offset.u256)
+      result[(i + 1) * 32 .. (i + 2) * 32 - 1] = encode(offset.u256)
   else:
     for i in 0 ..< x.len:
       result &= encode(x[i])

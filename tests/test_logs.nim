@@ -8,10 +8,11 @@
 # those terms.
 
 import
-  std/[options, json, random],
+  std/[json, random],
   pkg/unittest2,
   ../web3,
   chronos, stint,
+  results,
   ./helpers/utils
 
 #[ Contract LoggerContract
@@ -74,7 +75,7 @@ suite "Logs":
         let notifFut = newFuture[void]()
         var notificationsReceived = 0
 
-        let options = FilterOptions(fromBlock: some(blockId(0.BlockNumber)))
+        let options = FilterOptions(fromBlock: Opt.some(blockId(0.BlockNumber)))
         let s = await ns.subscribe(MyEvent, options) do (
             sender: Address, value: UInt256)
             {.raises: [], gcsafe.}:

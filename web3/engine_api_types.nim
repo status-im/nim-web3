@@ -8,14 +8,15 @@
 # those terms.
 
 import
-  std/[options, typetraits],
+  std/typetraits,
   stint,
-  primitives
+  primitives,
+  results
 
 from ./eth_api_types import AccessTuple
 
 export
-  options, stint, primitives
+  results, stint, primitives
 
 type
   TypedTransaction* = distinct seq[byte]
@@ -104,7 +105,7 @@ type
     baseFeePerGas*: UInt256
     blockHash*: BlockHash
     transactions*: seq[TypedTransaction]
-    withdrawals*: Option[seq[WithdrawalV1]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
 
   # https://github.com/ethereum/execution-apis/blob/fe8e13c288c592ec154ce25c534e26cb7ce0530d/src/engine/cancun.md#executionpayloadv3
   ExecutionPayloadV3* = object
@@ -128,25 +129,25 @@ type
 
   # https://eips.ethereum.org/EIPS/eip-6493
   TransactionFeesPerGas* = object
-    regular*: Option[UInt256]
-    blob*: Option[UInt256]
+    regular*: Opt[UInt256]
+    blob*: Opt[UInt256]
 
   TransactionPayload* = object
-    `type`*: Option[Quantity]
-    chainId*: Option[Quantity]
-    nonce*: Option[Quantity]
-    maxFeesPerGas*: Option[TransactionFeesPerGas]
-    gas*: Option[Quantity]
-    to*: Option[Address]
-    value*: Option[UInt256]
-    input*: Option[seq[byte]]
-    accessList*: Option[seq[AccessTuple]]
-    maxPriorityFeesPerGas*: Option[TransactionFeesPerGas]
-    blobVersionedHashes*: Option[seq[FixedBytes[32]]]
+    `type`*: Opt[Quantity]
+    chainId*: Opt[Quantity]
+    nonce*: Opt[Quantity]
+    maxFeesPerGas*: Opt[TransactionFeesPerGas]
+    gas*: Opt[Quantity]
+    to*: Opt[Address]
+    value*: Opt[UInt256]
+    input*: Opt[seq[byte]]
+    accessList*: Opt[seq[AccessTuple]]
+    maxPriorityFeesPerGas*: Opt[TransactionFeesPerGas]
+    blobVersionedHashes*: Opt[seq[FixedBytes[32]]]
 
   TransactionSignature* = object
-    `from`*: Option[Address]
-    ecdsaSignature*: Option[FixedBytes[65]]
+    `from`*: Opt[Address]
+    ecdsaSignature*: Opt[FixedBytes[65]]
 
   Transaction* = object
     payload*: TransactionPayload
@@ -197,7 +198,7 @@ type
   #   https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadbodiesbyrangev1
   ExecutionPayloadBodyV1* = object
     transactions*: seq[TypedTransaction]
-    withdrawals*: Option[seq[WithdrawalV1]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
@@ -225,7 +226,7 @@ type
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
-    withdrawals*: Option[seq[WithdrawalV1]]
+    withdrawals*: Opt[seq[WithdrawalV1]]
 
   SomePayloadAttributes* =
     PayloadAttributesV1 |
@@ -242,8 +243,8 @@ type
 
   PayloadStatusV1* = object
     status*: PayloadExecutionStatus
-    latestValidHash*: Option[BlockHash]
-    validationError*: Option[string]
+    latestValidHash*: Opt[BlockHash]
+    validationError*: Opt[string]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
@@ -256,7 +257,7 @@ type
 
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatusV1
-    payloadId*: Option[PayloadID]
+    payloadId*: Opt[PayloadID]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#transitionconfigurationv1
   TransitionConfigurationV1* = object
@@ -292,6 +293,13 @@ type
     GetPayloadV2Response |
     GetPayloadV3Response |
     GetPayloadV4Response
+
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#engine_getclientversionv1
+  ClientVersionV1* = object
+    code*: string # e.g. NB or BU
+    name*: string # Human-readable name of the client, e.g. Lighthouse or go-ethereum
+    version*: string #  the version string of the current implementation e.g. v4.6.0 or 1.0.0-alpha.1 or 1.0.0+20130313144700
+    commit*: FixedBytes[4]
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/common.md#errors
