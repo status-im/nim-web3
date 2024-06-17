@@ -34,7 +34,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
-    depositReceipts*: Opt[seq[DepositReceiptV1]]
+    depositRequests*: Opt[seq[DepositRequestV1]]
     exits*: Opt[seq[WithdrawalRequestV1]]
 
   PayloadAttributes* = object
@@ -64,7 +64,7 @@ type
 {.push raises: [].}
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.depositReceipts.isSome or payload.exits.isSome:
+  if payload.depositRequests.isSome or payload.exits.isSome:
     Version.V4
   elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
@@ -272,7 +272,7 @@ func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
     withdrawals: p.withdrawals.get,
     blobGasUsed: p.blobGasUsed.get(0.Quantity),
     excessBlobGas: p.excessBlobGas.get(0.Quantity),
-    depositRequests: p.depositReceipts.get(newSeq[DepositReceiptV1]()),
+    depositRequests: p.depositRequests.get(newSeq[DepositRequestV1]()),
     withdrawalRequests: p.exits.get(newSeq[WithdrawalRequestV1]())
   )
 
@@ -390,7 +390,7 @@ func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
     withdrawals: Opt.some(p.withdrawals),
     blobGasUsed: Opt.some(p.blobGasUsed),
     excessBlobGas: Opt.some(p.excessBlobGas),
-    depositReceipts: Opt.some(p.depositRequests),
+    depositRequests: Opt.some(p.depositRequests),
     exits: Opt.some(p.withdrawalRequests)
   )
 
