@@ -53,7 +53,7 @@ derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 #------------------------------------------------------------------------------
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
-DepositReceiptV1.useDefaultSerializationIn JrpcConv
+DepositRequestV1.useDefaultSerializationIn JrpcConv
 WithdrawalRequestV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv

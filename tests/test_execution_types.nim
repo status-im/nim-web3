@@ -64,7 +64,7 @@ suite "Execution types tests":
       shouldOverrideBuilder: Opt.some(false),
     )
 
-    deposit = DepositReceiptV1(
+    deposit = DepositRequestV1(
       pubkey: FixedBytes[48].conv(1),
       withdrawalCredentials: FixedBytes[32].conv(3),
       amount: 5.Quantity,
@@ -167,12 +167,12 @@ suite "Execution types tests":
 
   test "payload version 4":
     var v4 = payload
-    v4.depositReceipts = Opt.some(@[deposit])
+    v4.depositRequests = Opt.some(@[deposit])
     v4.exits = Opt.some(@[exit])
     check v4.version == Version.V4
 
     var bad41 = v4
-    bad41.depositReceipts = Opt.none(seq[DepositReceiptV1])
+    bad41.depositRequests = Opt.none(seq[DepositRequestV1])
     check bad41.version == Version.V4
 
     var bad42 = v4
@@ -180,11 +180,11 @@ suite "Execution types tests":
     check bad42.version == Version.V4
 
     let v41 = bad41.V4
-    check v41.depositRequests == newSeq[DepositReceiptV1]()
+    check v41.depositRequests == newSeq[DepositRequestV1]()
     check v41.withdrawalRequests == v4.exits.get
 
     let v42 = bad42.V4
-    check v42.depositRequests == v4.depositReceipts.get
+    check v42.depositRequests == v4.depositRequests.get
     check v42.withdrawalRequests == newSeq[WithdrawalRequestV1]()
 
     # roundtrip
