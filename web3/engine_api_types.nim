@@ -229,20 +229,20 @@ type
     safeBlockHash*: BlockHash
     finalizedBlockHash*: BlockHash
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#request-2
   PayloadID* = FixedBytes[8]
 
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatusV1
     payloadId*: Opt[PayloadID]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#transitionconfigurationv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#transitionconfigurationv1
   TransitionConfigurationV1* = object
     terminalTotalDifficulty*: UInt256
     terminalBlockHash*: BlockHash
     terminalBlockNumber*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#response-2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#response-2
   GetPayloadV2Response* = object
     executionPayload*: ExecutionPayloadV1OrV2
     blockValue*: UInt256
@@ -251,7 +251,7 @@ type
     executionPayload*: ExecutionPayloadV2
     blockValue*: UInt256
 
-  # https://github.com/ethereum/execution-apis/blob/584905270d8ad665718058060267061ecfd79ca5/src/engine/cancun.md#response-2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#response-2
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
@@ -279,7 +279,7 @@ type
     commit*: FixedBytes[4]
 
 const
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/common.md#errors
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/common.md#errors
   engineApiParseError* = -32700
   engineApiInvalidRequest* = -32600
   engineApiMethodNotFound* = -32601
