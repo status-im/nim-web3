@@ -35,7 +35,8 @@ type
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
     depositRequests*: Opt[seq[DepositRequestV1]]
-    exits*: Opt[seq[WithdrawalRequestV1]]
+    withdrawalRequests*: Opt[seq[WithdrawalRequestV1]]
+    consolidationRequests*:Opt[seq[ConsolidationRequestV1]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -64,7 +65,9 @@ type
 {.push raises: [].}
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.depositRequests.isSome or payload.exits.isSome:
+  if payload.depositRequests.isSome or
+      payload.withdrawalRequests.isSome or
+      payload.consolidationRequests.isSome:
     Version.V4
   elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
@@ -273,7 +276,8 @@ func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
     blobGasUsed: p.blobGasUsed.get(0.Quantity),
     excessBlobGas: p.excessBlobGas.get(0.Quantity),
     depositRequests: p.depositRequests.get(newSeq[DepositRequestV1]()),
-    withdrawalRequests: p.exits.get(newSeq[WithdrawalRequestV1]())
+    withdrawalRequests: p.withdrawalRequests.get(newSeq[WithdrawalRequestV1]()),
+    consolidationRequests: p.consolidationRequests.get(newSeq[ConsolidationRequestV1]()),
   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -391,7 +395,8 @@ func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
     blobGasUsed: Opt.some(p.blobGasUsed),
     excessBlobGas: Opt.some(p.excessBlobGas),
     depositRequests: Opt.some(p.depositRequests),
-    exits: Opt.some(p.withdrawalRequests)
+    withdrawalRequests: Opt.some(p.withdrawalRequests),
+    consolidationRequests: Opt.some(p.consolidationRequests),
   )
 
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
