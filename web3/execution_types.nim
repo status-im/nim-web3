@@ -34,8 +34,9 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
-    depositReceipts*: Opt[seq[DepositReceiptV1]]
-    exits*: Opt[seq[WithdrawalRequestV1]]
+    depositRequests*: Opt[seq[DepositRequestV1]]
+    withdrawalRequests*: Opt[seq[WithdrawalRequestV1]]
+    consolidationRequests*:Opt[seq[ConsolidationRequestV1]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -64,7 +65,9 @@ type
 {.push raises: [].}
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.depositReceipts.isSome or payload.exits.isSome:
+  if payload.depositRequests.isSome or
+      payload.withdrawalRequests.isSome or
+      payload.consolidationRequests.isSome:
     Version.V4
   elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
@@ -272,8 +275,9 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
 #     withdrawals: p.withdrawals.get,
 #     blobGasUsed: p.blobGasUsed.get(0.Quantity),
 #     excessBlobGas: p.excessBlobGas.get(0.Quantity),
-#     depositRequests: p.depositReceipts.get(newSeq[DepositReceiptV1]()),
-#     withdrawalRequests: p.exits.get(newSeq[WithdrawalRequestV1]())
+#     depositRequests: p.depositRequests.get(newSeq[DepositRequestV1]()),
+#     withdrawalRequests: p.withdrawalRequests.get(newSeq[WithdrawalRequestV1]()),
+#     consolidationRequests: p.consolidationRequests.get(newSeq[ConsolidationRequestV1]()),
 #   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -390,8 +394,9 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
 #     withdrawals: Opt.some(p.withdrawals),
 #     blobGasUsed: Opt.some(p.blobGasUsed),
 #     excessBlobGas: Opt.some(p.excessBlobGas),
-#     depositReceipts: Opt.some(p.depositRequests),
-#     exits: Opt.some(p.withdrawalRequests)
+#     depositRequests: Opt.some(p.depositRequests),
+#     withdrawalRequests: Opt.some(p.withdrawalRequests),
+#     consolidationRequests: Opt.some(p.consolidationRequests),
 #   )
 
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =

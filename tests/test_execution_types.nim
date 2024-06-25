@@ -64,7 +64,7 @@ suite "Execution types tests":
       shouldOverrideBuilder: Opt.some(false),
     )
 
-    deposit = DepositReceiptV1(
+    deposit = DepositRequestV1(
       pubkey: FixedBytes[48].conv(1),
       withdrawalCredentials: FixedBytes[32].conv(3),
       amount: 5.Quantity,
@@ -72,9 +72,15 @@ suite "Execution types tests":
       index: 9.Quantity
     )
 
-    exit = WithdrawalRequestV1(
+    withdrawal = WithdrawalRequestV1(
       sourceAddress: address(7),
       validatorPublicKey: FixedBytes[48].conv(9)
+    )
+
+    consolidation = ConsolidationRequestV1(
+      sourceAddress: address(8),
+      sourcePubkey: FixedBytes[48].conv(10),
+      targetPubkey: FixedBytes[48].conv(11)
     )
 
   test "payload version":
@@ -167,25 +173,37 @@ suite "Execution types tests":
 
   test "payload version 4":
     var v4 = payload
-    v4.depositReceipts = Opt.some(@[deposit])
-    v4.exits = Opt.some(@[exit])
+    v4.depositRequests = Opt.some(@[deposit])
+    v4.withdrawalRequests  = Opt.some(@[withdrawal])
+    v4.consolidationRequests = Opt.some(@[consolidation])
     check v4.version == Version.V4
 
     var bad41 = v4
-    bad41.depositReceipts = Opt.none(seq[DepositReceiptV1])
+    bad41.depositRequests = Opt.none(seq[DepositRequestV1])
     check bad41.version == Version.V4
 
     var bad42 = v4
-    bad42.exits = Opt.none(seq[WithdrawalRequestV1])
+    bad42.withdrawalRequests  = Opt.none(seq[WithdrawalRequestV1])
     check bad42.version == Version.V4
 
+    var bad43 = v4
+    bad43.consolidationRequests  = Opt.none(seq[ConsolidationRequestV1])
+    check bad43.version == Version.V4
+
     let v41 = bad41.V4
-    check v41.depositRequests == newSeq[DepositReceiptV1]()
-    check v41.withdrawalRequests == v4.exits.get
+    check v41.depositRequests == newSeq[DepositRequestV1]()
+    check v41.withdrawalRequests == v4.withdrawalRequests.get
+    check v41.consolidationRequests == v4.consolidationRequests.get
 
     let v42 = bad42.V4
-    check v42.depositRequests == v4.depositReceipts.get
+    check v42.depositRequests == v4.depositRequests.get
     check v42.withdrawalRequests == newSeq[WithdrawalRequestV1]()
+    check v41.consolidationRequests == v4.consolidationRequests.get
+
+    let v43 = bad43.V4
+    check v43.depositRequests == v4.depositRequests.get
+    check v43.withdrawalRequests == v4.withdrawalRequests.get
+    check v43.consolidationRequests == newSeq[ConsolidationRequestV1]()
 
     # roundtrip
     let v4p = v4.V4

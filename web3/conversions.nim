@@ -58,7 +58,7 @@ TransactionSignature.useDefaultReaderIn JrpcConv
 Transaction.useDefaultSerializationIn JrpcConv
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
-DepositReceiptV1.useDefaultSerializationIn JrpcConv
+DepositRequestV1.useDefaultSerializationIn JrpcConv
 WithdrawalRequestV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
@@ -80,6 +80,7 @@ GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
 ClientVersionV1.useDefaultSerializationIn JrpcConv
+ConsolidationRequestV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # execution_types
