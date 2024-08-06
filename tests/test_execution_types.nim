@@ -74,7 +74,7 @@ suite "Execution types tests":
 
     withdrawal = WithdrawalRequestV1(
       sourceAddress: address(7),
-      validatorPublicKey: FixedBytes[48].conv(9)
+      validatorPubkey: FixedBytes[48].conv(9)
     )
 
     consolidation = ConsolidationRequestV1(

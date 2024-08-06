@@ -38,10 +38,10 @@ type
     signature*: FixedBytes[96]
     index*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#withdrawalrequestv1
+  # https://github.com/nflaig/execution-apis/blob/update-withdrawal-request/src/engine/prague.md#withdrawalrequestv1
   WithdrawalRequestV1* = object
     sourceAddress*: Address
-    validatorPublicKey*: FixedBytes[48]
+    validatorPubkey*: FixedBytes[48]
     amount*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#consolidationrequestv1
