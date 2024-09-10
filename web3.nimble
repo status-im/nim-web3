@@ -42,6 +42,6 @@ proc test(args, path: string) =
 
 ### tasks
 task test, "Run all tests":
-  test "", "tests/all_tests.nim"
+  test "--mm:refc", "tests/all_tests.nim"
   if (NimMajor, NimMinor) > (1, 6):
-    test "--mm:refc", "tests/all_tests.nim"
+    test "--mm:orc", "tests/all_tests.nim"
