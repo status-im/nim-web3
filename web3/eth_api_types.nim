@@ -60,6 +60,9 @@ type
     commitments*: Opt[seq[KZGCommitment]]
     proofs*: Opt[seq[KZGProof]]
 
+    # EIP-7702
+    authorizationList*: Opt[seq[AuthorizationObject]]
+
   ## A block header object
   BlockHeader* = ref object
     number*: Quantity
