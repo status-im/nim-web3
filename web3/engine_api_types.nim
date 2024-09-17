@@ -135,8 +135,12 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
-  # https://eips.ethereum.org/EIPS/eip-6493
-  TransactionFeesPerGas* = object
+  # https://eips.ethereum.org/EIPS/eip-6404
+  ExecutionSignature* = object
+    address*: Opt[Address]
+    secp256k1Signature*: Opt[FixedBytes[65]]
+
+  FeesPerGas* = object
     regular*: Opt[UInt256]
     blob*: Opt[UInt256]
 
@@ -144,22 +148,18 @@ type
     `type`*: Opt[Quantity]
     chainId*: Opt[Quantity]
     nonce*: Opt[Quantity]
-    maxFeesPerGas*: Opt[TransactionFeesPerGas]
+    maxFeesPerGas*: Opt[FeesPerGas]
     gas*: Opt[Quantity]
     to*: Opt[Address]
     value*: Opt[UInt256]
     input*: Opt[seq[byte]]
     accessList*: Opt[seq[AccessTuple]]
-    maxPriorityFeesPerGas*: Opt[TransactionFeesPerGas]
+    maxPriorityFeesPerGas*: Opt[FeesPerGas]
     blobVersionedHashes*: Opt[seq[FixedBytes[32]]]
-
-  TransactionSignature* = object
-    `from`*: Opt[Address]
-    ecdsaSignature*: Opt[FixedBytes[65]]
 
   Transaction* = object
     payload*: TransactionPayload
-    signature*: TransactionSignature
+    `from`*: ExecutionSignature
 
   # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#executionpayloadv4
   ExecutionPayloadV4* = object
