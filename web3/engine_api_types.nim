@@ -144,9 +144,19 @@ type
     regular*: Opt[UInt256]
     blob*: Opt[UInt256]
 
+  AuthorizationPayloadV1* = object
+    magic*: Opt[Quantity]
+    chainId*: Opt[UInt256]
+    address*: Opt[Address]
+    nonce*: Opt[Quantity]
+
+  AuthorizationV1* = object
+    payload*: AuthorizationPayloadV1
+    authority*: ExecutionSignature
+
   TransactionPayload* = object
     `type`*: Opt[Quantity]
-    chainId*: Opt[Quantity]
+    chainId*: Opt[UInt256]
     nonce*: Opt[Quantity]
     maxFeesPerGas*: Opt[FeesPerGas]
     gas*: Opt[Quantity]
@@ -156,6 +166,7 @@ type
     accessList*: Opt[seq[AccessTuple]]
     maxPriorityFeesPerGas*: Opt[FeesPerGas]
     blobVersionedHashes*: Opt[seq[FixedBytes[32]]]
+    authorizationList*: Opt[seq[AuthorizationV1]]
 
   Transaction* = object
     payload*: TransactionPayload

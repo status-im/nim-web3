@@ -56,9 +56,11 @@ derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 # engine_api_types
 #------------------------------------------------------------------------------
 
-ExecutionSignature.useDefaultReaderIn JrpcConv
-FeesPerGas.useDefaultReaderIn JrpcConv
-TransactionPayload.useDefaultReaderIn JrpcConv
+ExecutionSignature.useDefaultSerializationIn JrpcConv
+FeesPerGas.useDefaultSerializationIn JrpcConv
+AuthorizationPayloadV1.useDefaultSerializationIn JrpcConv
+AuthorizationV1.useDefaultSerializationIn JrpcConv
+TransactionPayload.useDefaultSerializationIn JrpcConv
 Transaction.useDefaultSerializationIn JrpcConv
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
