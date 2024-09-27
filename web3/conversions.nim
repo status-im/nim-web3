@@ -42,6 +42,10 @@ ProofResponse.useDefaultSerializationIn JrpcConv
 FilterOptions.useDefaultSerializationIn JrpcConv
 TransactionArgs.useDefaultSerializationIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
+AuthorizationObject.useDefaultSerializationIn JrpcConv
+DepositRequestObject.useDefaultSerializationIn JrpcConv
+WithdrawalRequestObject.useDefaultSerializationIn JrpcConv
+ConsolidationRequestObject.useDefaultSerializationIn JrpcConv
 
 derefType(BlockHeader).useDefaultSerializationIn JrpcConv
 derefType(BlockObject).useDefaultSerializationIn JrpcConv
@@ -53,7 +57,7 @@ derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 #------------------------------------------------------------------------------
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
-DepositReceiptV1.useDefaultSerializationIn JrpcConv
+DepositRequestV1.useDefaultSerializationIn JrpcConv
 WithdrawalRequestV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
@@ -75,6 +79,7 @@ GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
 ClientVersionV1.useDefaultSerializationIn JrpcConv
+ConsolidationRequestV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # execution_types

@@ -7,6 +7,8 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+{.push raises: [].}
+
 import
   std/typetraits,
   stint,
@@ -19,7 +21,7 @@ export
 type
   TypedTransaction* = distinct seq[byte]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#withdrawalv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
     validatorIndex*: Quantity
@@ -27,20 +29,26 @@ type
     amount*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#depositrequestv1
-  DepositReceiptV1* = object
+  DepositRequestV1* = object
     pubkey*: FixedBytes[48]
     withdrawalCredentials*: FixedBytes[32]
     amount*: Quantity
     signature*: FixedBytes[96]
     index*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#withdrawalrequestv1
+  # https://github.com/nflaig/execution-apis/blob/update-withdrawal-request/src/engine/prague.md#withdrawalrequestv1
   WithdrawalRequestV1* = object
     sourceAddress*: Address
-    validatorPublicKey*: FixedBytes[48]
+    validatorPubkey*: FixedBytes[48]
     amount*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#executionpayloadv1
+  # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#consolidationrequestv1
+  ConsolidationRequestV1* = object
+    sourceAddress*: Address
+    sourcePubkey*: FixedBytes[48]
+    targetPubkey*: FixedBytes[48]
+
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#executionpayloadv1
   ExecutionPayloadV1* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -57,7 +65,7 @@ type
     blockHash*: Hash256
     transactions*: seq[TypedTransaction]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#executionpayloadv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadv2
   ExecutionPayloadV2* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -87,7 +95,7 @@ type
   # please fix this. (Maybe the RPC library does handle sum types?
   # Or maybe we can enhance it to do so?) --Adam
   #
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md
   ExecutionPayloadV1OrV2* = object
     parentHash*: BlockHash
     feeRecipient*: Address
@@ -105,7 +113,7 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/blob/fe8e13c288c592ec154ce25c534e26cb7ce0530d/src/engine/cancun.md#executionpayloadv3
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#executionpayloadv3
   ExecutionPayloadV3* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -125,7 +133,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#executionpayloadv4
+  # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#executionpayloadv4
   ExecutionPayloadV4* = object
     parentHash*: Hash256
     feeRecipient*: Address
@@ -144,13 +152,9 @@ type
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
-
-    # https://github.com/ethereum/consensus-specs/pull/3757
-    # https://github.com/ethereum/execution-apis/pull/544
-    # mainly for devnet-0
-    depositRequests*: seq[DepositReceiptV1]
-
+    depositRequests*: seq[DepositRequestV1]
     withdrawalRequests*: seq[WithdrawalRequestV1]
+    consolidationRequests*: seq[ConsolidationRequestV1]
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
@@ -158,34 +162,35 @@ type
     ExecutionPayloadV3 |
     ExecutionPayloadV4
 
-  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#blobsbundlev1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object
     commitments*: seq[KZGCommitment]
     proofs*: seq[KZGProof]
     blobs*: seq[Blob]
 
-  # https://github.com/ethereum/execution-apis/blob/d03c193dc317538e2a1a098030c21bacc2fd1333/src/engine/shanghai.md#executionpayloadbodyv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
-  #   https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadbodiesbyhashv1
-  #   https://github.com/ethereum/execution-apis/blob/main/src/engine/shanghai.md#engine_getpayloadbodiesbyrangev1
+  #   https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#engine_getpayloadbodiesbyhashv1
+  #   https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#engine_getpayloadbodiesbyrangev1
+  # "Client software MUST set withdrawals field to null for bodies of pre-Shanghai blocks."
   ExecutionPayloadBodyV1* = object
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadattributesv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#payloadattributesv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#payloadattributesv2
   PayloadAttributesV2* = object
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
 
-  # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#payloadattributesv3
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#payloadattributesv3
   PayloadAttributesV3* = object
     timestamp*: Quantity
     prevRandao*: FixedBytes[32]
@@ -205,7 +210,7 @@ type
     PayloadAttributesV2 |
     PayloadAttributesV3
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#payloadstatusv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
     syncing = "SYNCING"
     valid = "VALID"
@@ -218,26 +223,26 @@ type
     latestValidHash*: Opt[BlockHash]
     validationError*: Opt[string]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#forkchoicestatev1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
     headBlockHash*: BlockHash
     safeBlockHash*: BlockHash
     finalizedBlockHash*: BlockHash
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#request-2
   PayloadID* = FixedBytes[8]
 
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatusV1
     payloadId*: Opt[PayloadID]
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#transitionconfigurationv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#transitionconfigurationv1
   TransitionConfigurationV1* = object
     terminalTotalDifficulty*: UInt256
     terminalBlockHash*: BlockHash
     terminalBlockNumber*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#response-2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#response-2
   GetPayloadV2Response* = object
     executionPayload*: ExecutionPayloadV1OrV2
     blockValue*: UInt256
@@ -246,7 +251,7 @@ type
     executionPayload*: ExecutionPayloadV2
     blockValue*: UInt256
 
-  # https://github.com/ethereum/execution-apis/blob/584905270d8ad665718058060267061ecfd79ca5/src/engine/cancun.md#response-2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#response-2
   GetPayloadV3Response* = object
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
@@ -274,7 +279,7 @@ type
     commit*: FixedBytes[4]
 
 const
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/common.md#errors
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/common.md#errors
   engineApiParseError* = -32700
   engineApiInvalidRequest* = -32600
   engineApiMethodNotFound* = -32601
@@ -286,8 +291,6 @@ const
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
   engineApiUnsupportedFork* = -38005
-
-{.push raises: [].}
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)

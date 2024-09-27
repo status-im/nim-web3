@@ -172,6 +172,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ProofResponse)
     checkRandomObject(FilterOptions)
     checkRandomObject(TransactionArgs)
+    checkRandomObject(AuthorizationObject)
 
     checkRandomObject(BlockHeader)
     checkRandomObject(BlockObject)
