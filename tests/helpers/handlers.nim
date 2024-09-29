@@ -17,6 +17,8 @@ import
 
 type
   Hash256 = w3.Hash256
+  Address = w3.Address
+  FixedBytes[N: static int] = w3.FixedBytes[N]
 
 func decodeFromString(x: JsonString, T: type): T =
   let jsonBytes = JrpcConv.decode(x.string, string)

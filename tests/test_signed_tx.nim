@@ -34,6 +34,9 @@ contract NumberStorage {
    }
 }
 ]#
+
+type Address = web3.Address
+
 contract(NumberStorage):
   proc setNumber(number: UInt256)
   proc getNumber(): UInt256 {.view.}
