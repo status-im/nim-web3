@@ -9,7 +9,6 @@
 
 import
   std/strutils,
-  stint,
   stew/byteutils,
   faststreams/textio,
   json_rpc/jsonmarshal,
@@ -20,10 +19,14 @@ import
   ./eth_api_types,
   ./execution_types
 
+import eth/common/eth_types_json_serialization
+
 export
   results,
   json_serialization,
   jsonmarshal
+
+export eth_types_json_serialization except Topic
 
 template derefType(T: type): untyped =
   typeof(T()[])
@@ -190,11 +193,15 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: DynamicBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: CommonJsonFlavors, N](w: var JsonWriter[F], v: FixedBytes[N])
+proc writeValue*[N](w: var JsonWriter[JrpcConv], v: FixedBytes[N])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: Address)
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Address)
+      {.gcsafe, raises: [IOError].} =
+  writeHexValue w, distinctBase(v)
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Hash32)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
@@ -207,7 +214,7 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
   writeHexValue w, distinctBase(v)
 
 proc writeValue*[F: CommonJsonFlavors](
-    w: var JsonWriter[F], v: Quantity | BlockNumber
+    w: var JsonWriter[F], v: Quantity
 ) {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
@@ -218,15 +225,20 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicByte
   wrapValueError:
     val = fromHex(DynamicBytes, r.parseString())
 
-proc readValue*[F: CommonJsonFlavors, N](r: var JsonReader[F], val: var FixedBytes[N])
+proc readValue*[N](r: var JsonReader[JrpcConv], val: var FixedBytes[N])
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(FixedBytes[N], r.parseString())
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Address)
+proc readValue*(r: var JsonReader[JrpcConv], val: var Address)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(Address, r.parseString())
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var Hash32)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  wrapValueError:
+    val = fromHex(Hash32, r.parseString())
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var TypedTransaction)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -251,11 +263,6 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
     r.raiseUnexpectedValue("Quantity value has invalid leading 0")
   wrapValueError:
     val = Quantity fromHex[uint64](hexStr)
-
-proc readValue*[F: CommonJsonFlavors](
-    r: var JsonReader[F],
-    val: var BlockNumber) {.gcsafe, raises: [IOError, JsonReaderError].} =
-  r.readValue(distinctBase(val, recursive = false))
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -315,7 +322,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
   wrapValueError:
     if valid(hexStr):
       val = RtBlockIdentifier(
-        kind: bidNumber, number: BlockNumber fromHex[uint64](hexStr))
+        kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
     else:
       val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
 
@@ -328,7 +335,7 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
 proc readValue*(r: var JsonReader[JrpcConv], val: var TxOrHash)
        {.gcsafe, raises: [IOError, SerializationError].} =
   if r.tokKind == JsonValueKind.String:
-    val = TxOrHash(kind: tohHash, hash: r.readValue(TxHash))
+    val = TxOrHash(kind: tohHash, hash: r.readValue(Hash32))
   else:
     val = TxOrHash(kind: tohTx, tx: r.readValue(TransactionObject))
 
@@ -400,7 +407,7 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
   else:
     w.writeValue JsonString("null")
 
-func `$`*(v: Quantity | BlockNumber): string {.inline.} =
+func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(v.uint64)
 
 func `$`*(v: TypedTransaction): string {.inline.} =

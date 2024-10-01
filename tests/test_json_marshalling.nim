@@ -18,7 +18,10 @@ import
   ../web3/execution_types,
   ../web3/[conversions, eth_api_types]
 
-proc rand[N](_: type FixedBytes[N]): FixedBytes[N] =
+proc rand[N: static int](_: type FixedBytes[N]): FixedBytes[N] =
+  discard randomBytes(distinctBase result)
+
+proc rand(_: type Hash32): Hash32 =
   discard randomBytes(distinctBase result)
 
 proc rand[M,N](_: type DynamicBytes[M,N]): DynamicBytes[M,N] =
@@ -27,7 +30,7 @@ proc rand[M,N](_: type DynamicBytes[M,N]): DynamicBytes[M,N] =
 proc rand(_: type Address): Address =
   discard randomBytes(distinctBase result)
 
-proc rand[T: Quantity | BlockNumber](_: type T): T =
+proc rand[T: Quantity](_: type T): T =
   var res: array[8, byte]
   discard randomBytes(res)
   result = T(uint64.fromBytesBE(res))
@@ -57,7 +60,7 @@ proc rand(_: type UInt256): UInt256 =
   result = UInt256.fromBytesBE(x)
 
 proc rand(_: type RtBlockIdentifier): RtBlockIdentifier =
-  RtBlockIdentifier(kind: bidNumber, number: rand(BlockNumber))
+  RtBlockIdentifier(kind: bidNumber, number: rand(Quantity))
 
 proc rand(_: type PayloadExecutionStatus): PayloadExecutionStatus =
   var x: array[1, byte]
@@ -67,7 +70,7 @@ proc rand(_: type PayloadExecutionStatus): PayloadExecutionStatus =
      result = PayloadExecutionStatus(x[0].int)
 
 proc rand(_: type TxOrHash): TxOrHash =
-  TxOrHash(kind: tohHash, hash: rand(TxHash))
+  TxOrHash(kind: tohHash, hash: rand(Hash32))
 
 proc rand[X: object](T: type X): T
 
@@ -125,9 +128,9 @@ suite "JSON-RPC Quantity":
           resUInt256Ref[] == validValue.distinctBase.u256
 
     checkType(Quantity)
-    checkType(BlockNumber)
+    checkType(Quantity)
 
-  test "Invalid Quantity/BlockNumber/UInt256/ref UInt256":
+  test "Invalid Quantity/Quantity/UInt256/ref UInt256":
     # TODO once https://github.com/status-im/nimbus-eth2/pull/3850 addressed,
     # re-add "0x0400" test case as invalid.
     for invalidStr in [
@@ -145,7 +148,7 @@ suite "JSON-RPC Quantity":
           check: false
 
       checkInvalids(Quantity)
-      checkInvalids(BlockNumber)
+      checkInvalids(Quantity)
       checkInvalids(UInt256)
       checkInvalids(ref UInt256)
 
@@ -203,11 +206,11 @@ suite "JSON-RPC Quantity":
     checkRandomObject(GetPayloadResponse)
 
   test "check blockId":
-    let a = RtBlockIdentifier(kind: bidNumber, number: 77.BlockNumber)
+    let a = RtBlockIdentifier(kind: bidNumber, number: 77.Quantity)
     let x = JrpcConv.encode(a)
     let c = JrpcConv.decode(x, RtBlockIdentifier)
     check c.kind == bidNumber
-    check c.number == 77.BlockNumber
+    check c.number == 77.Quantity
 
     let d = JrpcConv.decode("\"10\"", RtBlockIdentifier)
     check d.kind == bidAlias
@@ -237,7 +240,6 @@ suite "JSON-RPC Quantity":
         check y == "\"0xffffffffffffffff\""
 
     checkType(Quantity)
-    checkType(BlockNumber)
 
   test "AccessListResult":
     var z: AccessListResult
