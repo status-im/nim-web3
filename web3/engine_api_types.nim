@@ -30,56 +30,58 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#depositrequestv1
   DepositRequestV1* = object
-    pubkey*: FixedBytes[48]
-    withdrawalCredentials*: FixedBytes[32]
+    pubkey*: Bytes48
+    withdrawalCredentials*: Bytes32
     amount*: Quantity
-    signature*: FixedBytes[96]
+    signature*: Bytes96
     index*: Quantity
 
   # https://github.com/nflaig/execution-apis/blob/update-withdrawal-request/src/engine/prague.md#withdrawalrequestv1
   WithdrawalRequestV1* = object
     sourceAddress*: Address
-    validatorPubkey*: FixedBytes[48]
+    validatorPubkey*: Bytes48
     amount*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#consolidationrequestv1
   ConsolidationRequestV1* = object
     sourceAddress*: Address
-    sourcePubkey*: FixedBytes[48]
-    targetPubkey*: FixedBytes[48]
+    sourcePubkey*: Bytes48
+    targetPubkey*: Bytes48
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#executionpayloadv1
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/openrpc/schemas/payload.yaml#L51
   ExecutionPayloadV1* = object
-    parentHash*: Hash256
+    parentHash*: Hash32
     feeRecipient*: Address
-    stateRoot*: Hash256
-    receiptsRoot*: Hash256
-    logsBloom*: FixedBytes[256]
-    prevRandao*: FixedBytes[32]
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
     blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: Hash256
+    blockHash*: Hash32
     transactions*: seq[TypedTransaction]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadv2
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/openrpc/schemas/payload.yaml#L135
   ExecutionPayloadV2* = object
-    parentHash*: Hash256
+    parentHash*: Hash32
     feeRecipient*: Address
-    stateRoot*: Hash256
-    receiptsRoot*: Hash256
-    logsBloom*: FixedBytes[256]
-    prevRandao*: FixedBytes[32]
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
     blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: Hash256
+    blockHash*: Hash32
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
 
@@ -96,58 +98,60 @@ type
   # Or maybe we can enhance it to do so?) --Adam
   #
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/openrpc/schemas/payload.yaml#L51
   ExecutionPayloadV1OrV2* = object
-    parentHash*: BlockHash
+    parentHash*: Hash32
     feeRecipient*: Address
-    stateRoot*: BlockHash
-    receiptsRoot*: BlockHash
-    logsBloom*: FixedBytes[256]
-    prevRandao*: FixedBytes[32]
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
     blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: BlockHash
+    blockHash*: Hash32
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#executionpayloadv3
   ExecutionPayloadV3* = object
-    parentHash*: Hash256
+    parentHash*: Hash32
     feeRecipient*: Address
-    stateRoot*: Hash256
-    receiptsRoot*: Hash256
-    logsBloom*: FixedBytes[256]
-    prevRandao*: FixedBytes[32]
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
     blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: Hash256
+    blockHash*: Hash32
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#executionpayloadv4
+  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/openrpc/schemas/payload.yaml#L246
   ExecutionPayloadV4* = object
-    parentHash*: Hash256
+    parentHash*: Hash32
     feeRecipient*: Address
-    stateRoot*: Hash256
-    receiptsRoot*: Hash256
-    logsBloom*: FixedBytes[256]
-    prevRandao*: FixedBytes[32]
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
     blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: Hash256
+    blockHash*: Hash32
     transactions*: seq[TypedTransaction]
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
@@ -180,28 +184,28 @@ type
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
-    prevRandao*: FixedBytes[32]
+    prevRandao*: Bytes32
     suggestedFeeRecipient*: Address
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#payloadattributesv2
   PayloadAttributesV2* = object
     timestamp*: Quantity
-    prevRandao*: FixedBytes[32]
+    prevRandao*: Bytes32
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#payloadattributesv3
   PayloadAttributesV3* = object
     timestamp*: Quantity
-    prevRandao*: FixedBytes[32]
+    prevRandao*: Bytes32
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
-    parentBeaconBlockRoot*: FixedBytes[32]
+    parentBeaconBlockRoot*: Bytes32
 
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
     timestamp*: Quantity
-    prevRandao*: FixedBytes[32]
+    prevRandao*: Bytes32
     suggestedFeeRecipient*: Address
     withdrawals*: Opt[seq[WithdrawalV1]]
 
@@ -220,26 +224,24 @@ type
 
   PayloadStatusV1* = object
     status*: PayloadExecutionStatus
-    latestValidHash*: Opt[BlockHash]
+    latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
-    headBlockHash*: BlockHash
-    safeBlockHash*: BlockHash
-    finalizedBlockHash*: BlockHash
+    headBlockHash*: Hash32
+    safeBlockHash*: Hash32
+    finalizedBlockHash*: Hash32
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#request-2
-  PayloadID* = FixedBytes[8]
-
+  # https://github.com/ethereum/execution-apis/blob/main/src/engine/openrpc/schemas/forkchoice.yaml#L18
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatusV1
-    payloadId*: Opt[PayloadID]
+    payloadId*: Opt[Bytes8]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#transitionconfigurationv1
   TransitionConfigurationV1* = object
     terminalTotalDifficulty*: UInt256
-    terminalBlockHash*: BlockHash
+    terminalBlockHash*: Hash32
     terminalBlockNumber*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#response-2
@@ -276,7 +278,7 @@ type
     code*: string # e.g. NB or BU
     name*: string # Human-readable name of the client, e.g. Lighthouse or go-ethereum
     version*: string #  the version string of the current implementation e.g. v4.6.0 or 1.0.0-alpha.1 or 1.0.0+20130313144700
-    commit*: FixedBytes[4]
+    commit*: Bytes4
 
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/common.md#errors
@@ -294,3 +296,8 @@ const
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)
+
+# Backwards compatibility
+
+type
+  PayloadID* {.deprecated.} = Bytes8

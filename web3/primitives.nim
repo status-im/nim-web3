@@ -7,13 +7,20 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+{.push raises: [].}
+
 import
-  std/[hashes, typetraits],
+  std/[hashes as std_hashes, typetraits],
   stint,
   stew/byteutils,
+  eth/common/[addresses, base, hashes],
   results
 
+export base except BlockNumber
+
 export
+  addresses,
+  std_hashes,
   hashes,
   typetraits,
   results
@@ -23,36 +30,20 @@ const
   fieldElementsPerBlob = 4096
 
 type
-  FixedBytes*[N: static[int]] = distinct array[N, byte]
+  # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/schemas/base-types.yaml
 
   DynamicBytes*[
     minLen: static[int] = 0,
     maxLen: static[int] = high(int)] = distinct seq[byte]
 
-  Address* = distinct array[20, byte]
-  TxHash* = FixedBytes[32]
-  Hash256* = FixedBytes[32]
-  BlockHash* = FixedBytes[32]
   Quantity* = distinct uint64
-  BlockNumber* = distinct Quantity
+    # Quantity is use in lieu of an ordinary `uint64` to avoid the default
+    # format that comes with json_serialization
 
-  CodeHash* = FixedBytes[32]
-  StorageHash* = FixedBytes[32]
-  VersionedHash* = FixedBytes[32]
 
-  KZGCommitment* = FixedBytes[48]
-  KZGProof* = FixedBytes[48]
   Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
-{.push raises: [].}
-
-template `==`*[N](a, b: FixedBytes[N]): bool =
-  distinctBase(a) == distinctBase(b)
-
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
-  distinctBase(a) == distinctBase(b)
-
-func `==`*(a, b: Address): bool {.inline.} =
   distinctBase(a) == distinctBase(b)
 
 template ethQuantity(typ: type) {.dirty.} =
@@ -64,25 +55,12 @@ template ethQuantity(typ: type) {.dirty.} =
   func `==`*(a, b: typ): bool {.borrow.}
 
 ethQuantity Quantity
-ethQuantity BlockNumber
 
-func hash*[N](bytes: FixedBytes[N]): Hash =
-  hash(distinctBase bytes)
-
-func hash*(bytes: Address): Hash =
-  hash(distinctBase bytes)
-
-template toHex*[N](x: FixedBytes[N]): string =
+template toHex*(x: DynamicBytes): string =
   toHex(distinctBase x)
 
-template toHex*[minLen, maxLen](x: DynamicBytes[minLen, maxLen]): string =
-  toHex(distinctBase x)
-
-template toHex*(x: Address): string =
-  toHex(distinctBase x)
-
-template fromHex*(T: type Address, hexStr: string): T =
-  T fromHex(distinctBase(T), hexStr)
+template to0xHex*[minLen, maxLen](x: DynamicBytes[minLen, maxLen]): string =
+  to0xHex(distinctBase x)
 
 template skip0xPrefix(hexStr: string): int =
   ## Returns the index of the first meaningful char in `hexStr` by skipping
@@ -102,20 +80,20 @@ func fromHex*[minLen, maxLen](T: type DynamicBytes[minLen, maxLen], hexStr: stri
 
   T hexToSeqByte(hexStr)
 
-template fromHex*[N](T: type FixedBytes[N], hexStr: string): T =
-  T fromHex(distinctBase(T), hexStr)
+template data*(v: DynamicBytes): seq[byte] =
+  distinctBase v
 
-func toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
-  copyMem(addr result[0], unsafeAddr distinctBase(data)[0], N)
+template bytes*(v: DynamicBytes): seq[byte] {.deprecated: "data".} =
+  v.data
 
-template bytes*(data: DynamicBytes): seq[byte] =
-  distinctBase data
+template bytes*(v: FixedBytes): auto {.deprecated: "data".} =
+  v.data
 
-template bytes*(data: FixedBytes): auto =
-  distinctBase data
+template bytes*(v: Address): auto {.deprecated: "data".} =
+  v.data
 
-template bytes*(data: Address): auto =
-  distinctBase data
+template bytes*(v: Hash32): auto {.deprecated: "data".} =
+  v.data
 
 template len*(data: DynamicBytes): int =
   len(distinctBase data)
@@ -126,11 +104,18 @@ template len*(data: FixedBytes): int =
 template len*(data: Address): int =
   len(distinctBase data)
 
+template len*(data: Hash32): int =
+  len(distinctBase data)
+
 func `$`*[minLen, maxLen](data: DynamicBytes[minLen, maxLen]): string =
-  "0x" & byteutils.toHex(distinctBase(data))
+  data.to0xHex()
 
-func `$`*[N](data: FixedBytes[N]): string =
-  "0x" & byteutils.toHex(distinctBase(data))
+# Backwards compatibility
 
-func `$`*(data: Address): string =
-  "0x" & byteutils.toHex(distinctBase(data))
+type
+  Hash256* {.deprecated.} = Hash32
+  BlockNumber* {.deprecated.} = Quantity
+  BlockHash* {.deprecated.} = Hash32
+  CodeHash* {.deprecated.} = Hash32
+  StorageHash* {.deprecated.} = Hash32
+  TxHash* {.deprecated.} = Hash32

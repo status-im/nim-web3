@@ -8,9 +8,8 @@
 # those terms.
 
 import
-  results,
-  eth_api_types, stint,
-  eth/[common, keys, rlp], eth/common/transaction
+  eth_api_types,
+  eth/common/[transactions_rlp, keys]
 
 func signTransaction(tr: var Transaction, pk: PrivateKey) =
   let h = tr.txHashNoSignature
@@ -43,8 +42,7 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxLegacy)
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
-  if s.to.isSome:
-    tr.to = Opt.some(EthAddress(s.to.get))
+  tr.to = s.to
 
   if s.value.isSome:
     tr.value = s.value.get
@@ -55,18 +53,17 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     signTransactionEip155(tr, pk)
   else:
     signTransaction(tr, pk)
-  return rlp.encode(tr)
+  rlp.encode(tr)
 
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] {.deprecated: "Provide chainId in TransactionArgs".} =
   var tr = Transaction(txType: TxLegacy, chainId: chainId)
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
-  if s.to.isSome:
-    tr.to = Opt.some(EthAddress(s.to.get))
+  tr.to = s.to
 
   if s.value.isSome:
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
   signTransactionEip155(tr, pk)
-  return rlp.encode(tr)
+  rlp.encode(tr)
