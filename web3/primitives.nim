@@ -40,7 +40,6 @@ type
     # Quantity is use in lieu of an ordinary `uint64` to avoid the default
     # format that comes with json_serialization
 
-
   Blob* = FixedBytes[fieldElementsPerBlob * 32]
 
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
@@ -79,6 +78,9 @@ func fromHex*[minLen, maxLen](T: type DynamicBytes[minLen, maxLen], hexStr: stri
     raise newException(ValueError, "hex input too large")
 
   T hexToSeqByte(hexStr)
+
+func toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
+  copyMem(addr result[0], unsafeAddr distinctBase(data)[0], N)
 
 template data*(v: DynamicBytes): seq[byte] =
   distinctBase v
