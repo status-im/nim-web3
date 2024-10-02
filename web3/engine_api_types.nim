@@ -200,7 +200,7 @@ type
     prevRandao*: Bytes32
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
-    parentBeaconBlockRoot*: Bytes32
+    parentBeaconBlockRoot*: Hash32
 
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object

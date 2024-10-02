@@ -43,7 +43,7 @@ type
     prevRandao*: Bytes32
     suggestedFeeRecipient*: Address
     withdrawals*: Opt[seq[WithdrawalV1]]
-    parentBeaconBlockRoot*: Opt[Bytes32]
+    parentBeaconBlockRoot*: Opt[Hash32]
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
