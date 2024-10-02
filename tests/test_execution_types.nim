@@ -48,7 +48,7 @@ suite "Execution types tests":
       prevRandao: b32(2),
       suggestedFeeRecipient: address(3),
       withdrawals: Opt.some(@[wd]),
-      parentBeaconBlockRoot: Opt.some(b32(4)),
+      parentBeaconBlockRoot: Opt.some(h256(4)),
     )
 
     blobs = BlobsBundleV1(
@@ -110,7 +110,7 @@ suite "Execution types tests":
 
   test "attr version":
     var v2 = attr
-    v2.parentBeaconBlockRoot = Opt.none(Bytes32)
+    v2.parentBeaconBlockRoot = Opt.none(Hash32)
     var v1 = v2
     v1.withdrawals = Opt.none(seq[WithdrawalV1])
     check attr.version == Version.V3
