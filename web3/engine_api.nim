@@ -120,7 +120,7 @@ template newPayload*(
     rpcClient: RpcClient,
     payload: ExecutionPayloadV3,
     versionedHashes: seq[VersionedHash],
-    parentBeaconBlockRoot: Bytes32): Future[PayloadStatusV1] =
+    parentBeaconBlockRoot: Hash32): Future[PayloadStatusV1] =
   engine_newPayloadV3(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot)
 
@@ -128,7 +128,7 @@ template newPayload*(
     rpcClient: RpcClient,
     payload: ExecutionPayloadV4,
     versionedHashes: seq[VersionedHash],
-    parentBeaconBlockRoot: Bytes32): Future[PayloadStatusV1] =
+    parentBeaconBlockRoot: Hash32): Future[PayloadStatusV1] =
   engine_newPayloadV4(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot)
 
