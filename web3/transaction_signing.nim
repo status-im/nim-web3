@@ -9,34 +9,7 @@
 
 import
   eth_api_types,
-  eth/common/[transactions_rlp, keys]
-
-func signTransaction(tr: var Transaction, pk: PrivateKey) =
-  let h = tr.txHashNoSignature
-  let s = sign(pk, SkMessage(h.data))
-
-  var r = toRaw(s)
-  let v = r[64]
-
-  tr.R = fromBytesBE(UInt256, r.toOpenArray(0, 31))
-  tr.S = fromBytesBE(UInt256, r.toOpenArray(32, 63))
-
-  tr.V = uint64(v) + 27 # TODO! Complete this
-
-func signTransactionEip155(tr: var Transaction, pk: PrivateKey) =
-  let chainId = tr.chainId
-  tr.V = uint64(chainId) * 2 + 35
-
-  let h = tr.txHashNoSignature
-  let s = sign(pk, SkMessage(h.data))
-
-  var r = toRaw(s)
-  let v = r[64]
-
-  tr.R = fromBytesBE(UInt256, r.toOpenArray(0, 31))
-  tr.S = fromBytesBE(UInt256, r.toOpenArray(32, 63))
-
-  tr.V = uint64(v) + uint64(chainId) * 2 + 35
+  eth/common/[keys, transactions_rlp, transaction_utils]
 
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxLegacy)
@@ -48,11 +21,12 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
-  if s.chainId.isSome():
-    tr.chainId = ChainId(s.chainId.get)
-    signTransactionEip155(tr, pk)
-  else:
-    signTransaction(tr, pk)
+  tr.signature =
+    if s.chainId.isSome():
+      tr.chainId = ChainId(s.chainId.get)
+      tr.sign(pk, true)
+    else:
+      tr.sign(pk, false)
   rlp.encode(tr)
 
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] {.deprecated: "Provide chainId in TransactionArgs".} =
@@ -65,5 +39,5 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): s
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
-  signTransactionEip155(tr, pk)
+  tr.signature = tr.sign(pk, true)
   rlp.encode(tr)
