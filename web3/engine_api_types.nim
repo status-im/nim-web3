@@ -136,41 +136,42 @@ type
     excessBlobGas*: Quantity
 
   # https://eips.ethereum.org/EIPS/eip-6404
-  ExecutionSignature* = object
-    address*: Opt[Address]
-    secp256k1Signature*: Opt[FixedBytes[65]]
+  ExecutionSignatureV1* = object
+    secp256k1*: Opt[FixedBytes[65]]
 
-  FeesPerGas* = object
+  FeesPerGasV1* = object
     regular*: Opt[UInt256]
     blob*: Opt[UInt256]
 
+  AccessTupleV1* = AccessTuple
+
   AuthorizationPayloadV1* = object
     magic*: Opt[Quantity]
-    chainId*: Opt[UInt256]
+    chainId*: Opt[Quantity]
     address*: Opt[Address]
     nonce*: Opt[Quantity]
 
   AuthorizationV1* = object
     payload*: AuthorizationPayloadV1
-    authority*: ExecutionSignature
+    signature*: ExecutionSignatureV1
 
-  TransactionPayload* = object
+  TransactionPayloadV1* = object
     `type`*: Opt[Quantity]
-    chainId*: Opt[UInt256]
+    chainId*: Opt[Quantity]
     nonce*: Opt[Quantity]
-    maxFeesPerGas*: Opt[FeesPerGas]
+    maxFeesPerGas*: Opt[FeesPerGasV1]
     gas*: Opt[Quantity]
     to*: Opt[Address]
     value*: Opt[UInt256]
     input*: Opt[seq[byte]]
-    accessList*: Opt[seq[AccessTuple]]
-    maxPriorityFeesPerGas*: Opt[FeesPerGas]
+    accessList*: Opt[seq[AccessTupleV1]]
+    maxPriorityFeesPerGas*: Opt[FeesPerGasV1]
     blobVersionedHashes*: Opt[seq[FixedBytes[32]]]
     authorizationList*: Opt[seq[AuthorizationV1]]
 
-  Transaction* = object
-    payload*: TransactionPayload
-    `from`*: ExecutionSignature
+  TransactionV1* = object
+    payload*: TransactionPayloadV1
+    signature*: ExecutionSignatureV1
 
   # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#executionpayloadv4
   ExecutionPayloadV4* = object
@@ -187,7 +188,7 @@ type
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
     blockHash*: Hash256
-    transactions*: seq[Transaction]
+    transactions*: seq[TransactionV1]
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity

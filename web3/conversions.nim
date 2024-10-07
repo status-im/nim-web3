@@ -56,12 +56,12 @@ derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 # engine_api_types
 #------------------------------------------------------------------------------
 
-ExecutionSignature.useDefaultSerializationIn JrpcConv
-FeesPerGas.useDefaultSerializationIn JrpcConv
+ExecutionSignatureV1.useDefaultSerializationIn JrpcConv
+FeesPerGasV1.useDefaultSerializationIn JrpcConv
 AuthorizationPayloadV1.useDefaultSerializationIn JrpcConv
 AuthorizationV1.useDefaultSerializationIn JrpcConv
-TransactionPayload.useDefaultSerializationIn JrpcConv
-Transaction.useDefaultSerializationIn JrpcConv
+TransactionPayloadV1.useDefaultSerializationIn JrpcConv
+TransactionV1.useDefaultSerializationIn JrpcConv
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
 DepositRequestV1.useDefaultSerializationIn JrpcConv
@@ -408,7 +408,11 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
     w.writeValue JsonString("null")
 
 proc writeValue*[
-    T: FeesPerGas | TransactionPayload | ExecutionSignature
+    T:
+      ExecutionSignatureV1 |
+      FeesPerGasV1 |
+      AuthorizationPayloadV1 |
+      TransactionPayloadV1
 ](w: var JsonWriter[JrpcConv], value: T) {.gcsafe, raises: [IOError].} =
   w.writeObject(T):
     value.enumInstanceSerializedFields(fieldName, fieldValue):
