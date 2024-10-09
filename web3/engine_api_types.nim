@@ -28,26 +28,6 @@ type
     address*: Address
     amount*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/prague.md#depositrequestv1
-  DepositRequestV1* = object
-    pubkey*: Bytes48
-    withdrawalCredentials*: Bytes32
-    amount*: Quantity
-    signature*: Bytes96
-    index*: Quantity
-
-  # https://github.com/nflaig/execution-apis/blob/update-withdrawal-request/src/engine/prague.md#withdrawalrequestv1
-  WithdrawalRequestV1* = object
-    sourceAddress*: Address
-    validatorPubkey*: Bytes48
-    amount*: Quantity
-
-  # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#consolidationrequestv1
-  ConsolidationRequestV1* = object
-    sourceAddress*: Address
-    sourcePubkey*: Bytes48
-    targetPubkey*: Bytes48
-
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#executionpayloadv1
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/openrpc/schemas/payload.yaml#L51
   ExecutionPayloadV1* = object
@@ -136,35 +116,10 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/3ae3d29fc9900e5c48924c238dff7643fdc3680e/src/engine/prague.md#executionpayloadv4
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/openrpc/schemas/payload.yaml#L246
-  ExecutionPayloadV4* = object
-    parentHash*: Hash32
-    feeRecipient*: Address
-    stateRoot*: Hash32
-    receiptsRoot*: Hash32
-    logsBloom*: Bytes256
-    prevRandao*: Bytes32
-    blockNumber*: Quantity
-    gasLimit*: Quantity
-    gasUsed*: Quantity
-    timestamp*: Quantity
-    extraData*: DynamicBytes[0, 32]
-    baseFeePerGas*: UInt256
-    blockHash*: Hash32
-    transactions*: seq[TypedTransaction]
-    withdrawals*: seq[WithdrawalV1]
-    blobGasUsed*: Quantity
-    excessBlobGas*: Quantity
-    depositRequests*: seq[DepositRequestV1]
-    withdrawalRequests*: seq[WithdrawalRequestV1]
-    consolidationRequests*: seq[ConsolidationRequestV1]
-
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
     ExecutionPayloadV2 |
-    ExecutionPayloadV3 |
-    ExecutionPayloadV4
+    ExecutionPayloadV3
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object
@@ -260,12 +215,13 @@ type
     blobsBundle*: BlobsBundleV1
     shouldOverrideBuilder*: bool
 
-  # https://github.com/ethereum/execution-apis/blob/90a46e9137c89d58e818e62fa33a0347bba50085/src/engine/prague.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/4140e528360fea53c34a766d86a000c6c039100e/src/engine/prague.md#response-1
   GetPayloadV4Response* = object
-    executionPayload*: ExecutionPayloadV4
+    executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
     blobsBundle*: BlobsBundleV1
     shouldOverrideBuilder*: bool
+    executionRequests*: array[3, seq[byte]]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |

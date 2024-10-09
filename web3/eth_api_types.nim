@@ -7,6 +7,8 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+{.push raises: [].}
+
 import
   stint,
   ./primitives
@@ -291,8 +293,6 @@ type
     gasUsedRatio*: seq[float64]
     blobGasUsedRatio*: seq[float64]
     reward*: Opt[seq[FeeHistoryReward]]
-
-{.push raises: [].}
 
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)

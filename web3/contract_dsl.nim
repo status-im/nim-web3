@@ -198,7 +198,7 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
           `senderName`.sender, `output`,
           static(keccak256(`signature`).data[0..<4]) & encode(`funcParamsTuple`))
 
-proc `&`(a, b: openarray[byte]): seq[byte] =
+proc `&`(a, b: openArray[byte]): seq[byte] =
   let sza = a.len
   let szb = b.len
   result.setLen(sza + szb)
@@ -217,7 +217,7 @@ proc genConstructor(cname: NimNode, constructorObject: ConstructorObject): NimNo
     funcParamsTuple.add(ident input.name)
 
   result = quote do:
-    proc deployContract*[TSender](`sender`: TSender, contractType: typedesc[`cname`], `contractCode`: openarray[byte]): auto =
+    proc deployContract*[TSender](`sender`: TSender, contractType: typedesc[`cname`], `contractCode`: openArray[byte]): auto =
       discard
   for input in constructorObject.inputs:
     result[3].add nnkIdentDefs.newTree(

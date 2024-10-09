@@ -17,13 +17,13 @@ func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
 func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
   @(x.toByteArrayBE())
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var StUint): int =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int =
   const meaningfulLen = to.bits div 8
   let offset = offset + baseOffset
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
 
-func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var StInt[N]): int =
+func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int =
   const meaningfulLen = N div 8
   let offset = offset + baseOffset
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
@@ -39,7 +39,7 @@ func encode*[N: static int](b: FixedBytes[N]): seq[byte] = encodeFixed(b.data)
 func encode*(b: Address): seq[byte] = encodeFixed(b.data)
 func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = encodeFixed(b)
 
-func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
+func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
   let meaningfulLen = to.len
   var padding = to.len mod 32
   if padding != 0:
@@ -49,10 +49,10 @@ func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openAr
     assign(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen + padding
 
-func decode*[N](input: openarray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
+func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
   decodeFixed(input, baseOffset, offset, array[N, byte](to))
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var Address): int {.inline.} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline.} =
   decodeFixed(input, baseOffset, offset, array[20, byte](to))
 
 func encodeDynamic(v: openArray[byte]): seq[byte] =
@@ -71,7 +71,7 @@ func encode*(x: seq[byte]): seq[byte] {.inline.} =
 func encode*(x: string): seq[byte] {.inline.} =
   encodeDynamic(x.toOpenArrayByte(0, x.high))
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte]): int =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
@@ -80,7 +80,7 @@ func decode*(input: openarray[byte], baseOffset, offset: int, to: var seq[byte])
   let actualDataOffset = baseOffset + dataOffset + 32
   to = input[actualDataOffset ..< actualDataOffset + dataLen]
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var string): int =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
@@ -89,15 +89,15 @@ func decode*(input: openarray[byte], baseOffset, offset: int, to: var string): i
   let actualDataOffset = baseOffset + dataOffset + 32
   to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
   var s: seq[byte]
   result = decode(input, baseOffset, offset, s)
   # TODO: Check data len, and raise?
   to = typeof(to)(move(s))
 
-func decode*(input: openarray[byte], baseOffset, offset: int, obj: var object): int
+func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int
 
-func decode*[T](input: openarray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline.} =
+func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline.} =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
@@ -110,10 +110,10 @@ func decode*[T](input: openarray[byte], baseOffset, offset: int, to: var seq[T])
   for i in 0 ..< dataLen:
     offset += decode(input, baseOffset, offset, to[i])
 
-proc isDynamicObject(T: typedesc): bool
+func isDynamicObject(T: typedesc): bool
 
 template isDynamicType(a: typedesc): bool =
-  when a is seq | openarray | string | DynamicBytes:
+  when a is seq | openArray | string | DynamicBytes:
     true
   elif a is object:
     const r = isDynamicObject(a)
@@ -121,7 +121,7 @@ template isDynamicType(a: typedesc): bool =
   else:
     false
 
-proc isDynamicObject(T: typedesc): bool =
+func isDynamicObject(T: typedesc): bool =
   var a: T
   for v in fields(a):
     if isDynamicType(typeof(v)): return true
@@ -129,12 +129,12 @@ proc isDynamicObject(T: typedesc): bool =
 
 func encode*(x: bool): seq[byte] = encode(x.int.u256)
 
-func decode*(input: openarray[byte], baseOffset, offset: int, to: var bool): int =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var bool): int =
   var i: Int256
   result = decode(input, baseOffset, offset, i)
   to = not i.isZero()
 
-func decode*(input: openarray[byte], baseOffset, offset: int, obj: var object): int =
+func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int =
   when isDynamicObject(typeof(obj)):
     var dataOffsetBig: UInt256
     result = decode(input, baseOffset, offset, dataOffsetBig)
@@ -153,7 +153,7 @@ func decode*(input: openarray[byte], baseOffset, offset: int, obj: var object): 
 
 func encode*(x: tuple): seq[byte]
 
-func encode*[T](x: openarray[T]): seq[byte] =
+func encode*[T](x: openArray[T]): seq[byte] =
   result = encode(x.len.u256)
   when isDynamicType(T):
     result.setLen((1 + x.len) * 32)
@@ -165,7 +165,7 @@ func encode*[T](x: openarray[T]): seq[byte] =
     for i in 0 ..< x.len:
       result &= encode(x[i])
 
-proc getTupleImpl(t: NimNode): NimNode =
+func getTupleImpl(t: NimNode): NimNode =
   getTypeImpl(t)[1].getTypeImpl()
 
 macro typeListLen*(t: typedesc[tuple]): int =
@@ -191,5 +191,5 @@ func encode*(x: tuple): seq[byte] =
     inc i
 
 # Obsolete
-func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openarray[byte], ...) instead".} =
+func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openArray[byte], ...) instead".} =
   decode(hexToSeqByte(input), 0, offset div 2, to) * 2
