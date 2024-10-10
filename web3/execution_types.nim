@@ -7,6 +7,8 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+{.push raises: [].}
+
 import
   stint,
   ./engine_api_types
@@ -34,9 +36,6 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
-    depositRequests*: Opt[seq[DepositRequestV1]]
-    withdrawalRequests*: Opt[seq[WithdrawalRequestV1]]
-    consolidationRequests*:Opt[seq[ConsolidationRequestV1]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -60,16 +59,9 @@ type
     V1
     V2
     V3
-    V4
-
-{.push raises: [].}
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.depositRequests.isSome or
-      payload.withdrawalRequests.isSome or
-      payload.consolidationRequests.isSome:
-    Version.V4
-  elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
+  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -87,9 +79,7 @@ func version*(attr: PayloadAttributes): Version =
 func version*(res: GetPayloadResponse): Version =
   # TODO: should this return whatever version of
   # executionPayload.version?
-  if res.executionPayload.version == Version.V4:
-    Version.V4
-  elif res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
+  if res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
     Version.V3
   elif res.blockValue.isSome:
     Version.V2
@@ -256,30 +246,6 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     excessBlobGas: p.excessBlobGas.get(0.Quantity)
   )
 
-func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
-  ExecutionPayloadV4(
-    parentHash: p.parentHash,
-    feeRecipient: p.feeRecipient,
-    stateRoot: p.stateRoot,
-    receiptsRoot: p.receiptsRoot,
-    logsBloom: p.logsBloom,
-    prevRandao: p.prevRandao,
-    blockNumber: p.blockNumber,
-    gasLimit: p.gasLimit,
-    gasUsed: p.gasUsed,
-    timestamp: p.timestamp,
-    extraData: p.extraData,
-    baseFeePerGas: p.baseFeePerGas,
-    blockHash: p.blockHash,
-    transactions: p.transactions,
-    withdrawals: p.withdrawals.get,
-    blobGasUsed: p.blobGasUsed.get(0.Quantity),
-    excessBlobGas: p.excessBlobGas.get(0.Quantity),
-    depositRequests: p.depositRequests.get(newSeq[DepositRequestV1]()),
-    withdrawalRequests: p.withdrawalRequests.get(newSeq[WithdrawalRequestV1]()),
-    consolidationRequests: p.consolidationRequests.get(newSeq[ConsolidationRequestV1]()),
-  )
-
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
   ExecutionPayloadV1(
     parentHash: p.parentHash,
@@ -375,30 +341,6 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
     excessBlobGas: Opt.some(p.excessBlobGas)
   )
 
-func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
-  ExecutionPayload(
-    parentHash: p.parentHash,
-    feeRecipient: p.feeRecipient,
-    stateRoot: p.stateRoot,
-    receiptsRoot: p.receiptsRoot,
-    logsBloom: p.logsBloom,
-    prevRandao: p.prevRandao,
-    blockNumber: p.blockNumber,
-    gasLimit: p.gasLimit,
-    gasUsed: p.gasUsed,
-    timestamp: p.timestamp,
-    extraData: p.extraData,
-    baseFeePerGas: p.baseFeePerGas,
-    blockHash: p.blockHash,
-    transactions: p.transactions,
-    withdrawals: Opt.some(p.withdrawals),
-    blobGasUsed: Opt.some(p.blobGasUsed),
-    excessBlobGas: Opt.some(p.excessBlobGas),
-    depositRequests: Opt.some(p.depositRequests),
-    withdrawalRequests: Opt.some(p.withdrawalRequests),
-    consolidationRequests: Opt.some(p.consolidationRequests),
-  )
-
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
   ExecutionPayload(
     parentHash: p.parentHash,
@@ -437,7 +379,7 @@ func V3*(res: GetPayloadResponse): GetPayloadV3Response =
 
 func V4*(res: GetPayloadResponse): GetPayloadV4Response =
   GetPayloadV4Response(
-    executionPayload: res.executionPayload.V4,
+    executionPayload: res.executionPayload.V3,
     blockValue: res.blockValue.get,
     blobsBundle: res.blobsBundle.get(BlobsBundleV1()),
     shouldOverrideBuilder: res.shouldOverrideBuilder.get(false)

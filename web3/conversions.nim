@@ -60,13 +60,10 @@ derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
 #------------------------------------------------------------------------------
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
-DepositRequestV1.useDefaultSerializationIn JrpcConv
-WithdrawalRequestV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV4.useDefaultSerializationIn JrpcConv
 BlobsBundleV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadBodyV1.useDefaultSerializationIn JrpcConv
 PayloadAttributesV1.useDefaultSerializationIn JrpcConv
@@ -82,7 +79,6 @@ GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
 ClientVersionV1.useDefaultSerializationIn JrpcConv
-ConsolidationRequestV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # execution_types
@@ -329,7 +325,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
 proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
   case v.kind
-  of bidNumber: w.writeValue(v.number.Quantity)
+  of bidNumber: w.writeValue(v.number)
   of bidAlias: w.writeValue(v.alias)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var TxOrHash)
