@@ -46,9 +46,6 @@ FilterOptions.useDefaultSerializationIn JrpcConv
 TransactionArgs.useDefaultSerializationIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
 AuthorizationObject.useDefaultSerializationIn JrpcConv
-DepositRequestObject.useDefaultSerializationIn JrpcConv
-WithdrawalRequestObject.useDefaultSerializationIn JrpcConv
-ConsolidationRequestObject.useDefaultSerializationIn JrpcConv
 
 derefType(BlockHeader).useDefaultSerializationIn JrpcConv
 derefType(BlockObject).useDefaultSerializationIn JrpcConv
