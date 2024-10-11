@@ -79,6 +79,13 @@ proc rand[T](_: type seq[T]): seq[T] =
   for i in 0..<3:
     result[i] = rand(T)
 
+proc rand(_: type array[3, seq[byte]]): array[3, seq[byte]] =
+  var z = newSeq[byte](10)
+  discard randomBytes(z)
+  result[0] = z
+  result[1] = z
+  result[2] = z
+
 proc rand[T](_: type SingleOrList[T]): SingleOrList[T] =
   SingleOrList[T](kind: slkSingle, single: rand(T))
 
