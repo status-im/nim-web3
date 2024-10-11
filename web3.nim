@@ -222,14 +222,14 @@ proc subscribeForLogs*(w: Web3, options: FilterOptions,
   else:
     result.historicalEventsProcessed = true
 
-func addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Topic): FilterOptions =
+func addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Bytes32): FilterOptions =
   result = options
   if result.address.kind == slkNull:
     result.address = AddressOrList(kind: slkSingle, single: address)
   result.topics.insert(TopicOrList(kind: slkSingle, single: topic), 0)
 
 proc subscribeForLogs*(s: Web3SenderImpl, options: FilterOptions,
-                       topic: Topic,
+                       topic: Bytes32,
                        logsHandler: SubscriptionEventHandler,
                        errorHandler: SubscriptionErrorHandler,
                        withHistoricEvents = true): Future[Subscription] =
@@ -258,7 +258,7 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   s.removed = true
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
-proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
+proc getJsonLogs(s: Web3SenderImpl, topic: Bytes32,
                  fromBlock = Opt.none(RtBlockIdentifier),
                  toBlock = Opt.none(RtBlockIdentifier),
                  blockHash = Opt.none(Hash32)): Future[seq[JsonString]] =
@@ -310,7 +310,8 @@ proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[Hash32] {.d
   var cc = c
   if cc.nonce.isNone:
     cc.nonce = Opt.some(await web3.nextNonce())
-  let t = encodeTransaction(cc, web3.privateKey.get(), chainId)
+  cc.chainId = Opt.some(chainId.Quantity)
+  let t = encodeTransaction(cc, web3.privateKey.get())
   return await web3.provider.eth_sendRawTransaction(t)
 
 proc sendData(web3: Web3,
