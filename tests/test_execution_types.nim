@@ -29,7 +29,7 @@ suite "Execution types tests":
       stateRoot: h256(3),
       receiptsRoot: h256(4),
       logsBloom: FixedBytes[256].conv(5),
-      prevRandao: h256(6),
+      prevRandao: b32(6),
       blockNumber: 7.Quantity,
       gasLimit: 8.Quantity,
       gasUsed: 9.Quantity,
@@ -45,7 +45,7 @@ suite "Execution types tests":
 
     attr = PayloadAttributes(
       timestamp: 1.Quantity,
-      prevRandao: h256(2),
+      prevRandao: b32(2),
       suggestedFeeRecipient: address(3),
       withdrawals: Opt.some(@[wd]),
       parentBeaconBlockRoot: Opt.some(h256(4)),
@@ -110,7 +110,7 @@ suite "Execution types tests":
 
   test "attr version":
     var v2 = attr
-    v2.parentBeaconBlockRoot = Opt.none(Hash256)
+    v2.parentBeaconBlockRoot = Opt.none(Hash32)
     var v1 = v2
     v1.withdrawals = Opt.none(seq[WithdrawalV1])
     check attr.version == Version.V3

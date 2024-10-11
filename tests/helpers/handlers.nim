@@ -16,7 +16,9 @@ import
   ../../web3/primitives as w3
 
 type
-  Hash256 = w3.Hash256
+  Hash32 = w3.Hash32
+  Address = w3.Address
+  FixedBytes[N: static int] = w3.FixedBytes[N]
 
 func decodeFromString(x: JsonString, T: type): T =
   let jsonBytes = JrpcConv.decode(x.string, string)
@@ -26,18 +28,18 @@ proc installHandlers*(server: RpcServer) =
   server.rpc("eth_syncing") do(x: JsonString) -> SyncingStatus:
     return SyncingStatus(syncing: false)
 
-  server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> TxHash:
+  server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> Hash32:
     let tx = rlp.decode(data, PooledTransaction)
     let h = rlpHash(tx)
-    return TxHash(h.data)
+    return Hash32(h.data)
 
-  server.rpc("eth_getTransactionReceipt") do(x: JsonString, data: TxHash) -> ReceiptObject:
+  server.rpc("eth_getTransactionReceipt") do(x: JsonString, data: Hash32) -> ReceiptObject:
     var r: ReceiptObject
     if x != "-1".JsonString:
       r = decodeFromString(x, ReceiptObject)
     return r
 
-  server.rpc("eth_getTransactionByHash") do(x: JsonString, data: TxHash) -> TransactionObject:
+  server.rpc("eth_getTransactionByHash") do(x: JsonString, data: Hash32) -> TransactionObject:
     var tx: TransactionObject
     if x != "-1".JsonString:
       tx = decodeFromString(x, TransactionObject)
@@ -49,7 +51,7 @@ proc installHandlers*(server: RpcServer) =
       tx = decodeFromString(x, TransactionObject)
     return tx
 
-  server.rpc("eth_getTransactionByBlockHashAndIndex") do(x: JsonString, data: Hash256, quantity: Quantity) -> TransactionObject:
+  server.rpc("eth_getTransactionByBlockHashAndIndex") do(x: JsonString, data: Hash32, quantity: Quantity) -> TransactionObject:
     var tx: TransactionObject
     if x != "-1".JsonString:
       tx = decodeFromString(x, TransactionObject)
@@ -77,7 +79,7 @@ proc installHandlers*(server: RpcServer) =
     if x != "-1".JsonString:
       result = decodeFromString(x, Quantity)
 
-  server.rpc("eth_getBlockTransactionCountByHash") do(x: JsonString, data: BlockHash) -> Quantity:
+  server.rpc("eth_getBlockTransactionCountByHash") do(x: JsonString, data: Hash32) -> Quantity:
     if x != "-1".JsonString:
       result = decodeFromString(x, Quantity)
 
@@ -92,7 +94,7 @@ proc installHandlers*(server: RpcServer) =
       blk = decodeFromString(x, BlockObject)
     return blk
 
-  server.rpc("eth_getBlockByHash") do(x: JsonString, data: BlockHash, fullTransactions: bool) -> BlockObject:
+  server.rpc("eth_getBlockByHash") do(x: JsonString, data: Hash32, fullTransactions: bool) -> BlockObject:
     var blk: BlockObject
     if x != "-1".JsonString:
       blk = decodeFromString(x, BlockObject)
@@ -130,7 +132,7 @@ proc installHandlers*(server: RpcServer) =
     if x != "-1".JsonString:
       result = decodeFromString(x, Quantity)
 
-  server.rpc("debug_getRawTransaction") do(x: JsonString, data: TxHash) -> RlpEncodedBytes:
+  server.rpc("debug_getRawTransaction") do(x: JsonString, data: Bytes32) -> RlpEncodedBytes:
     var res: seq[byte]
     if x != "-1".JsonString:
       res = decodeFromString(x, seq[byte])

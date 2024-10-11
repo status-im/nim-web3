@@ -19,11 +19,14 @@ func conv*(T: type, x: int): T =
 func address*(x: int): Address =
   conv(typeof result, x)
 
-func txhash*(x: int): TxHash =
+func txhash*(x: int): Hash32 =
   conv(typeof result, x)
 
 func blob*(x: int): BlobData =
   conv(typeof result, x)
 
-func h256*(x: int): Hash256 =
+func h256*(x: int): Hash32 =
+  conv(typeof result, x)
+
+func b32*(x: int): Bytes32 =
   conv(typeof result, x)

@@ -12,6 +12,8 @@
 import
   ./primitives
 
+export primitives
+
 func parseCmdArg*(T: type Address, input: string): T
                  {.raises: [ValueError].} =
   fromHex(T, string input)
@@ -19,9 +21,9 @@ func parseCmdArg*(T: type Address, input: string): T
 func completeCmdArg*(T: type Address, input: string): seq[string] =
   @[]
 
-func parseCmdArg*(T: type BlockHash, input: string): T
+func parseCmdArg*(T: type Hash32, input: string): T
                  {.raises: [ValueError].} =
   fromHex(T, string input)
 
-func completeCmdArg*(T: type BlockHash, input: string): seq[string] =
+func completeCmdArg*(T: type Hash32, input: string): seq[string] =
   @[]

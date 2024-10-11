@@ -35,8 +35,8 @@ func encodeFixed(a: openArray[byte]): seq[byte] =
   result.setLen(padding) # Zero fill padding
   result.add(a)
 
-func encode*[N](b: FixedBytes[N]): seq[byte] = encodeFixed(array[N, byte](b))
-func encode*(b: Address): seq[byte] = encodeFixed(array[20, byte](b))
+func encode*[N: static int](b: FixedBytes[N]): seq[byte] = encodeFixed(b.data)
+func encode*(b: Address): seq[byte] = encodeFixed(b.data)
 func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = encodeFixed(b)
 
 func decodeFixed(input: openarray[byte], baseOffset, offset: int, to: var openArray[byte]): int =

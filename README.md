@@ -11,13 +11,13 @@ The humble beginnings of a Nim library similar to web3.[js|py]
 
 You can install the developement version of the library through nimble with the following command
 
-```
+```console
 nimble install https://github.com/status-im/nim-web3@#master
 ```
 
 ## Development
 
-You should first run `./simulator.sh` which runs `ganache-cli`
+You should first run `./simulator.sh` which runs `hardhat node`
 
 This creates a local simulated Ethereum network on your local machine and the tests will use this for their E2E processing
 

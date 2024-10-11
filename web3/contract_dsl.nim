@@ -1,6 +1,5 @@
 import
   std/[macros, strutils],
-  nimcrypto/keccak,
   json_serialization,
   ./[encoding, eth_api_types],
   stint,
@@ -40,9 +39,6 @@ type
     of function: functionObject: FunctionObject
     of constructor: constructorObject: ConstructorObject
     of event: eventObject: EventObject
-
-proc keccak256Bytes(s: string): array[32, byte] {.inline.} =
-  keccak256.digest(s).data
 
 proc joinStrings(s: varargs[string]): string = join(s)
 
@@ -194,13 +190,13 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
       mixin createImmutableContractInvocation
       return createImmutableContractInvocation(
           `senderName`.sender, `output`,
-          static(keccak256Bytes(`signature`)[0..<4]) & encode(`funcParamsTuple`))
+          static(keccak256(`signature`).data[0..<4]) & encode(`funcParamsTuple`))
   else:
     result[6] = quote do:
       mixin createMutableContractInvocation
       return createMutableContractInvocation(
           `senderName`.sender, `output`,
-          static(keccak256Bytes(`signature`)[0..<4]) & encode(`funcParamsTuple`))
+          static(keccak256(`signature`).data[0..<4]) & encode(`funcParamsTuple`))
 
 proc `&`(a, b: openarray[byte]): seq[byte] =
   let sza = a.len
@@ -313,9 +309,9 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
     result = quote do:
       type `cbident`* = object
 
-      template eventTopic*(T: type `cbident`): eth_api_types.Topic =
-        const r = keccak256Bytes(`signature`)
-        eth_api_types.Topic(r)
+      template eventTopic*(T: type `cbident`): eth_api_types.Bytes32 =
+        const r = Bytes32 keccak256(`signature`).data
+        r
 
       proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
                       t: type `cbident`,

@@ -8,20 +8,20 @@
 # those terms.
 
 import
-  std/[json, tables, uri, macros],
-  stint, httputils, chronos,
+  std/[tables, uri, macros],
+  httputils, chronos,
   results,
   json_rpc/[rpcclient, jsonmarshal],
   json_rpc/private/jrpc_sys,
-  eth/keys,
+  eth/common/keys,
   chronos/apps/http/httpclient,
   web3/[eth_api_types, conversions, transaction_signing, encoding, contract_dsl],
   web3/eth_api
 
 from eth/common/eth_types import ChainId
 
-export UInt256, Int256, Uint128, Int128, ChainId
 export
+  ChainId,
   eth_api_types,
   conversions,
   encoding,
@@ -51,7 +51,7 @@ type
     gas*: uint64
     gasPrice*: int
     chainId*: Opt[ChainId]
-    blockNumber*: BlockNumber
+    blockNumber*: Quantity
 
   Sender*[T] = ContractInstance[T, Web3SenderImpl]
   AsyncSender*[T] = ContractInstance[T, Web3AsyncSenderImpl]
@@ -261,7 +261,7 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
 proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
                  fromBlock = Opt.none(RtBlockIdentifier),
                  toBlock = Opt.none(RtBlockIdentifier),
-                 blockHash = Opt.none(BlockHash)): Future[seq[JsonString]] =
+                 blockHash = Opt.none(Hash32)): Future[seq[JsonString]] =
 
   var options = FilterOptions(
     address: AddressOrList(kind: slkSingle, single: s.contractAddress),
@@ -282,7 +282,7 @@ proc getJsonLogs*[TContract](s: Sender[TContract],
                   EventName: type,
                   fromBlock = Opt.none(RtBlockIdentifier),
                   toBlock = Opt.none(RtBlockIdentifier),
-                  blockHash = Opt.none(BlockHash)): Future[seq[JsonString]] {.inline.} =
+                  blockHash = Opt.none(Hash32)): Future[seq[JsonString]] {.inline.} =
   mixin eventTopic
   getJsonLogs(s.sender, eventTopic(EventName), fromBlock, toBlock, blockHash)
 
@@ -291,11 +291,11 @@ proc nextNonce*(web3: Web3): Future[Quantity] {.async.} =
     inc web3.lastKnownNonce.get
     return web3.lastKnownNonce.get
   else:
-    let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress.Address
+    let fromAddress = web3.privateKey.get().toPublicKey().toCanonicalAddress
     result = await web3.provider.eth_getTransactionCount(fromAddress, "latest")
     web3.lastKnownNonce = Opt.some result
 
-proc send*(web3: Web3, c: TransactionArgs): Future[TxHash] {.async.} =
+proc send*(web3: Web3, c: TransactionArgs): Future[Hash32] {.async.} =
   if web3.privateKey.isSome():
     var cc = c
     if cc.nonce.isNone:
@@ -305,7 +305,7 @@ proc send*(web3: Web3, c: TransactionArgs): Future[TxHash] {.async.} =
   else:
     return await web3.provider.eth_sendTransaction(c)
 
-proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[TxHash] {.deprecated: "Provide chainId in TransactionArgs", async.} =
+proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[Hash32] {.deprecated: "Provide chainId in TransactionArgs", async.} =
   doAssert(web3.privateKey.isSome())
   var cc = c
   if cc.nonce.isNone:
@@ -320,7 +320,7 @@ proc sendData(web3: Web3,
               value: UInt256,
               gas: uint64,
               gasPrice: int,
-              chainId = Opt.none(ChainId)): Future[TxHash] {.async.} =
+              chainId = Opt.none(ChainId)): Future[Hash32] {.async.} =
   let
     gasPrice = if web3.privateKey.isSome() or gasPrice != 0: Opt.some(gasPrice.Quantity)
                else: Opt.none(Quantity)
@@ -345,7 +345,7 @@ proc sendData(web3: Web3,
 proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            value = 0.u256,
            gas = 3000000'u64,
-           gasPrice = 0): Future[TxHash] =
+           gasPrice = 0): Future[Hash32] =
   sendData(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, gasPrice)
 
@@ -353,7 +353,7 @@ proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            chainId: ChainId,
            value = 0.u256,
            gas = 3000000'u64,
-           gasPrice = 0): Future[TxHash] =
+           gasPrice = 0): Future[Hash32] =
   sendData(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, some(chainId))
 
@@ -364,7 +364,7 @@ proc callAux(
     data: seq[byte],
     value = 0.u256,
     gas = 3000000'u64,
-    blockNumber = high(BlockNumber)): Future[seq[byte]] {.async.} =
+    blockNumber = high(Quantity)): Future[seq[byte]] {.async.} =
   var cc: TransactionArgs
   cc.data = Opt.some(data)
   cc.source = Opt.some(defaultAccount)
@@ -372,7 +372,7 @@ proc callAux(
   cc.gas = Opt.some(Quantity(gas))
   cc.value = Opt.some(value)
   result =
-    if blockNumber != high(BlockNumber):
+    if blockNumber != high(Quantity):
       await web3.provider.eth_call(cc, blockId(blockNumber))
     else:
       await web3.provider.eth_call(cc, "latest")
@@ -381,7 +381,7 @@ proc call*[T](
     c: ContractInvocation[T, Web3SenderImpl],
     value = 0.u256,
     gas = 3000000'u64,
-    blockNumber = high(BlockNumber)): Future[T] {.async.} =
+    blockNumber = high(Quantity)): Future[T] {.async.} =
   let response = await callAux(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
   if response.len > 0:
@@ -389,7 +389,7 @@ proc call*[T](
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
 
-proc getMinedTransactionReceipt*(web3: Web3, tx: TxHash): Future[ReceiptObject] {.async.} =
+proc getMinedTransactionReceipt*(web3: Web3, tx: Hash32): Future[ReceiptObject] {.async.} =
   ## Returns the receipt for the transaction. Waits for it to be mined if necessary.
   # TODO: Potentially more optimal solution is to subscribe and wait for appropriate
   # notification. Now we're just polling every 500ms which should be ok for most cases.
@@ -450,7 +450,7 @@ func contractInstance*(
       contractAddress: toAddress,
       defaultAccount: web3.defaultAccount,
       gas: 3000000,
-      blockNumber: BlockNumber.high))
+      blockNumber: Quantity.high))
 
 proc createMutableContractInvocation*(sender: Web3AsyncSenderImpl, ReturnType: typedesc, data: sink seq[byte]) {.async.} =
   assert(sender.gas > 0)

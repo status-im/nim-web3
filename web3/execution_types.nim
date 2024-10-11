@@ -17,19 +17,19 @@ export
 
 type
   ExecutionPayload* = object
-    parentHash*: Hash256
+    parentHash*: Hash32
     feeRecipient*: Address
-    stateRoot*: Hash256
-    receiptsRoot*: Hash256
-    logsBloom*: FixedBytes[256]
-    prevRandao*: FixedBytes[32]
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
     blockNumber*: Quantity
     gasLimit*: Quantity
     gasUsed*: Quantity
     timestamp*: Quantity
     extraData*: DynamicBytes[0, 32]
     baseFeePerGas*: UInt256
-    blockHash*: Hash256
+    blockHash*: Hash32
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
@@ -40,10 +40,10 @@ type
 
   PayloadAttributes* = object
     timestamp*: Quantity
-    prevRandao*: FixedBytes[32]
+    prevRandao*: Bytes32
     suggestedFeeRecipient*: Address
     withdrawals*: Opt[seq[WithdrawalV1]]
-    parentBeaconBlockRoot*: Opt[FixedBytes[32]]
+    parentBeaconBlockRoot*: Opt[Hash32]
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |

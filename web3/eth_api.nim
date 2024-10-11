@@ -10,7 +10,6 @@
 
 import
   std/json,
-  json_serialization/stew/results,
   json_rpc/[client, jsonmarshal],
   stint,
   ./conversions,
@@ -22,7 +21,7 @@ export
 
 createRpcSigsFromNim(RpcClient):
   proc web3_clientVersion(): string
-  proc web3_sha3(data: seq[byte]): Hash256
+  proc web3_sha3(data: seq[byte]): Hash32
   proc net_version(): string
   proc net_peerCount(): Quantity
   proc net_listening(): bool
@@ -38,7 +37,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getBalance(data: Address, blockId: BlockIdentifier): UInt256
   proc eth_getStorageAt(data: Address, slot: UInt256, blockId: BlockIdentifier): FixedBytes[32]
   proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
-  proc eth_getBlockTransactionCountByHash(data: BlockHash): Quantity
+  proc eth_getBlockTransactionCountByHash(data: Hash32): Quantity
   proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
 
   # TODO: Investigate why nim v2 cannot instantiate generic functions
@@ -49,26 +48,26 @@ createRpcSigsFromNim(RpcClient):
     proc eth_getBlockReceipts(blockId: BlockIdentifier): Opt[seq[ReceiptObject]]
 
   proc eth_getBlockReceipts(blockId: string): Opt[seq[ReceiptObject]]
-  proc eth_getBlockReceipts(blockId: BlockNumber): Opt[seq[ReceiptObject]]
+  proc eth_getBlockReceipts(blockId: Quantity): Opt[seq[ReceiptObject]]
   proc eth_getBlockReceipts(blockId: RtBlockIdentifier): Opt[seq[ReceiptObject]]
 
-  proc eth_getUncleCountByBlockHash(data: BlockHash): Quantity
+  proc eth_getUncleCountByBlockHash(data: Hash32): Quantity
   proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
   proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]
   proc eth_sign(address: Address, data: seq[byte]): seq[byte]
   proc eth_signTransaction(args: TransactionArgs): seq[byte]
-  proc eth_sendTransaction(args: TransactionArgs): TxHash
-  proc eth_sendRawTransaction(data: seq[byte]): TxHash
+  proc eth_sendTransaction(args: TransactionArgs): Hash32
+  proc eth_sendRawTransaction(data: seq[byte]): Hash32
   proc eth_call(args: TransactionArgs, blockId: BlockIdentifier): seq[byte]
   proc eth_estimateGas(args: TransactionArgs): Quantity
   proc eth_createAccessList(args: TransactionArgs, blockId: BlockIdentifier): AccessListResult
-  proc eth_getBlockByHash(data: BlockHash, fullTransactions: bool): BlockObject
+  proc eth_getBlockByHash(data: Hash32, fullTransactions: bool): BlockObject
   proc eth_getBlockByNumber(blockId: BlockIdentifier, fullTransactions: bool): BlockObject
-  proc eth_getTransactionByHash(data: TxHash): TransactionObject
-  proc eth_getTransactionByBlockHashAndIndex(data: Hash256, quantity: Quantity): TransactionObject
+  proc eth_getTransactionByHash(data: Hash32): TransactionObject
+  proc eth_getTransactionByBlockHashAndIndex(data: Hash32, quantity: Quantity): TransactionObject
   proc eth_getTransactionByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: Quantity): TransactionObject
-  proc eth_getTransactionReceipt(data: TxHash): ReceiptObject
-  proc eth_getUncleByBlockHashAndIndex(data: Hash256, quantity: Quantity): BlockObject
+  proc eth_getTransactionReceipt(data: Hash32): ReceiptObject
+  proc eth_getUncleByBlockHashAndIndex(data: Hash32, quantity: Quantity): BlockObject
   proc eth_getUncleByBlockNumberAndIndex(blockId: BlockIdentifier, quantity: Quantity): BlockObject
   proc eth_getCompilers(): seq[string]
   proc eth_compileLLL(): seq[byte]
@@ -84,7 +83,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_chainId(): Quantity
 
   proc eth_getWork(): seq[UInt256]
-  proc eth_submitWork(nonce: int64, powHash: Hash256, mixDigest: Hash256): bool
+  proc eth_submitWork(nonce: int64, powHash: Hash32, mixDigest: Hash32): bool
   proc eth_submitHashrate(hashRate: UInt256, id: UInt256): bool
   proc eth_subscribe(name: string, options: FilterOptions): string
   proc eth_subscribe(name: string): string
@@ -103,7 +102,7 @@ createRpcSigsFromNim(RpcClient):
   proc debug_getRawBlock(blockId: BlockIdentifier): RlpEncodedBytes
   proc debug_getRawHeader(blockId: BlockIdentifier): RlpEncodedBytes
   proc debug_getRawReceipts(blockId: BlockIdentifier): seq[RlpEncodedBytes]
-  proc debug_getRawTransaction(data: TxHash): RlpEncodedBytes
+  proc debug_getRawTransaction(data: Hash32): RlpEncodedBytes
 
 createSingleRpcSig(RpcClient, "eth_getJsonLogs"):
   proc eth_getLogs(filterOptions: FilterOptions): seq[JsonString]

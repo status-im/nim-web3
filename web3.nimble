@@ -14,10 +14,10 @@ description = "These are the humble beginnings of library similar to web3.[js|py
 license     = "MIT or Apache License 2.0"
 
 ### Dependencies
-requires "nim >= 1.6.0"
+requires "nim >= 2.0.0"
 requires "chronicles"
-requires "chronos#head"
-requires "bearssl#head"
+requires "chronos"
+requires "bearssl"
 requires "eth"
 requires "faststreams"
 requires "json_rpc"
@@ -42,6 +42,6 @@ proc test(args, path: string) =
 
 ### tasks
 task test, "Run all tests":
-  test "", "tests/all_tests.nim"
+  test "--mm:refc", "tests/all_tests.nim"
   if (NimMajor, NimMinor) > (1, 6):
-    test "--mm:refc", "tests/all_tests.nim"
+    test "--mm:orc", "tests/all_tests.nim"
