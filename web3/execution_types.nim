@@ -54,11 +54,13 @@ type
     blockValue*: Opt[UInt256]
     blobsBundle*: Opt[BlobsBundleV1]
     shouldOverrideBuilder*: Opt[bool]
+    executionRequests*: Opt[array[3, seq[byte]]]
 
   Version* {.pure.} = enum
     V1
     V2
     V3
+    V4
 
 func version*(payload: ExecutionPayload): Version =
   if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
@@ -77,9 +79,9 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  # TODO: should this return whatever version of
-  # executionPayload.version?
-  if res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
+  if res.executionRequests.isSome:
+    Version.V4
+  elif res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
     Version.V3
   elif res.blockValue.isSome:
     Version.V2
@@ -382,7 +384,8 @@ func V4*(res: GetPayloadResponse): GetPayloadV4Response =
     executionPayload: res.executionPayload.V3,
     blockValue: res.blockValue.get,
     blobsBundle: res.blobsBundle.get(BlobsBundleV1()),
-    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false)
+    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
+    executionRequests: res.executionRequests.get,
   )
 
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
@@ -407,5 +410,6 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),
     blobsBundle: Opt.some(x.blobsBundle),
-    shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder)
+    shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
+    executionRequests: Opt.some(x.executionRequests),
   )
