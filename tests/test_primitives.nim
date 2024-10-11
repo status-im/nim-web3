@@ -56,9 +56,9 @@ suite "Primitives":
 
   test "to bytes":
     let
-      ab2 = addr2.bytes
-      tb2 = txhash2.bytes
-      bb2 = blob2.bytes
+      ab2 = addr2.data
+      tb2 = txhash2.data
+      bb2 = blob2.data
 
     check ab2.toHex == "0000000000000000000000000000000000000002"
     check tb2.toHex == "0000000000000000000000000000000000000000000000000000000000000002"

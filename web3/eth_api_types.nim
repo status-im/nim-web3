@@ -13,8 +13,11 @@ import
   stint,
   ./primitives
 
+from eth/common/transactions import AccessPair
+
 export
-  primitives
+  primitives,
+  AccessPair
 
 type
   SyncObject* = object
@@ -50,7 +53,7 @@ type
     input*: Opt[seq[byte]]
 
     # Introduced by EIP-2930.
-    accessList*: Opt[seq[AccessTuple]]
+    accessList*: Opt[seq[AccessPair]]
     chainId*: Opt[Quantity]
 
     # EIP-4844
@@ -157,12 +160,8 @@ type
     of tohTx:
       tx*: TransactionObject
 
-  AccessTuple* = object
-    address*: Address
-    storageKeys*: seq[Bytes32]
-
   AccessListResult* = object
-    accessList*: seq[AccessTuple]
+    accessList*: seq[AccessPair]
     error*: Opt[string]
     gasUsed*: Quantity
 
@@ -192,7 +191,7 @@ type
     yParity*: Opt[Quantity]                       # ECDSA y parity, none for Legacy, same as v for >= Tx2930
     `type`*: Opt[Quantity]                        # EIP-2718, with 0x0 for Legacy
     chainId*: Opt[Quantity]                       # EIP-159
-    accessList*: Opt[seq[AccessTuple]]            # EIP-2930
+    accessList*: Opt[seq[AccessPair]]            # EIP-2930
     maxFeePerGas*: Opt[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Opt[Quantity]          # EIP-1559
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844

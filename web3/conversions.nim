@@ -37,7 +37,7 @@ template derefType(T: type): untyped =
 
 SyncObject.useDefaultSerializationIn JrpcConv
 WithdrawalObject.useDefaultSerializationIn JrpcConv
-AccessTuple.useDefaultSerializationIn JrpcConv
+AccessPair.useDefaultSerializationIn JrpcConv
 AccessListResult.useDefaultSerializationIn JrpcConv
 LogObject.useDefaultSerializationIn JrpcConv
 StorageProof.useDefaultSerializationIn JrpcConv

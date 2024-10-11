@@ -168,7 +168,7 @@ suite "JSON-RPC Quantity":
   test "Random object encoding":
     checkRandomObject(SyncObject)
     checkRandomObject(WithdrawalObject)
-    checkRandomObject(AccessTuple)
+    checkRandomObject(AccessPair)
     checkRandomObject(AccessListResult)
     checkRandomObject(LogObject)
     checkRandomObject(StorageProof)
