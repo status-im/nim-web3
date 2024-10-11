@@ -99,23 +99,6 @@ type
     address*: Address
     amount*: Quantity
 
-  DepositRequestObject* = object  # EIP-6110
-    pubkey*               : Bytes48
-    withdrawalCredentials*: Bytes32
-    amount*               : Quantity
-    signature*            : Bytes96
-    index*                : Quantity
-
-  WithdrawalRequestObject* = object  # EIP-7002
-    sourceAddress*  : Address
-    validatorPubkey*: Bytes48
-    amount*         : Quantity
-
-  ConsolidationRequestObject* = object  # EIP-7251
-    sourceAddress*: Address
-    sourcePubkey* : Bytes48
-    targetPubkey* : Bytes48
-
   ## A block object, or null when no block was found
   BlockObject* = ref object
     number*: Quantity                        # the block number. null when its pending block.
@@ -144,10 +127,7 @@ type
     blobGasUsed*: Opt[Quantity]              # EIP-4844
     excessBlobGas*: Opt[Quantity]            # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]      # EIP-4788
-    depositRequests*: Opt[seq[DepositRequestObject]] # EIP-6110
-    withdrawalRequests*: Opt[seq[WithdrawalRequestObject]] # EIP-7002
-    consolidationRequests*: Opt[seq[ConsolidationRequestObject]] # EIP-7251
-    requestsRoot*: Opt[Hash32]              # EIP-7685
+    requestsHash*: Opt[Hash32]               # EIP-7685
 
   TxOrHashKind* = enum
     tohHash
