@@ -149,9 +149,9 @@ type
     chainId*: Quantity
     address*: Address
     nonce*: Quantity
-    yParity*: Quantity
-    R*: UInt256
-    S*: UInt256
+    v*: Quantity
+    r*: UInt256
+    s*: UInt256
 
   TransactionObject* = ref object                 # A transaction object, or null when no transaction was found:
     hash*: Hash32                                 # hash of the transaction.
@@ -171,7 +171,7 @@ type
     yParity*: Opt[Quantity]                       # ECDSA y parity, none for Legacy, same as v for >= Tx2930
     `type`*: Opt[Quantity]                        # EIP-2718, with 0x0 for Legacy
     chainId*: Opt[Quantity]                       # EIP-159
-    accessList*: Opt[seq[AccessPair]]            # EIP-2930
+    accessList*: Opt[seq[AccessPair]]             # EIP-2930
     maxFeePerGas*: Opt[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Opt[Quantity]          # EIP-1559
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844
@@ -181,7 +181,7 @@ type
   ReceiptObject* = ref object        # A transaction receipt object, or null when no receipt was found:
     transactionHash*: Hash32         # hash of the transaction.
     transactionIndex*: Quantity      # integer of the transactions index position in the block.
-    blockHash*: Hash32                  # hash of the block where this transaction was in.
+    blockHash*: Hash32               # hash of the block where this transaction was in.
     blockNumber*: Quantity           # block number where this transaction was in.
     `from`*: Address                 # address of the sender.
     to*: Opt[Address]                # address of the receiver. null when its a contract creation transaction.
