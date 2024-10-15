@@ -123,8 +123,8 @@ type
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object
-    commitments*: seq[KZGCommitment]
-    proofs*: seq[KZGProof]
+    commitments*: seq[KzgCommitment]
+    proofs*: seq[KzgProof]
     blobs*: seq[Blob]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1

@@ -52,8 +52,8 @@ suite "Execution types tests":
     )
 
     blobs = BlobsBundleV1(
-      commitments: @[KZGCommitment.conv(1)],
-      proofs: @[KZGProof.conv(2)],
+      commitments: @[KzgCommitment.conv(1)],
+      proofs: @[KzgProof.conv(2)],
       blobs: @[Blob.conv(3)],
     )
 

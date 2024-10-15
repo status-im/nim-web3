@@ -62,8 +62,8 @@ type
 
     # EIP-4844 blob sidecars
     blobs*: Opt[seq[Blob]]
-    commitments*: Opt[seq[KZGCommitment]]
-    proofs*: Opt[seq[KZGProof]]
+    commitments*: Opt[seq[KzgCommitment]]
+    proofs*: Opt[seq[KzgProof]]
 
     # EIP-7702
     authorizationList*: Opt[seq[AuthorizationObject]]
