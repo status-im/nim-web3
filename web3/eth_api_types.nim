@@ -87,6 +87,7 @@ type
     excessBlobGas*: Opt[Quantity]        # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
     requestsRoot*: Opt[Hash32]           # EIP-7685
+    systemLogsRoot*: Opt[Hash32]         # Fusaka-Light
 
   WithdrawalObject* = object
     index*: Quantity
@@ -143,6 +144,7 @@ type
     withdrawalRequests*: Opt[seq[WithdrawalRequestObject]] # EIP-7002
     consolidationRequests*: Opt[seq[ConsolidationRequestObject]] # EIP-7251
     requestsRoot*: Opt[Hash32]              # EIP-7685
+    systemLogsRoot*: Opt[Hash32]             # Fusaka-Light
 
   TxOrHashKind* = enum
     tohHash

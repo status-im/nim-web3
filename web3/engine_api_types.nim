@@ -199,6 +199,7 @@ type
     depositRequests*: seq[DepositRequestV1]
     withdrawalRequests*: seq[WithdrawalRequestV1]
     consolidationRequests*: seq[ConsolidationRequestV1]
+    systemLogsRoot*: Hash32
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |

@@ -37,6 +37,7 @@ type
     depositRequests*: Opt[seq[DepositRequestV1]]
     withdrawalRequests*: Opt[seq[WithdrawalRequestV1]]
     consolidationRequests*:Opt[seq[ConsolidationRequestV1]]
+    systemLogsRoot*: Opt[Hash32]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -67,7 +68,8 @@ type
 func version*(payload: ExecutionPayload): Version =
   if payload.depositRequests.isSome or
       payload.withdrawalRequests.isSome or
-      payload.consolidationRequests.isSome:
+      payload.consolidationRequests.isSome or
+      payload.systemLogsRoot.isSome:
     Version.V4
   elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
@@ -278,6 +280,7 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
 #     depositRequests: p.depositRequests.get(newSeq[DepositRequestV1]()),
 #     withdrawalRequests: p.withdrawalRequests.get(newSeq[WithdrawalRequestV1]()),
 #     consolidationRequests: p.consolidationRequests.get(newSeq[ConsolidationRequestV1]()),
+#     systemLogsRoot: p.systemLogsRoot.get,
 #   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -397,6 +400,7 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
 #     depositRequests: Opt.some(p.depositRequests),
 #     withdrawalRequests: Opt.some(p.withdrawalRequests),
 #     consolidationRequests: Opt.some(p.consolidationRequests),
+#     systemLogsRoot: Opt.some(p.systemLogsRoot),
 #   )
 
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
