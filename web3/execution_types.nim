@@ -43,6 +43,8 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: Opt[seq[WithdrawalV1]]
     parentBeaconBlockRoot*: Opt[Hash32]
+    targetBlobsPerBlock*: Opt[Quantity]
+    maxBlobsPerBlock*: Opt[Quantity]
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
@@ -71,7 +73,9 @@ func version*(payload: ExecutionPayload): Version =
     Version.V1
 
 func version*(attr: PayloadAttributes): Version =
-  if attr.parentBeaconBlockRoot.isSome:
+  if attr.targetBlobsPerBlock.isSome or attr.maxBlobsPerBlock.isSome:
+    Version.V4
+  elif attr.parentBeaconBlockRoot.isSome:
     Version.V3
   elif attr.withdrawals.isSome:
     Version.V2
@@ -120,6 +124,17 @@ func V3*(attr: PayloadAttributes): PayloadAttributesV3 =
     parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get
   )
 
+func V4*(attr: PayloadAttributes): PayloadAttributesV4 =
+  PayloadAttributesV4(
+    timestamp: attr.timestamp,
+    prevRandao: attr.prevRandao,
+    suggestedFeeRecipient: attr.suggestedFeeRecipient,
+    withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
+    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
+    targetBlobsPerBlock: attr.targetBlobsPerBlock.get,
+    maxBlobsPerBlock: attr.maxBlobsPerBlock.get,
+  )
+
 func V1*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV1] =
   if attr.isNone:
     return Opt.none(PayloadAttributesV1)
@@ -134,6 +149,11 @@ func V3*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV3] =
   if attr.isNone:
     return Opt.none(PayloadAttributesV3)
   Opt.some(attr.get.V3)
+
+func V4*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV4] =
+  if attr.isNone:
+    return Opt.none(PayloadAttributesV4)
+  Opt.some(attr.get.V4)
 
 func payloadAttributes*(attr: PayloadAttributesV1): PayloadAttributes =
   PayloadAttributes(
@@ -159,6 +179,17 @@ func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
     parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot)
   )
 
+func payloadAttributes*(attr: PayloadAttributesV4): PayloadAttributes =
+  PayloadAttributes(
+    timestamp: attr.timestamp,
+    prevRandao: attr.prevRandao,
+    suggestedFeeRecipient: attr.suggestedFeeRecipient,
+    withdrawals: Opt.some(attr.withdrawals),
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
+    targetBlobsPerBlock: Opt.some(attr.targetBlobsPerBlock),
+    maxBlobsPerBlock: Opt.some(attr.maxBlobsPerBlock),
+  )
+
 func payloadAttributes*(x: Opt[PayloadAttributesV1]): Opt[PayloadAttributes] =
   if x.isNone: Opt.none(PayloadAttributes)
   else: Opt.some(payloadAttributes x.get)
@@ -168,6 +199,10 @@ func payloadAttributes*(x: Opt[PayloadAttributesV2]): Opt[PayloadAttributes] =
   else: Opt.some(payloadAttributes x.get)
 
 func payloadAttributes*(x: Opt[PayloadAttributesV3]): Opt[PayloadAttributes] =
+  if x.isNone: Opt.none(PayloadAttributes)
+  else: Opt.some(payloadAttributes x.get)
+
+func payloadAttributes*(x: Opt[PayloadAttributesV4]): Opt[PayloadAttributes] =
   if x.isNone: Opt.none(PayloadAttributes)
   else: Opt.some(payloadAttributes x.get)
 

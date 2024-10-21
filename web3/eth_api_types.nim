@@ -92,6 +92,7 @@ type
     excessBlobGas*: Opt[Quantity]        # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
     requestsRoot*: Opt[Hash32]           # EIP-7685
+    targetBlobCount*: Opt[Quantity]      # EIP-7742
 
   WithdrawalObject* = object
     index*: Quantity
