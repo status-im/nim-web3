@@ -87,28 +87,18 @@ func getValue(params: RequestParamsRx, field: string, FieldType: type):
   except CatchableError as exc:
     return err(exc.msg)
 
-func toJsonString(params: RequestParamsRx):
-       Result[JsonString, string] {.gcsafe, raises: [].} =
-  try:
-    let res = JrpcSys.encode(params.toTx)
-    return ok(res.JsonString)
-  except CatchableError as exc:
-    return err(exc.msg)
-
 proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
                                 Result[void, string] {.gcsafe, raises: [].} =
   let subs = params.getValue("subscription", string).valueOr:
     return err(error)
   let s = w.subscriptions.getOrDefault(subs)
   if not s.isNil and not s.removed:
+    let res = params.getValue("result", JsonString).valueOr:
+      return err(error)
     if s.historicalEventsProcessed:
-      let res = params.getValue("result", JsonString).valueOr:
-        return err(error)
       s.eventHandler(res)
     else:
-      let par = params.toJsonString().valueOr:
-        return err(error)
-      s.pendingEvents.add(par)
+      s.pendingEvents.add(res)
 
   ok()
 

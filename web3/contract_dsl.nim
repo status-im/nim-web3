@@ -47,13 +47,10 @@ type
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var EventData)
        {.raises: [IOError, SerializationError].} =
-  # - First form: {"data": ..., "topics":[...]}
-  # - Second form: {"result": {"data": ..., "topics":[...]}}
   r.parseObject(key):
     case key
     of "data"  : r.readValue(val.data)
     of "topics": r.readValue(val.topics)
-    of "result": r.readValue(val)
     else: discard r.readValue(JsonString)
 
 proc joinStrings(s: varargs[string]): string = join(s)
