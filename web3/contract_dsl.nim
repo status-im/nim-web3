@@ -45,13 +45,7 @@ type
     data*: seq[byte]
     topics*: seq[Bytes32]
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var EventData)
-       {.raises: [IOError, SerializationError].} =
-  r.parseObject(key):
-    case key
-    of "data"  : r.readValue(val.data)
-    of "topics": r.readValue(val.topics)
-    else: discard r.readValue(JsonString)
+EventData.useDefaultSerializationIn JrpcConv
 
 proc joinStrings(s: varargs[string]): string = join(s)
 
