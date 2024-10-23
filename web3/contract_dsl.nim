@@ -2,6 +2,7 @@ import
   std/[macros, strutils],
   json_serialization,
   ./[encoding, eth_api_types],
+  ./conversions,
   stint,
   stew/byteutils
 
@@ -39,6 +40,21 @@ type
     of function: functionObject: FunctionObject
     of constructor: constructorObject: ConstructorObject
     of event: eventObject: EventObject
+
+  EventData* = object
+    data*: seq[byte]
+    topics*: seq[Bytes32]
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var EventData)
+       {.raises: [IOError, SerializationError].} =
+  # - First form: {"data": ..., "topics":[...]}
+  # - Second form: {"result": {"data": ..., "topics":[...]}}
+  r.parseObject(key):
+    case key
+    of "data"  : r.readValue(val.data)
+    of "topics": r.readValue(val.topics)
+    of "result": r.readValue(val)
+    else: discard r.readValue(JsonString)
 
 proc joinStrings(s: varargs[string]): string = join(s)
 
@@ -233,7 +249,7 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
   if not eventObject.anonymous:
     let callbackIdent = ident "callback"
     let jsonIdent = ident "j"
-    let jsonData = ident "jsonData"
+    let eventData = ident "eventData"
     var
       params = nnkFormalParams.newTree(newEmptyNode())
       paramsWithRawData = nnkFormalParams.newTree(newEmptyNode())
@@ -243,10 +259,9 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
       call = nnkCall.newTree(callbackIdent)
       callWithRawData = nnkCall.newTree(callbackIdent)
       offset = ident "offset"
-      inputData = ident "inputData"
 
     argParseBody.add quote do:
-      let `jsonData` = JrpcConv.decode(`jsonIdent`.string, JsonNode)
+      let `eventData` = JrpcConv.decode(`jsonIdent`.string, EventData)
 
     var offsetInited = false
 
@@ -264,19 +279,18 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
       if input.indexed:
         argParseBody.add quote do:
           var `argument`: `kind`
-          discard decode(hexToSeqByte(`jsonData`["topics"][`i`].getStr), 0, 0, `argument`)
+          discard decode(`eventData`.topics[`i`].data, 0, 0, `argument`)
         i += 1
       else:
         if not offsetInited:
           argParseBody.add quote do:
-            var `inputData` = hexToSeqByte(`jsonData`["data"].getStr)
             var `offset` = 0
 
           offsetInited = true
 
         argParseBody.add quote do:
           var `argument`: `kind`
-          `offset` += decode(`inputData`, 0, `offset`, `argument`)
+          `offset` += decode(`eventData`.data, 0, `offset`, `argument`)
       call.add argument
       callWithRawData.add argument
     let
