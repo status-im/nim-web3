@@ -28,9 +28,6 @@ export
 
 export eth_types_json_serialization except Topic
 
-template derefType(T: type): untyped =
-  typeof(T()[])
-
 #------------------------------------------------------------------------------
 # eth_api_types
 #------------------------------------------------------------------------------
@@ -47,10 +44,10 @@ TransactionArgs.useDefaultSerializationIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
 AuthorizationObject.useDefaultSerializationIn JrpcConv
 
-derefType(BlockHeader).useDefaultSerializationIn JrpcConv
-derefType(BlockObject).useDefaultSerializationIn JrpcConv
-derefType(TransactionObject).useDefaultSerializationIn JrpcConv
-derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
+BlockHeader.useDefaultSerializationIn JrpcConv
+BlockObject.useDefaultSerializationIn JrpcConv
+TransactionObject.useDefaultSerializationIn JrpcConv
+ReceiptObject.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # engine_api_types
