@@ -58,6 +58,7 @@ createRpcSigsFromNim(RpcClient):
     executionRequests: Opt[array[3, seq[byte]]]): PayloadStatusV1
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
@@ -76,6 +77,12 @@ template forkchoiceUpdated*(
     forkchoiceState: ForkchoiceStateV1,
     payloadAttributes: Opt[PayloadAttributesV3]): Future[ForkchoiceUpdatedResponse] =
   engine_forkchoiceUpdatedV3(rpcClient, forkchoiceState, payloadAttributes)
+
+template forkchoiceUpdated*(
+    rpcClient: RpcClient,
+    forkchoiceState: ForkchoiceStateV1,
+    payloadAttributes: Opt[PayloadAttributesV4]): Future[ForkchoiceUpdatedResponse] =
+  engine_forkchoiceUpdatedV4(rpcClient, forkchoiceState, payloadAttributes)
 
 template getPayload*(
     rpcClient: RpcClient,
