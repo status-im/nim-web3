@@ -16,11 +16,10 @@ import
 type
   DummySender = object
 
-proc createMutableContractInvocation(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
-proc createImmutableContractInvocation(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
-proc createContractDeployment(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
+func createMutableContractInvocation(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
+func createContractDeployment(s: DummySender, t: typedesc, data: seq[byte]): seq[byte] = data
 
-proc instantiateContract(t: typedesc): ContractInstance[t, DummySender] =
+func instantiateContract(t: typedesc): ContractInstance[t, DummySender] =
   discard
 
 proc checkData(a: seq[byte], expectedData: string) =
