@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/[json, random],
+  std/random,
   pkg/unittest2,
   ../web3,
   chronos, stint,
