@@ -11,7 +11,7 @@ import
   eth_api_types,
   eth/common/[keys, transactions_rlp, transaction_utils]
 
-func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
+func encodeTransactionLegacy(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxLegacy)
   tr.gasLimit = s.gas.get.GasInt
   tr.gasPrice = s.gasPrice.get.GasInt
@@ -28,6 +28,84 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     else:
       tr.sign(pk, false)
   rlp.encode(tr)
+
+func encodeTransactionEip2930(s: TransactionArgs, pk: PrivateKey): seq[byte] =
+  var tr = Transaction(txType: TxEip2930)
+  tr.gasLimit = s.gas.get.GasInt
+  tr.gasPrice = s.gasPrice.get.GasInt
+  tr.to = s.to
+  if s.value.isSome:
+    tr.value = s.value.get
+  tr.nonce = uint64(s.nonce.get)
+  tr.payload = s.payload
+  tr.chainId = ChainId(s.chainId.get)
+  tr.signature = tr.sign(pk, true)
+  tr.accessList = s.accessList.get
+  rlp.encode(tr)
+
+func encodeTransactionEip1559(s: TransactionArgs, pk: PrivateKey): seq[byte] =
+  var tr = Transaction(txType: TxEip1559)
+  tr.gasLimit = s.gas.get.GasInt
+  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get.GasInt
+  tr.maxFeePerGas = s.maxFeePerGas.get.GasInt
+  tr.to = s.to
+  if s.value.isSome:
+    tr.value = s.value.get
+  tr.nonce = uint64(s.nonce.get)
+  tr.payload = s.payload
+  tr.chainId = ChainId(s.chainId.get)
+  tr.signature = tr.sign(pk, true)
+  if s.accessList.isSome:
+    tr.accessList = s.accessList.get
+  rlp.encode(tr)
+
+func encodeTransactionEip4844(s: TransactionArgs, pk: PrivateKey): seq[byte] =
+  var tr = Transaction(txType: TxEip4844)
+  tr.gasLimit = s.gas.get.GasInt
+  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get.GasInt
+  tr.maxFeePerGas = s.maxFeePerGas.get.GasInt
+  tr.to = s.to
+  if s.value.isSome:
+    tr.value = s.value.get
+  tr.nonce = uint64(s.nonce.get)
+  tr.payload = s.payload
+  tr.chainId = ChainId(s.chainId.get)
+  tr.signature = tr.sign(pk, true)
+  if s.accessList.isSome:
+    tr.accessList = s.accessList.get
+  tr.maxFeePerBlobGas = s.maxFeePerBlobGas.get
+  tr.versionedHashes = s.blobVersionedHashes.get
+  rlp.encode(tr)
+
+func encodeTransactionEip7702(s: TransactionArgs, pk: PrivateKey): seq[byte] =
+  var tr = Transaction(txType: TxEip7702)
+  tr.gasLimit = s.gas.get.GasInt
+  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get.GasInt
+  tr.maxFeePerGas = s.maxFeePerGas.get.GasInt
+  tr.to = s.to
+  if s.value.isSome:
+    tr.value = s.value.get
+  tr.nonce = uint64(s.nonce.get)
+  tr.payload = s.payload
+  tr.chainId = ChainId(s.chainId.get)
+  tr.signature = tr.sign(pk, true)
+  if s.accessList.isSome:
+    tr.accessList = s.accessList.get
+  tr.authorizationList = s.authorizationList.get
+  rlp.encode(tr)
+
+func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType = TxLegacy): seq[byte] =
+  case txType
+  of TxLegacy:
+    encodeTransactionLegacy(s, pk)
+  of TxEip2930:
+    encodeTransactionEip2930(s, pk)
+  of TxEip1559:
+    encodeTransactionEip1559(s, pk)
+  of TxEip4844:
+    encodeTransactionEip4844(s, pk)
+  of TxEip7702:
+    encodeTransactionEip7702(s, pk)
 
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] {.deprecated: "Provide chainId in TransactionArgs".} =
   var tr = Transaction(txType: TxLegacy, chainId: chainId)

@@ -42,7 +42,7 @@ ProofResponse.useDefaultSerializationIn JrpcConv
 FilterOptions.useDefaultSerializationIn JrpcConv
 TransactionArgs.useDefaultSerializationIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
-AuthorizationObject.useDefaultSerializationIn JrpcConv
+Authorization.useDefaultSerializationIn JrpcConv
 
 BlockHeader.useDefaultSerializationIn JrpcConv
 BlockObject.useDefaultSerializationIn JrpcConv
@@ -204,7 +204,21 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
   writeHexValue w, distinctBase(v)
 
 proc writeValue*[F: CommonJsonFlavors](
+    w: var JsonWriter[F], v: uint64
+) {.gcsafe, raises: [IOError].} =
+  w.stream.write "\"0x"
+  w.stream.toHex(v)
+  w.stream.write "\""
+
+proc writeValue*[F: CommonJsonFlavors](
     w: var JsonWriter[F], v: Quantity
+) {.gcsafe, raises: [IOError].} =
+  w.stream.write "\"0x"
+  w.stream.toHex(distinctBase v)
+  w.stream.write "\""
+
+proc writeValue*[F: CommonJsonFlavors](
+    w: var JsonWriter[F], v: ChainId
 ) {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
@@ -246,6 +260,14 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var RlpEncodedB
       # skip empty hex
       val = RlpEncodedBytes hexToSeqByte(hexStr)
 
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var uint64)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  let hexStr = r.parseString()
+  if hexStr.invalidQuantityPrefix:
+    r.raiseUnexpectedValue("Quantity value has invalid leading 0")
+  wrapValueError:
+    val = fromHex[uint64](hexStr)
+
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
@@ -253,6 +275,14 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
     r.raiseUnexpectedValue("Quantity value has invalid leading 0")
   wrapValueError:
     val = Quantity fromHex[uint64](hexStr)
+
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var ChainId)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  let hexStr = r.parseString()
+  if hexStr.invalidQuantityPrefix:
+    r.raiseUnexpectedValue("ChainId value has invalid leading 0")
+  wrapValueError:
+    val = ChainId fromHex[uint64](hexStr)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
