@@ -91,7 +91,7 @@ type
     blobGasUsed*: Opt[Quantity]          # EIP-4844
     excessBlobGas*: Opt[Quantity]        # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
-    requestsRoot*: Opt[Hash32]           # EIP-7685
+    requestsHash*: Opt[Hash32]           # EIP-7685
     targetBlobCount*: Opt[Quantity]      # EIP-7742
 
   WithdrawalObject* = object
@@ -129,6 +129,7 @@ type
     excessBlobGas*: Opt[Quantity]            # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]      # EIP-4788
     requestsHash*: Opt[Hash32]               # EIP-7685
+    targetBlobCount*: Opt[Quantity]          # EIP-7742
 
   TxOrHashKind* = enum
     tohHash
@@ -156,7 +157,7 @@ type
 
   TransactionObject* = ref object                 # A transaction object, or null when no transaction was found:
     hash*: Hash32                                 # hash of the transaction.
-    nonce*: Quantity                              # TODO: Is int? the number of transactions made by the sender prior to this one.
+    nonce*: Quantity                              # the number of transactions made by the sender prior to this one.
     blockHash*: Opt[Hash32]                       # hash of the block where this transaction was in. null when its pending.
     blockNumber*: Opt[Quantity]                   # block number where this transaction was in. null when its pending.
     transactionIndex*: Opt[Quantity]              # integer of the transactions index position in the block. null when its pending.
@@ -190,7 +191,7 @@ type
     effectiveGasPrice*: Quantity     # The sum of the base fee and tip paid per unit of gas.
     gasUsed*: Quantity               # the amount of gas used by this specific transaction alone.
     contractAddress*: Opt[Address]   # the contract address created, if the transaction was a contract creation, otherwise null.
-    logs*: seq[LogObject]            # TODO: See Wiki for details. list of log objects, which this transaction generated.
+    logs*: seq[LogObject]            # list of log objects, which this transaction generated.
     logsBloom*: Bytes256             # bloom filter for light clients to quickly retrieve related logs.
     `type`*: Opt[Quantity]           # integer of the transaction type, 0x0 for legacy transactions, 0x1 for access list types, 0x2 for dynamic fees.
     root*: Opt[Hash32]               # 32 bytes of post-transaction stateroot (pre Byzantium)
