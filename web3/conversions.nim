@@ -204,13 +204,6 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
   writeHexValue w, distinctBase(v)
 
 proc writeValue*[F: CommonJsonFlavors](
-    w: var JsonWriter[F], v: uint64
-) {.gcsafe, raises: [IOError].} =
-  w.stream.write "\"0x"
-  w.stream.toHex(v)
-  w.stream.write "\""
-
-proc writeValue*[F: CommonJsonFlavors](
     w: var JsonWriter[F], v: Quantity
 ) {.gcsafe, raises: [IOError].} =
   w.stream.write "\"0x"
@@ -260,14 +253,6 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var RlpEncodedB
       # skip empty hex
       val = RlpEncodedBytes hexToSeqByte(hexStr)
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var uint64)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  let hexStr = r.parseString()
-  if hexStr.invalidQuantityPrefix:
-    r.raiseUnexpectedValue("Uint64 value has invalid leading 0")
-  wrapValueError:
-    val = strutils.fromHex[uint64](hexStr)
-
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
@@ -304,6 +289,20 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: PayloadExecution
 #------------------------------------------------------------------------------
 # Exclusive to JrpcConv
 #------------------------------------------------------------------------------
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: uint64)
+      {.gcsafe, raises: [IOError].} =
+  w.stream.write "\"0x"
+  w.stream.toHex(v)
+  w.stream.write "\""
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var uint64)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  let hexStr = r.parseString()
+  if hexStr.invalidQuantityPrefix:
+    r.raiseUnexpectedValue("Uint64 value has invalid leading 0")
+  wrapValueError:
+    val = strutils.fromHex[uint64](hexStr)
 
 proc writeValue*(w: var JsonWriter[JrpcConv], val: UInt256)
       {.gcsafe, raises: [IOError].} =
