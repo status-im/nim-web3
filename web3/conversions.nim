@@ -266,7 +266,7 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var uint64)
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("Uint64 value has invalid leading 0")
   wrapValueError:
-    val = fromHex[uint64](hexStr)
+    val = strutils.fromHex[uint64](hexStr)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -274,7 +274,7 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("Quantity value has invalid leading 0")
   wrapValueError:
-    val = Quantity fromHex[uint64](hexStr)
+    val = Quantity strutils.fromHex[uint64](hexStr)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var ChainId)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -282,7 +282,7 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var ChainId)
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("ChainId value has invalid leading 0")
   wrapValueError:
-    val = ChainId fromHex[uint64](hexStr)
+    val = ChainId strutils.fromHex[uint64](hexStr)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
