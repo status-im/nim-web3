@@ -30,7 +30,17 @@ proc rand[M,N](_: type DynamicBytes[M,N]): DynamicBytes[M,N] =
 proc rand(_: type Address): Address =
   discard randomBytes(distinctBase result)
 
+proc rand(_: type uint64): uint64 =
+  var res: array[8, byte]
+  discard randomBytes(res)
+  result = uint64.fromBytesBE(res)
+
 proc rand[T: Quantity](_: type T): T =
+  var res: array[8, byte]
+  discard randomBytes(res)
+  result = T(uint64.fromBytesBE(res))
+
+proc rand[T: ChainId](_: type T): T =
   var res: array[8, byte]
   discard randomBytes(res)
   result = T(uint64.fromBytesBE(res))
@@ -182,7 +192,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ProofResponse)
     checkRandomObject(FilterOptions)
     checkRandomObject(TransactionArgs)
-    checkRandomObject(AuthorizationObject)
+    checkRandomObject(Authorization)
 
     checkRandomObject(BlockHeader)
     checkRandomObject(BlockObject)
@@ -259,3 +269,8 @@ suite "JSON-RPC Quantity":
     )
     let w = JrpcConv.encode(z)
     check w == """{"accessList":[],"error":"error","gasUsed":"0x0"}"""
+
+  test "Authorization":
+    var z: Authorization
+    let w = JrpcConv.encode(z)
+    check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0x0","v":"0x0","r":"0x0","s":"0x0"}"""

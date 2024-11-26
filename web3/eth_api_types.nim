@@ -13,11 +13,12 @@ import
   stint,
   ./primitives
 
-from eth/common/transactions import AccessPair
+from eth/common/transactions import AccessPair, Authorization
 
 export
   primitives,
-  AccessPair
+  AccessPair,
+  Authorization
 
 type
   SyncObject* = object
@@ -66,7 +67,7 @@ type
     proofs*: Opt[seq[KzgProof]]
 
     # EIP-7702
-    authorizationList*: Opt[seq[AuthorizationObject]]
+    authorizationList*: Opt[seq[Authorization]]
 
   ## A block header object
   BlockHeader* = ref object
@@ -145,14 +146,6 @@ type
     error*: Opt[string]
     gasUsed*: Quantity
 
-  AuthorizationObject* = object
-    chainId*: Quantity
-    address*: Address
-    nonce*: Quantity
-    v*: Quantity
-    r*: UInt256
-    s*: UInt256
-
   TransactionObject* = ref object                 # A transaction object, or null when no transaction was found:
     hash*: Hash32                                 # hash of the transaction.
     nonce*: Quantity                              # the number of transactions made by the sender prior to this one.
@@ -170,13 +163,13 @@ type
     s*: UInt256                                   # ECDSA signature s
     yParity*: Opt[Quantity]                       # ECDSA y parity, none for Legacy, same as v for >= Tx2930
     `type`*: Opt[Quantity]                        # EIP-2718, with 0x0 for Legacy
-    chainId*: Opt[Quantity]                       # EIP-159
+    chainId*: Opt[Quantity]                       # EIP-155
     accessList*: Opt[seq[AccessPair]]             # EIP-2930
     maxFeePerGas*: Opt[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Opt[Quantity]          # EIP-1559
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844
     blobVersionedHashes*: Opt[seq[VersionedHash]] # EIP-4844
-    authorizationList*: Opt[seq[AuthorizationObject]] # EIP-7702
+    authorizationList*: Opt[seq[Authorization]]   # EIP-7702
 
   ReceiptObject* = ref object        # A transaction receipt object, or null when no receipt was found:
     transactionHash*: Hash32         # hash of the transaction.
