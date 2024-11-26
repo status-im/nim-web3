@@ -33,7 +33,7 @@ export eth_types_json_serialization except Topic
 #------------------------------------------------------------------------------
 
 SyncObject.useDefaultSerializationIn JrpcConv
-WithdrawalObject.useDefaultSerializationIn JrpcConv
+Withdrawal.useDefaultSerializationIn JrpcConv
 AccessPair.useDefaultSerializationIn JrpcConv
 AccessListResult.useDefaultSerializationIn JrpcConv
 LogObject.useDefaultSerializationIn JrpcConv
@@ -264,7 +264,7 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var uint64)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
-    r.raiseUnexpectedValue("Quantity value has invalid leading 0")
+    r.raiseUnexpectedValue("Uint64 value has invalid leading 0")
   wrapValueError:
     val = fromHex[uint64](hexStr)
 

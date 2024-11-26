@@ -94,7 +94,7 @@ func encodeTransactionEip7702(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   tr.authorizationList = s.authorizationList.get
   rlp.encode(tr)
 
-func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType = TxLegacy): seq[byte] =
+func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType): seq[byte] =
   case txType
   of TxLegacy:
     encodeTransactionLegacy(s, pk)
@@ -106,6 +106,20 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType = TxL
     encodeTransactionEip4844(s, pk)
   of TxEip7702:
     encodeTransactionEip7702(s, pk)
+
+func txType(s: TransactionArgs): TxType =
+  if s.authorizationList.isSome:
+    return TxEip7702
+  if s.blobVersionedHashes.isSome:
+    return TxEip4844
+  if s.gasPrice.isNone:
+    return TxEip1559
+  if s.accessList.isSome:
+    return TxEip2930
+  TxLegacy
+
+func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
+  encodeTransaction(s, pk, s.txType)
 
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] {.deprecated: "Provide chainId in TransactionArgs".} =
   var tr = Transaction(txType: TxLegacy, chainId: chainId)

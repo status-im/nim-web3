@@ -13,12 +13,14 @@ import
   stint,
   ./primitives
 
+from eth/common/blocks import Withdrawal
 from eth/common/transactions import AccessPair, Authorization
 
 export
   primitives,
   AccessPair,
-  Authorization
+  Authorization,
+  Withdrawal
 
 type
   SyncObject* = object
@@ -94,12 +96,6 @@ type
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
     requestsHash*: Opt[Hash32]           # EIP-7685
 
-  WithdrawalObject* = object
-    index*: Quantity
-    validatorIndex*: Quantity
-    address*: Address
-    amount*: Quantity
-
   ## A block object, or null when no block was found
   BlockObject* = ref object
     number*: Quantity                        # the block number. null when its pending block.
@@ -123,7 +119,7 @@ type
     transactions*: seq[TxOrHash]             # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[Hash32]                     # list of uncle hashes.
     baseFeePerGas*: Opt[UInt256]             # EIP-1559
-    withdrawals*: Opt[seq[WithdrawalObject]] # EIP-4895
+    withdrawals*: Opt[seq[Withdrawal]] # EIP-4895
     withdrawalsRoot*: Opt[Hash32]            # EIP-4895
     blobGasUsed*: Opt[Quantity]              # EIP-4844
     excessBlobGas*: Opt[Quantity]            # EIP-4844

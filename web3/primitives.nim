@@ -54,7 +54,6 @@ template ethQuantity(typ: type) {.dirty.} =
   func `==`*(a, b: typ): bool {.borrow.}
 
 ethQuantity Quantity
-ethQuantity ChainId
 
 template toHex*(x: DynamicBytes): string =
   toHex(distinctBase x)
