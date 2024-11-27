@@ -39,18 +39,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getTransactionCount(data: Address, blockId: BlockIdentifier): Quantity
   proc eth_getBlockTransactionCountByHash(data: Hash32): Quantity
   proc eth_getBlockTransactionCountByNumber(blockId: BlockIdentifier): Quantity
-
-  # TODO: Investigate why nim v2 cannot instantiate generic functions
-  # with oneof params `blockId: BlockIdentifier` and and return type
-  # Opt[seq[ReceiptObject]], this is a regression after all
-  # https://github.com/nim-lang/Nim/issues/23310
-  when false:
-    proc eth_getBlockReceipts(blockId: BlockIdentifier): Opt[seq[ReceiptObject]]
-
-  proc eth_getBlockReceipts(blockId: string): Opt[seq[ReceiptObject]]
-  proc eth_getBlockReceipts(blockId: Quantity): Opt[seq[ReceiptObject]]
-  proc eth_getBlockReceipts(blockId: RtBlockIdentifier): Opt[seq[ReceiptObject]]
-
+  proc eth_getBlockReceipts(blockId: BlockIdentifier): Opt[seq[ReceiptObject]]
   proc eth_getUncleCountByBlockHash(data: Hash32): Quantity
   proc eth_getUncleCountByBlockNumber(blockId: BlockIdentifier): Quantity
   proc eth_getCode(data: Address, blockId: BlockIdentifier): seq[byte]

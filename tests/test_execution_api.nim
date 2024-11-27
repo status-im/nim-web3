@@ -209,6 +209,20 @@ suite "Test eth api":
     check res.isSome
     waitFor client.close()
 
+  test "eth_getBlockReceipts with Quantity param":
+    let client = newRpcHttpClient()
+    waitFor client.connect("http://" & $srv.localAddress()[0])
+    let res = waitFor client.eth_getBlockReceipts(blockId(0))
+    check res.isSome
+    waitFor client.close()
+
+  test "eth_getBlockReceipts with string param":
+    let client = newRpcHttpClient()
+    waitFor client.connect("http://" & $srv.localAddress()[0])
+    let res = waitFor client.eth_getBlockReceipts("latest")
+    check res.isSome
+    waitFor client.close()
+    
   waitFor srv.stop()
   waitFor srv.closeWait()
 
