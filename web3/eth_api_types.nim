@@ -95,6 +95,7 @@ type
     excessBlobGas*: Opt[Quantity]        # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
     requestsHash*: Opt[Hash32]           # EIP-7685
+    targetBlobsPerBlock*: Opt[Quantity]  # EIP-7742
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
@@ -125,6 +126,7 @@ type
     excessBlobGas*: Opt[Quantity]            # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]      # EIP-4788
     requestsHash*: Opt[Hash32]               # EIP-7685
+    targetBlobsPerBlock*: Opt[Quantity]      # EIP-7742
 
   TxOrHashKind* = enum
     tohHash
