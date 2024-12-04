@@ -28,16 +28,13 @@ export
 
 export eth_types_json_serialization except Topic
 
-template derefType(T: type): untyped =
-  typeof(T()[])
-
 #------------------------------------------------------------------------------
 # eth_api_types
 #------------------------------------------------------------------------------
 
 SyncObject.useDefaultSerializationIn JrpcConv
 WithdrawalObject.useDefaultSerializationIn JrpcConv
-AccessTuple.useDefaultSerializationIn JrpcConv
+AccessPair.useDefaultSerializationIn JrpcConv
 AccessListResult.useDefaultSerializationIn JrpcConv
 LogObject.useDefaultSerializationIn JrpcConv
 StorageProof.useDefaultSerializationIn JrpcConv
@@ -46,14 +43,11 @@ FilterOptions.useDefaultSerializationIn JrpcConv
 TransactionArgs.useDefaultSerializationIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
 AuthorizationObject.useDefaultSerializationIn JrpcConv
-DepositRequestObject.useDefaultSerializationIn JrpcConv
-WithdrawalRequestObject.useDefaultSerializationIn JrpcConv
-ConsolidationRequestObject.useDefaultSerializationIn JrpcConv
 
-derefType(BlockHeader).useDefaultSerializationIn JrpcConv
-derefType(BlockObject).useDefaultSerializationIn JrpcConv
-derefType(TransactionObject).useDefaultSerializationIn JrpcConv
-derefType(ReceiptObject).useDefaultSerializationIn JrpcConv
+BlockHeader.useDefaultSerializationIn JrpcConv
+BlockObject.useDefaultSerializationIn JrpcConv
+TransactionObject.useDefaultSerializationIn JrpcConv
+ReceiptObject.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # engine_api_types
@@ -67,8 +61,6 @@ TransactionPayloadV1.useDefaultReaderIn JrpcConv
 TransactionV1.useDefaultSerializationIn JrpcConv
 
 WithdrawalV1.useDefaultSerializationIn JrpcConv
-DepositRequestV1.useDefaultSerializationIn JrpcConv
-WithdrawalRequestV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
@@ -89,7 +81,6 @@ GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
 ClientVersionV1.useDefaultSerializationIn JrpcConv
-ConsolidationRequestV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # execution_types
@@ -336,7 +327,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
 proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
   case v.kind
-  of bidNumber: w.writeValue(v.number.Quantity)
+  of bidNumber: w.writeValue(v.number)
   of bidAlias: w.writeValue(v.alias)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var TxOrHash)

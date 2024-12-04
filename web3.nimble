@@ -8,7 +8,7 @@
 # those terms.
 
 mode        = ScriptMode.Verbose
-version     = "0.3.2"
+version     = "0.3.4"
 author      = "Status Research & Development GmbH"
 description = "These are the humble beginnings of library similar to web3.[js|py]"
 license     = "MIT or Apache License 2.0"
@@ -34,14 +34,12 @@ proc test(args, path: string) =
 
   exec "nim " & getEnv("TEST_LANG", "c") & " " & getEnv("NIMFLAGS") & " " & args &
     " --outdir:build -r --skipParentCfg" &
-    " --warning[ObservableStores]:off --warning[GcUnsafe2]:off" &
     " --styleCheck:usages --styleCheck:error" &
-    " --hint[XDeclaredButNotUsed]:off --hint[Processing]:off " &
+    " --hint[Processing]:off " &
     path
 
 
 ### tasks
 task test, "Run all tests":
   test "--mm:refc", "tests/all_tests.nim"
-  if (NimMajor, NimMinor) > (1, 6):
-    test "--mm:orc", "tests/all_tests.nim"
+  test "--mm:orc", "tests/all_tests.nim"

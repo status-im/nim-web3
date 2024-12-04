@@ -7,12 +7,17 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+{.push raises: [].}
+
 import
   stint,
   ./primitives
 
+from eth/common/transactions import AccessPair
+
 export
-  primitives
+  primitives,
+  AccessPair
 
 type
   SyncObject* = object
@@ -48,7 +53,7 @@ type
     input*: Opt[seq[byte]]
 
     # Introduced by EIP-2930.
-    accessList*: Opt[seq[AccessTuple]]
+    accessList*: Opt[seq[AccessPair]]
     chainId*: Opt[Quantity]
 
     # EIP-4844
@@ -57,8 +62,8 @@ type
 
     # EIP-4844 blob sidecars
     blobs*: Opt[seq[Blob]]
-    commitments*: Opt[seq[KZGCommitment]]
-    proofs*: Opt[seq[KZGProof]]
+    commitments*: Opt[seq[KzgCommitment]]
+    proofs*: Opt[seq[KzgProof]]
 
     # EIP-7702
     authorizationList*: Opt[seq[AuthorizationObject]]
@@ -86,31 +91,14 @@ type
     blobGasUsed*: Opt[Quantity]          # EIP-4844
     excessBlobGas*: Opt[Quantity]        # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
-    requestsRoot*: Opt[Hash32]           # EIP-7685
-    systemLogsRoot*: Opt[Hash32]         # Fusaka-Light
+    requestsHash*: Opt[Hash32]           # EIP-7685
+    systemLogsRoot*: Opt[Hash32]         # Pureth
 
   WithdrawalObject* = object
     index*: Quantity
     validatorIndex*: Quantity
     address*: Address
     amount*: Quantity
-
-  DepositRequestObject* = object  # EIP-6110
-    pubkey*               : Bytes48
-    withdrawalCredentials*: Bytes32
-    amount*               : Quantity
-    signature*            : Bytes96
-    index*                : Quantity
-
-  WithdrawalRequestObject* = object  # EIP-7002
-    sourceAddress*  : Address
-    validatorPubkey*: Bytes48
-    amount*         : Quantity
-
-  ConsolidationRequestObject* = object  # EIP-7251
-    sourceAddress*: Address
-    sourcePubkey* : Bytes48
-    targetPubkey* : Bytes48
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
@@ -140,11 +128,8 @@ type
     blobGasUsed*: Opt[Quantity]              # EIP-4844
     excessBlobGas*: Opt[Quantity]            # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]      # EIP-4788
-    depositRequests*: Opt[seq[DepositRequestObject]] # EIP-6110
-    withdrawalRequests*: Opt[seq[WithdrawalRequestObject]] # EIP-7002
-    consolidationRequests*: Opt[seq[ConsolidationRequestObject]] # EIP-7251
-    requestsRoot*: Opt[Hash32]              # EIP-7685
-    systemLogsRoot*: Opt[Hash32]             # Fusaka-Light
+    requestsHash*: Opt[Hash32]               # EIP-7685
+    systemLogsRoot*: Opt[Hash32]             # Pureth
 
   TxOrHashKind* = enum
     tohHash
@@ -157,12 +142,8 @@ type
     of tohTx:
       tx*: TransactionObject
 
-  AccessTuple* = object
-    address*: Address
-    storageKeys*: seq[Bytes32]
-
   AccessListResult* = object
-    accessList*: seq[AccessTuple]
+    accessList*: seq[AccessPair]
     error*: Opt[string]
     gasUsed*: Quantity
 
@@ -170,13 +151,13 @@ type
     chainId*: Quantity
     address*: Address
     nonce*: Quantity
-    yParity*: Quantity
-    R*: UInt256
-    S*: UInt256
+    v*: Quantity
+    r*: UInt256
+    s*: UInt256
 
   TransactionObject* = ref object                 # A transaction object, or null when no transaction was found:
     hash*: Hash32                                 # hash of the transaction.
-    nonce*: Quantity                              # TODO: Is int? the number of transactions made by the sender prior to this one.
+    nonce*: Quantity                              # the number of transactions made by the sender prior to this one.
     blockHash*: Opt[Hash32]                       # hash of the block where this transaction was in. null when its pending.
     blockNumber*: Opt[Quantity]                   # block number where this transaction was in. null when its pending.
     transactionIndex*: Opt[Quantity]              # integer of the transactions index position in the block. null when its pending.
@@ -192,7 +173,7 @@ type
     yParity*: Opt[Quantity]                       # ECDSA y parity, none for Legacy, same as v for >= Tx2930
     `type`*: Opt[Quantity]                        # EIP-2718, with 0x0 for Legacy
     chainId*: Opt[Quantity]                       # EIP-159
-    accessList*: Opt[seq[AccessTuple]]            # EIP-2930
+    accessList*: Opt[seq[AccessPair]]             # EIP-2930
     maxFeePerGas*: Opt[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Opt[Quantity]          # EIP-1559
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844
@@ -202,7 +183,7 @@ type
   ReceiptObject* = ref object        # A transaction receipt object, or null when no receipt was found:
     transactionHash*: Hash32         # hash of the transaction.
     transactionIndex*: Quantity      # integer of the transactions index position in the block.
-    blockHash*: Hash32                  # hash of the block where this transaction was in.
+    blockHash*: Hash32               # hash of the block where this transaction was in.
     blockNumber*: Quantity           # block number where this transaction was in.
     `from`*: Address                 # address of the sender.
     to*: Opt[Address]                # address of the receiver. null when its a contract creation transaction.
@@ -210,7 +191,7 @@ type
     effectiveGasPrice*: Quantity     # The sum of the base fee and tip paid per unit of gas.
     gasUsed*: Quantity               # the amount of gas used by this specific transaction alone.
     contractAddress*: Opt[Address]   # the contract address created, if the transaction was a contract creation, otherwise null.
-    logs*: seq[LogObject]            # TODO: See Wiki for details. list of log objects, which this transaction generated.
+    logs*: seq[LogObject]            # list of log objects, which this transaction generated.
     logsBloom*: Bytes256             # bloom filter for light clients to quickly retrieve related logs.
     `type`*: Opt[Quantity]           # integer of the transaction type, 0x0 for legacy transactions, 0x1 for access list types, 0x2 for dynamic fees.
     root*: Opt[Hash32]               # 32 bytes of post-transaction stateroot (pre Byzantium)
@@ -293,8 +274,6 @@ type
     gasUsedRatio*: seq[float64]
     blobGasUsedRatio*: seq[float64]
     reward*: Opt[seq[FeeHistoryReward]]
-
-{.push raises: [].}
 
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)

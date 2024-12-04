@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2023 Status Research & Development GmbH
+# Copyright (c) 2023-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -16,7 +16,7 @@ export primitives
 
 func parseCmdArg*(T: type Address, input: string): T
                  {.raises: [ValueError].} =
-  fromHex(T, string input)
+  fromHex(T, input)
 
 func completeCmdArg*(T: type Address, input: string): seq[string] =
   @[]

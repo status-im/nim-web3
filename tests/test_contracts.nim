@@ -249,7 +249,7 @@ suite "Contracts":
       # was not deployed yet:
       try:
         let balFirst = await ns.getBalance(web3.defaultAccount).call(
-          blockNumber = 1.BlockNumber)
+          blockNumber = 1.Quantity)
         echo "getbalance (first block): ", balFirst.toHex
       except CatchableError as err:
         echo "getbalance (first block): ", err.msg
@@ -267,7 +267,7 @@ suite "Contracts":
       echo "transfers: ", await ns.getJsonLogs(
         Transfer,
         fromBlock = Opt.some(blockId(deployedAtBlock)),
-        toBlock = Opt.some(blockId(1000.BlockNumber)))
+        toBlock = Opt.some(blockId(1000)))
 
       await notifFut
       await s.unsubscribe()

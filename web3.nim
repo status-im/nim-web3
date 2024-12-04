@@ -87,28 +87,18 @@ func getValue(params: RequestParamsRx, field: string, FieldType: type):
   except CatchableError as exc:
     return err(exc.msg)
 
-func toJsonString(params: RequestParamsRx):
-       Result[JsonString, string] {.gcsafe, raises: [].} =
-  try:
-    let res = JrpcSys.encode(params.toTx)
-    return ok(res.JsonString)
-  except CatchableError as exc:
-    return err(exc.msg)
-
 proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
                                 Result[void, string] {.gcsafe, raises: [].} =
   let subs = params.getValue("subscription", string).valueOr:
     return err(error)
   let s = w.subscriptions.getOrDefault(subs)
   if not s.isNil and not s.removed:
+    let res = params.getValue("result", JsonString).valueOr:
+      return err(error)
     if s.historicalEventsProcessed:
-      let res = params.getValue("result", JsonString).valueOr:
-        return err(error)
       s.eventHandler(res)
     else:
-      let par = params.toJsonString().valueOr:
-        return err(error)
-      s.pendingEvents.add(par)
+      s.pendingEvents.add(res)
 
   ok()
 
@@ -222,14 +212,14 @@ proc subscribeForLogs*(w: Web3, options: FilterOptions,
   else:
     result.historicalEventsProcessed = true
 
-func addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Topic): FilterOptions =
+func addAddressAndSignatureToOptions(options: FilterOptions, address: Address, topic: Bytes32): FilterOptions =
   result = options
   if result.address.kind == slkNull:
     result.address = AddressOrList(kind: slkSingle, single: address)
   result.topics.insert(TopicOrList(kind: slkSingle, single: topic), 0)
 
 proc subscribeForLogs*(s: Web3SenderImpl, options: FilterOptions,
-                       topic: Topic,
+                       topic: Bytes32,
                        logsHandler: SubscriptionEventHandler,
                        errorHandler: SubscriptionErrorHandler,
                        withHistoricEvents = true): Future[Subscription] =
@@ -258,7 +248,7 @@ proc unsubscribe*(s: Subscription): Future[void] {.async.} =
   s.removed = true
   discard await s.web3.provider.eth_unsubscribe(s.id)
 
-proc getJsonLogs(s: Web3SenderImpl, topic: Topic,
+proc getJsonLogs(s: Web3SenderImpl, topic: Bytes32,
                  fromBlock = Opt.none(RtBlockIdentifier),
                  toBlock = Opt.none(RtBlockIdentifier),
                  blockHash = Opt.none(Hash32)): Future[seq[JsonString]] =
@@ -310,7 +300,8 @@ proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[Hash32] {.d
   var cc = c
   if cc.nonce.isNone:
     cc.nonce = Opt.some(await web3.nextNonce())
-  let t = encodeTransaction(cc, web3.privateKey.get(), chainId)
+  cc.chainId = Opt.some(chainId.Quantity)
+  let t = encodeTransaction(cc, web3.privateKey.get())
   return await web3.provider.eth_sendRawTransaction(t)
 
 proc sendData(web3: Web3,
