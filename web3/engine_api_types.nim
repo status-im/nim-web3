@@ -215,13 +215,13 @@ type
     blobsBundle*: BlobsBundleV1
     shouldOverrideBuilder*: bool
 
-  # https://github.com/ethereum/execution-apis/blob/4140e528360fea53c34a766d86a000c6c039100e/src/engine/prague.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/7c9772f95c2472ccfc6f6128dc2e1b568284a2da/src/engine/prague.md#response-1
   GetPayloadV4Response* = object
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
     blobsBundle*: BlobsBundleV1
     shouldOverrideBuilder*: bool
-    executionRequests*: array[3, seq[byte]]
+    executionRequests*: seq[seq[byte]]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
