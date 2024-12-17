@@ -12,10 +12,10 @@ import
   stint, ./eth_api_types, stew/[assign2, byteutils]
 
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
-  @(x.toByteArrayBE())
+  @(x.toBytesBE())
 
 func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
-  @(x.toByteArrayBE())
+  @(x.toBytesBE())
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int =
   const meaningfulLen = to.bits div 8
