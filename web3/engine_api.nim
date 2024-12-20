@@ -125,6 +125,15 @@ template newPayload*(
   engine_newPayloadV3(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot)
 
+template newPayload*(
+    rpcClient: RpcClient,
+    payload: ExecutionPayloadV3,
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: Hash32,
+    executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
+  engine_newPayloadV4(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
+
 template exchangeCapabilities*(
     rpcClient: RpcClient,
     methods: seq[string]): Future[seq[string]] =
