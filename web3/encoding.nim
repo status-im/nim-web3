@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/macros,
+  std/[macros, math],
   stint, ./eth_api_types, stew/[assign2, byteutils]
 
 macro makeTypeEnum(): untyped =
@@ -71,7 +71,12 @@ macro makeTypeEnum(): untyped =
 makeTypeEnum()
 
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
-  @(x.toByteArrayBE())
+  let numTargetBytes = bits div 8
+  let paddingBytes = 32 - numTargetBytes ## the Ethereum ABI imposes a 32 byte width for every type
+  let paddingZeros = newSeq[byte](paddingBytes)
+  let ret = paddingZeros & @(x.toByteArrayBE())
+  let retHex = ret.toHex()
+  ret
 
 func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
   @(x.toByteArrayBE())
