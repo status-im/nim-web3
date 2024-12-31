@@ -11,6 +11,65 @@ import
   std/macros,
   stint, ./eth_api_types, stew/[assign2, byteutils]
 
+macro makeTypeEnum(): untyped =
+  ## This macro creates all the various types of Solidity contracts and maps
+  ## them to the type used for their encoding. It also creates an enum to
+  ## identify these types in the contract signatures, along with encoder
+  ## functions used in the generated procedures.
+  result = newStmtList()
+  var lastpow2: int
+  for i in countdown(256, 8, 8):
+    let
+      identUint = newIdentNode("Uint" & $i)
+      identInt = newIdentNode("Int" & $i)
+    if ceil(log2(i.float)) == floor(log2(i.float)):
+      lastpow2 = i
+    if i notin [256, 125]: # Int/UInt256/128 are already defined in stint. No need to repeat.
+      result.add quote do:
+        type
+          `identUint`* = StUint[`lastpow2`]
+          `identInt`* = StInt[`lastpow2`]
+  let
+    identUint = ident("Uint")
+    identInt = ident("Int")
+    identBool = ident("Bool")
+  result.add quote do:
+    type
+      `identUint`* = UInt256
+      `identInt`* = Int256
+      `identBool`* = distinct Int256
+
+  for m in countup(8, 256, 8):
+    let
+      identInt = ident("Int" & $m)
+      identUint = ident("Uint" & $m)
+      identFixed = ident "Fixed" & $m
+      identUfixed = ident "Ufixed" & $m
+      identT = ident "T"
+    result.add quote do:
+      # Fixed stuff is not actually implemented yet, these procedures don't
+      # do what they are supposed to.
+      type
+        `identFixed`*[N: static[int]] = distinct `identInt`
+        `identUfixed`*[N: static[int]] = distinct `identUint`
+
+  let
+    identFixed = ident("Fixed")
+    identUfixed = ident("Ufixed")
+  result.add quote do:
+    type
+      `identFixed`* = distinct Int128
+      `identUfixed`* = distinct UInt128
+  for i in 1..256:
+    let
+      identBytes = ident("Bytes" & $i)
+      identResult = ident "result"
+    result.add quote do:
+      type
+        `identBytes`* = FixedBytes[`i`]
+
+makeTypeEnum()
+
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
   @(x.toByteArrayBE())
 
