@@ -310,7 +310,7 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
       type `cbident`* = object
 
       template eventTopic*(T: type `cbident`): eth_api_types.Bytes32 =
-        const r = Bytes32 keccak256(`signature`).data
+        const r = base.Bytes32 keccak256(`signature`).data
         r
 
       proc subscribe[TSender](s: ContractInstance[`cname`, TSender],
