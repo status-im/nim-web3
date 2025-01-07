@@ -30,10 +30,20 @@ proc rand[M,N](_: type DynamicBytes[M,N]): DynamicBytes[M,N] =
 proc rand(_: type Address): Address =
   discard randomBytes(distinctBase result)
 
+proc rand(_: type uint64): uint64 =
+  var res: array[8, byte]
+  discard randomBytes(res)
+  uint64.fromBytesBE(res)
+
 proc rand[T: Quantity](_: type T): T =
   var res: array[8, byte]
   discard randomBytes(res)
-  result = T(uint64.fromBytesBE(res))
+  T(uint64.fromBytesBE(res))
+
+proc rand[T: ChainId](_: type T): T =
+  var res: array[8, byte]
+  discard randomBytes(res)
+  T(uint64.fromBytesBE(res))
 
 proc rand(_: type RlpEncodedBytes): RlpEncodedBytes =
   discard randomBytes(distinctBase result)
@@ -42,22 +52,22 @@ proc rand(_: type TypedTransaction): TypedTransaction =
   discard randomBytes(distinctBase result)
 
 proc rand(_: type string): string =
-  result = "random bytes"
+  "random bytes"
 
 proc rand(_: type bool): bool =
   var x: array[1, byte]
   discard randomBytes(x)
-  result = x[0].int mod 2 == 0
+  x[0].int mod 2 == 0
 
 proc rand(_: type byte): byte =
   var x: array[1, byte]
   discard randomBytes(x)
-  result = x[0]
+  x[0]
 
 proc rand(_: type UInt256): UInt256 =
   var x: array[32, byte]
   discard randomBytes(x)
-  result = UInt256.fromBytesBE(x)
+  UInt256.fromBytesBE(x)
 
 proc rand(_: type RtBlockIdentifier): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: rand(Quantity))
@@ -79,12 +89,10 @@ proc rand[T](_: type seq[T]): seq[T] =
   for i in 0..<3:
     result[i] = rand(T)
 
-proc rand(_: type array[3, seq[byte]]): array[3, seq[byte]] =
+proc rand(_: type seq[seq[byte]]): seq[seq[byte]] =
   var z = newSeq[byte](10)
   discard randomBytes(z)
-  result[0] = z
-  result[1] = z
-  result[2] = z
+  @[z, z, z]
 
 proc rand[T](_: type SingleOrList[T]): SingleOrList[T] =
   SingleOrList[T](kind: slkSingle, single: rand(T))
@@ -93,9 +101,9 @@ proc rand[X](T: type Opt[X]): T =
   var x: array[1, byte]
   discard randomBytes(x)
   if x[0] > 127:
-    result = Opt.some(rand(X))
+    Opt.some(rand(X))
   else:
-    result = Opt.none(X)
+    Opt.none(X)
 
 proc rand[X: object](T: type X): T =
   result = T()
@@ -174,7 +182,7 @@ suite "JSON-RPC Quantity":
 
   test "Random object encoding":
     checkRandomObject(SyncObject)
-    checkRandomObject(WithdrawalObject)
+    checkRandomObject(Withdrawal)
     checkRandomObject(AccessPair)
     checkRandomObject(AccessListResult)
     checkRandomObject(LogObject)
@@ -182,7 +190,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ProofResponse)
     checkRandomObject(FilterOptions)
     checkRandomObject(TransactionArgs)
-    checkRandomObject(AuthorizationObject)
+    checkRandomObject(Authorization)
 
     checkRandomObject(BlockHeader)
     checkRandomObject(BlockObject)
@@ -249,7 +257,7 @@ suite "JSON-RPC Quantity":
     checkType(Quantity)
 
   test "AccessListResult":
-    var z: AccessListResult
+    let z = AccessListResult()
     let w = JrpcConv.encode(z)
     check w == """{"accessList":[],"gasUsed":"0x0"}"""
 
@@ -259,3 +267,10 @@ suite "JSON-RPC Quantity":
     )
     let w = JrpcConv.encode(z)
     check w == """{"accessList":[],"error":"error","gasUsed":"0x0"}"""
+
+  test "Authorization":
+    let z = Authorization()
+    let w = JrpcConv.encode(z)
+    check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0x0","v":"0x0","r":"0x0","s":"0x0"}"""
+    let x = JrpcConv.decode(w, Authorization)
+    check x == z

@@ -13,11 +13,14 @@ import
   stint,
   ./primitives
 
-from eth/common/transactions import AccessPair
+from eth/common/blocks import Withdrawal
+from eth/common/transactions import AccessPair, Authorization
 
 export
   primitives,
-  AccessPair
+  AccessPair,
+  Authorization,
+  Withdrawal
 
 type
   SyncObject* = object
@@ -66,7 +69,7 @@ type
     proofs*: Opt[seq[KzgProof]]
 
     # EIP-7702
-    authorizationList*: Opt[seq[AuthorizationObject]]
+    authorizationList*: Opt[seq[Authorization]]
 
   ## A block header object
   BlockHeader* = ref object
@@ -94,12 +97,6 @@ type
     requestsHash*: Opt[Hash32]           # EIP-7685
     systemLogsRoot*: Opt[Hash32]         # Pureth
 
-  WithdrawalObject* = object
-    index*: Quantity
-    validatorIndex*: Quantity
-    address*: Address
-    amount*: Quantity
-
   ## A block object, or null when no block was found
   BlockObject* = ref object
     number*: Quantity                        # the block number. null when its pending block.
@@ -123,7 +120,7 @@ type
     transactions*: seq[TxOrHash]             # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[Hash32]                     # list of uncle hashes.
     baseFeePerGas*: Opt[UInt256]             # EIP-1559
-    withdrawals*: Opt[seq[WithdrawalObject]] # EIP-4895
+    withdrawals*: Opt[seq[Withdrawal]] # EIP-4895
     withdrawalsRoot*: Opt[Hash32]            # EIP-4895
     blobGasUsed*: Opt[Quantity]              # EIP-4844
     excessBlobGas*: Opt[Quantity]            # EIP-4844
@@ -147,14 +144,6 @@ type
     error*: Opt[string]
     gasUsed*: Quantity
 
-  AuthorizationObject* = object
-    chainId*: Quantity
-    address*: Address
-    nonce*: Quantity
-    v*: Quantity
-    r*: UInt256
-    s*: UInt256
-
   TransactionObject* = ref object                 # A transaction object, or null when no transaction was found:
     hash*: Hash32                                 # hash of the transaction.
     nonce*: Quantity                              # the number of transactions made by the sender prior to this one.
@@ -172,13 +161,13 @@ type
     s*: UInt256                                   # ECDSA signature s
     yParity*: Opt[Quantity]                       # ECDSA y parity, none for Legacy, same as v for >= Tx2930
     `type`*: Opt[Quantity]                        # EIP-2718, with 0x0 for Legacy
-    chainId*: Opt[Quantity]                       # EIP-159
+    chainId*: Opt[Quantity]                       # EIP-155
     accessList*: Opt[seq[AccessPair]]             # EIP-2930
     maxFeePerGas*: Opt[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Opt[Quantity]          # EIP-1559
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844
     blobVersionedHashes*: Opt[seq[VersionedHash]] # EIP-4844
-    authorizationList*: Opt[seq[AuthorizationObject]] # EIP-7702
+    authorizationList*: Opt[seq[Authorization]]   # EIP-7702
 
   ReceiptObject* = ref object        # A transaction receipt object, or null when no receipt was found:
     transactionHash*: Hash32         # hash of the transaction.

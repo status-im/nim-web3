@@ -55,7 +55,7 @@ type
     blockValue*: Opt[UInt256]
     blobsBundle*: Opt[BlobsBundleV1]
     shouldOverrideBuilder*: Opt[bool]
-    executionRequests*: Opt[array[3, seq[byte]]]
+    executionRequests*: Opt[seq[seq[byte]]]
 
   Version* {.pure.} = enum
     V1
