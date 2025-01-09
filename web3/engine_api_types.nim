@@ -127,6 +127,10 @@ type
     proofs*: seq[KzgProof]
     blobs*: seq[Blob]
 
+  BlobAndProofV1* = object
+    blob*: Blob
+    proof*: KzgProof
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
   #   https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#engine_getpayloadbodiesbyhashv1
@@ -222,6 +226,9 @@ type
     blobsBundle*: BlobsBundleV1
     shouldOverrideBuilder*: bool
     executionRequests*: seq[seq[byte]]
+
+  GetBlobsV1Response* = object
+    blobAndProof*: BlobAndProofV1
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
