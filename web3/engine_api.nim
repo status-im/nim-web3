@@ -38,6 +38,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV4(payloadId: Bytes8): GetPayloadV4Response
   proc engine_getPayloadBodiesByHashV1(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
+  proc engine_getBlobsV1(blob_versioned_hashes: Bytes32): GetBlobsV1Response
 
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
@@ -106,6 +107,13 @@ template getPayload*(
     T: type GetPayloadV4Response,
     payloadId: Bytes8): Future[GetPayloadV4Response] =
   engine_getPayloadV4(rpcClient, payloadId)
+
+template getBlobs*(
+    rpcClient: RpcClient,
+    T: type GetBlobsV1Response,
+    blob_versioned_hashes: Bytes32):
+    Future[GetBlobsV1Response] =
+  engine_getBlobsV1(rpcClient, blob_versioned_hashes)
 
 template newPayload*(
     rpcClient: RpcClient,
