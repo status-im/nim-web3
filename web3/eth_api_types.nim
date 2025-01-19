@@ -10,6 +10,7 @@
 {.push raises: [].}
 
 import
+  std/[macros, math],
   stint,
   ./primitives
 
@@ -298,6 +299,37 @@ func payload*(args: TransactionArgs): seq[byte] =
 
 func isEIP4844*(args: TransactionArgs): bool =
   args.maxFeePerBlobGas.isSome or args.blobVersionedHashes.isSome
+
+macro makeEthereumTypeEnum(): untyped =
+  ## This macro creates all the various types of Solidity contracts and maps
+  ## them to the type used for their encoding. It also creates an enum to
+  ## identify these types in the contract signatures, along with encoder
+  ## functions used in the generated procedures.
+  result = newStmtList()
+  var lastpow2: int
+  for i in countdown(256, 8, 8):
+    let
+      identUint = newIdentNode("EthereumUint" & $i)
+      identInt = newIdentNode("EthereumInt" & $i)
+    if ceil(log2(i.float)) == floor(log2(i.float)):
+      lastpow2 = i
+
+    result.add quote do:
+      type
+        `identUint`* = StUint[`lastpow2`]
+        `identInt`* = StInt[`lastpow2`]
+
+  let
+    identUint = ident("EthereumUint")
+    identInt = ident("EthereumInt")
+    identBool = ident("EthereumBool")
+  result.add quote do:
+    type
+      `identUint`* = UInt256
+      `identInt`* = Int256
+      `identBool`* = distinct Int256
+
+makeEthereumTypeEnum()
 
 # Backwards compatibility
 
