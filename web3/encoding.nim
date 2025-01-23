@@ -14,20 +14,17 @@ import
 macro makeEncodingEthereumFuncs(): untyped =
   ## Creates all the encoding funcs needed to properly interact with Ethereum-like chains
   result = newStmtList()
-  for i in [256, 128, 64, 32, 16, 8]:
-    let
-      identUint = newIdentNode("EthereumUint" & $i)
-      identInt = newIdentNode("EthereumInt" & $i)
+  for numBits in [256, 128, 64, 32, 16, 8]:
+    let identUint = newIdentNode("EthereumUint" & $numBits)
 
-    for ident in [`identUint`, `identInt`]:
-      result.add quote do:
-        func encode*(x: `ident`): seq[byte] =
-          ## the Ethereum types are created by makeEthereumType macro in eth_api_types.nim
-          let numTargetBytes = `i` div 8
-          let paddingBytes = 32 - numTargetBytes
-            ## the Ethereum ABI imposes a 32 byte width for every type
-          let paddingZeros = newSeq[byte](paddingBytes)
-          paddingZeros & @(x.toBytesBE())
+    result.add quote do:
+      func encode*(x: `identUint`): seq[byte] =
+        ## the Ethereum types are created by makeEthereumType macro in eth_api_types.nim
+        let numTargetBytes = `numBits` div 8
+        let paddingBytes = 32 - numTargetBytes
+          ## the Ethereum ABI imposes a 32 byte width for every type
+        let paddingZeros = newSeq[byte](paddingBytes)
+        paddingZeros & @(stint.toBytesBE(x))
 
 makeEncodingEthereumFuncs()
 

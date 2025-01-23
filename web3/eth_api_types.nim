@@ -307,12 +307,9 @@ macro makeEthereumTypes(): untyped =
   for i in [256, 128, 64, 32, 16, 8]:
     let
       identUint = newIdentNode("EthereumUint" & $i)
-      identInt = newIdentNode("EthereumInt" & $i)
 
     result.add quote do:
-      type
-        `identUint`* = StUint[`i`]
-        `identInt`* = StInt[`i`]
+      type `identUint`* = StUint[`i`]
 
 makeEthereumTypes()
 
