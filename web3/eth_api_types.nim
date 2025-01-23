@@ -10,7 +10,7 @@
 {.push raises: [].}
 
 import
-  std/[macros, math],
+  std/macros,
   stint,
   ./primitives
 
