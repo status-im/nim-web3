@@ -228,7 +228,7 @@ type
     executionRequests*: seq[seq[byte]]
 
   GetBlobsV1Response* = object
-    blobAndProof*: BlobAndProofV1
+    blobsAndProofs*: seq[BlobAndProofV1]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
