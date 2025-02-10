@@ -111,7 +111,7 @@ template getPayload*(
 template getBlobs*(
     rpcClient: RpcClient,
     T: type GetBlobsV1Response,
-    blob_versioned_hashes: Bytes32):
+    blob_versioned_hashes: seq[VersionedHash]):
     Future[GetBlobsV1Response] =
   engine_getBlobsV1(rpcClient, blob_versioned_hashes)
 
