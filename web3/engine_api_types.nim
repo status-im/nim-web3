@@ -227,8 +227,7 @@ type
     shouldOverrideBuilder*: bool
     executionRequests*: seq[seq[byte]]
 
-  GetBlobsV1Response* = object
-    blobsAndProofs*: seq[BlobAndProofV1]
+  GetBlobsV1Response* = seq[BlobAndProofV1]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
