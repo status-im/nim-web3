@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2024 Status Research & Development GmbH
+# Copyright (c) 2022-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -196,12 +196,6 @@ type
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatusV1
     payloadId*: Opt[Bytes8]
-
-  # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#transitionconfigurationv1
-  TransitionConfigurationV1* = object
-    terminalTotalDifficulty*: UInt256
-    terminalBlockHash*: Hash32
-    terminalBlockNumber*: Quantity
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#response-2
   GetPayloadV2Response* = object

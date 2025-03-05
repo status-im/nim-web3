@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2024 Status Research & Development GmbH
+# Copyright (c) 2019-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -68,7 +68,6 @@ PayloadAttributesV1OrV2.useDefaultSerializationIn JrpcConv
 PayloadStatusV1.useDefaultSerializationIn JrpcConv
 ForkchoiceStateV1.useDefaultSerializationIn JrpcConv
 ForkchoiceUpdatedResponse.useDefaultSerializationIn JrpcConv
-TransitionConfigurationV1.useDefaultSerializationIn JrpcConv
 GetPayloadV2Response.useDefaultSerializationIn JrpcConv
 GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
