@@ -11,6 +11,23 @@ import
   std/macros,
   stint, ./eth_api_types, stew/[assign2, byteutils]
 
+macro makeEncodingEthereumFuncs(): untyped =
+  ## Creates all the encoding funcs needed to properly interact with Ethereum-like chains
+  result = newStmtList()
+  for numBits in [256, 128, 64, 32, 16, 8]:
+    let identUint = newIdentNode("EthereumUint" & $numBits)
+
+    result.add quote do:
+      func encode*(x: `identUint`): seq[byte] =
+        ## the Ethereum types are created by makeEthereumType macro in eth_api_types.nim
+        let numTargetBytes = `numBits` div 8
+        let paddingBytes = 32 - numTargetBytes
+          ## the Ethereum ABI imposes a 32 byte width for every type
+        let paddingZeros = newSeq[byte](paddingBytes)
+        paddingZeros & @(stint.toBytesBE(x))
+
+makeEncodingEthereumFuncs()
+
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
   @(x.toBytesBE())
 
