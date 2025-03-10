@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2024 Status Research & Development GmbH
+# Copyright (c) 2019-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -57,7 +57,7 @@ type
 
     # Introduced by EIP-2930.
     accessList*: Opt[seq[AccessPair]]
-    chainId*: Opt[Quantity]
+    chainId*: Opt[UInt256]
 
     # EIP-4844
     maxFeePerBlobGas*: Opt[UInt256]
@@ -159,7 +159,7 @@ type
     s*: UInt256                                   # ECDSA signature s
     yParity*: Opt[Quantity]                       # ECDSA y parity, none for Legacy, same as v for >= Tx2930
     `type`*: Opt[Quantity]                        # EIP-2718, with 0x0 for Legacy
-    chainId*: Opt[Quantity]                       # EIP-155
+    chainId*: Opt[UInt256]                        # EIP-155
     accessList*: Opt[seq[AccessPair]]             # EIP-2930
     maxFeePerGas*: Opt[Quantity]                  # EIP-1559
     maxPriorityFeePerGas*: Opt[Quantity]          # EIP-1559

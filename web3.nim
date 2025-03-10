@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2024 Status Research & Development GmbH
+# Copyright (c) 2019-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -300,7 +300,7 @@ proc send*(web3: Web3, c: TransactionArgs, chainId: ChainId): Future[Hash32] {.d
   var cc = c
   if cc.nonce.isNone:
     cc.nonce = Opt.some(await web3.nextNonce())
-  cc.chainId = Opt.some(chainId.Quantity)
+  cc.chainId = Opt.some(chainId)
   let t = encodeTransaction(cc, web3.privateKey.get())
   return await web3.provider.eth_sendRawTransaction(t)
 
@@ -317,8 +317,6 @@ proc sendData(web3: Web3,
                else: Opt.none(Quantity)
     nonce = if web3.privateKey.isSome(): Opt.some(await web3.nextNonce())
             else: Opt.none(Quantity)
-    chainId = if chainId.isSome(): Opt.some(Quantity(chainId.get))
-              else: Opt.none(Quantity)
 
     cc = TransactionArgs(
       data: Opt.some(data),
@@ -346,7 +344,7 @@ proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            gas = 3000000'u64,
            gasPrice = 0): Future[Hash32] =
   sendData(c.sender.web3, c.sender.contractAddress,
-    c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, some(chainId))
+    c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, Opt.some(chainId))
 
 proc callAux(
     web3: Web3,

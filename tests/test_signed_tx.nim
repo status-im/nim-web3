@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2024 Status Research & Development GmbH
+# Copyright (c) 2018-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -13,6 +13,7 @@ import
   results,
   eth/common/keys,
   stew/byteutils,
+  json_rpc/client,
   ../web3,
   ../web3/transaction_signing,
   ./helpers/utils,
@@ -56,7 +57,7 @@ suite "Signed transactions":
     tx.gas = Opt.some(Quantity(21000'u64))
     tx.gasPrice = Opt.some(Quantity(20000000000'i64))
 
-    let txBytes = encodeTransaction(tx, privateKey, ChainId(1))
+    let txBytes = encodeTransaction(tx, privateKey, 1.u256)
     let txHex = "0x" & txBytes.toHex
     check txHex == "0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"
 
@@ -72,7 +73,7 @@ suite "Signed transactions":
     tx.to = Opt.some(address"0x3535353535353535353535353535353535353535")
     tx.gas = Opt.some(Quantity(21000'u64))
     tx.gasPrice = Opt.some(Quantity(20000000000'i64))
-    tx.chainId = Opt.some(Quantity(1))
+    tx.chainId = Opt.some(1.u256)
 
     let txBytes = encodeTransaction(tx, privateKey)
     let txHex = "0x" & txBytes.toHex
@@ -91,7 +92,7 @@ suite "Signed transactions":
     tx.to = Opt.some(address"0x6Eb893e3466931517a04a17D153a6330c3f2f1dD")
     tx.gas = Opt.some(Quantity(157'u64))
     tx.gasPrice = Opt.some(Quantity(9086'u64))
-    tx.chainId = Opt.some(Quantity(2214903583))
+    tx.chainId = Opt.some(2214903583.u256)
     tx.data = Opt.some(hexToSeqByte("0x889e365e59664fb881554ba1175519b5195b1d20390beb806d8f2cda7893e6f79848195dba4c905db6d7257ffb5eefea35f18ae33c"))
     tx.accessList = Opt.some(newSeq[AccessPair]())
 
@@ -113,7 +114,7 @@ suite "Signed transactions":
     tx.gas = Opt.some(Quantity(157'u64))
     tx.maxFeePerGas = Opt.some(Quantity(879596102'u64))
     tx.maxPriorityFeePerGas = Opt.some(Quantity(2915939'u64))
-    tx.chainId = Opt.some(Quantity(2214903583))
+    tx.chainId = Opt.some(2214903583.u256)
     tx.data = Opt.some(hexToSeqByte("0x889e365e59664fb881554ba1175519b5195b1d20390beb806d8f2cda7893e6f79848195dba4c905db6d7257ffb5eefea35f18ae33c"))
     tx.accessList = Opt.some(newSeq[AccessPair]())
 
