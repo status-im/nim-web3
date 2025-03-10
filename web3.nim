@@ -344,7 +344,7 @@ proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            gas = 3000000'u64,
            gasPrice = 0): Future[Hash32] =
   sendData(c.sender.web3, c.sender.contractAddress,
-    c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, some(chainId))
+    c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, Opt.some(chainId))
 
 proc callAux(
     web3: Web3,
