@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2024 Status Research & Development GmbH
+# Copyright (c) 2019-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -23,7 +23,7 @@ func encodeTransactionLegacy(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   tr.payload = s.payload
   tr.signature =
     if s.chainId.isSome():
-      tr.chainId = ChainId(s.chainId.get)
+      tr.chainId = s.chainId.get
       tr.sign(pk, true)
     else:
       tr.sign(pk, false)
@@ -38,7 +38,7 @@ func encodeTransactionEip2930(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
-  tr.chainId = ChainId(s.chainId.get)
+  tr.chainId = s.chainId.get
   tr.signature = tr.sign(pk, true)
   tr.accessList = s.accessList.get
   rlp.encode(tr)
@@ -53,7 +53,7 @@ func encodeTransactionEip1559(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
-  tr.chainId = ChainId(s.chainId.get)
+  tr.chainId = s.chainId.get
   tr.signature = tr.sign(pk, true)
   if s.accessList.isSome:
     tr.accessList = s.accessList.get
@@ -69,7 +69,7 @@ func encodeTransactionEip4844(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
-  tr.chainId = ChainId(s.chainId.get)
+  tr.chainId = s.chainId.get
   tr.signature = tr.sign(pk, true)
   if s.accessList.isSome:
     tr.accessList = s.accessList.get
@@ -87,7 +87,7 @@ func encodeTransactionEip7702(s: TransactionArgs, pk: PrivateKey): seq[byte] =
     tr.value = s.value.get
   tr.nonce = uint64(s.nonce.get)
   tr.payload = s.payload
-  tr.chainId = ChainId(s.chainId.get)
+  tr.chainId = s.chainId.get
   tr.signature = tr.sign(pk, true)
   if s.accessList.isSome:
     tr.accessList = s.accessList.get
