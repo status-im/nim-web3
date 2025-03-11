@@ -69,7 +69,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getFilterChanges(filterId: string): JsonNode
   proc eth_getFilterLogs(filterId: string): JsonNode
   proc eth_getLogs(filterOptions: FilterOptions): seq[LogObject]
-  proc eth_chainId(): Quantity
+  proc eth_chainId(): UInt256
 
   proc eth_getWork(): seq[UInt256]
   proc eth_submitWork(nonce: int64, powHash: Hash32, mixDigest: Hash32): bool
