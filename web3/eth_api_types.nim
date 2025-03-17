@@ -72,7 +72,7 @@ type
     authorizationList*: Opt[seq[Authorization]]
 
     # EIP-7873
-    initCodes*: seq[seq[byte]]
+    initCodes*: Opt[seq[seq[byte]]]
 
   ## A block header object
   BlockHeader* = ref object
@@ -169,7 +169,7 @@ type
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844
     blobVersionedHashes*: Opt[seq[VersionedHash]] # EIP-4844
     authorizationList*: Opt[seq[Authorization]]   # EIP-7702
-    initCodes*: seq[seq[byte]]                    # EIP-7873
+    initCodes*: Opt[seq[seq[byte]]]               # EIP-7873
 
   ReceiptObject* = ref object        # A transaction receipt object, or null when no receipt was found:
     transactionHash*: Hash32         # hash of the transaction.
