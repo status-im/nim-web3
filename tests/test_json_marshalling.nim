@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2024 Status Research & Development GmbH
+# Copyright (c) 2018-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -203,6 +203,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ExecutionPayloadV1OrV2)
     checkRandomObject(ExecutionPayloadV3)
     checkRandomObject(BlobsBundleV1)
+    checkRandomObject(BlobAndProofV1)
     checkRandomObject(ExecutionPayloadBodyV1)
     checkRandomObject(PayloadAttributesV1)
     checkRandomObject(PayloadAttributesV2)
@@ -211,11 +212,9 @@ suite "JSON-RPC Quantity":
     checkRandomObject(PayloadStatusV1)
     checkRandomObject(ForkchoiceStateV1)
     checkRandomObject(ForkchoiceUpdatedResponse)
-    checkRandomObject(TransitionConfigurationV1)
     checkRandomObject(GetPayloadV2Response)
     checkRandomObject(GetPayloadV2ResponseExact)
     checkRandomObject(GetPayloadV3Response)
-
     checkRandomObject(ExecutionPayload)
     checkRandomObject(PayloadAttributes)
     checkRandomObject(GetPayloadResponse)

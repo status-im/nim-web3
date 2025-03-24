@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2024 Status Research & Development GmbH
+# Copyright (c) 2019-2025 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -67,6 +67,7 @@ ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV4.useDefaultSerializationIn JrpcConv
 BlobsBundleV1.useDefaultSerializationIn JrpcConv
+BlobAndProofV1.useDefaultSerializationIn JrpcConv
 ExecutionPayloadBodyV1.useDefaultSerializationIn JrpcConv
 PayloadAttributesV1.useDefaultSerializationIn JrpcConv
 PayloadAttributesV2.useDefaultSerializationIn JrpcConv
@@ -75,7 +76,6 @@ PayloadAttributesV1OrV2.useDefaultSerializationIn JrpcConv
 PayloadStatusV1.useDefaultSerializationIn JrpcConv
 ForkchoiceStateV1.useDefaultSerializationIn JrpcConv
 ForkchoiceUpdatedResponse.useDefaultSerializationIn JrpcConv
-TransitionConfigurationV1.useDefaultSerializationIn JrpcConv
 GetPayloadV2Response.useDefaultSerializationIn JrpcConv
 GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
@@ -218,13 +218,6 @@ proc writeValue*[F: CommonJsonFlavors](
   w.stream.toHex(distinctBase v)
   w.stream.write "\""
 
-proc writeValue*[F: CommonJsonFlavors](
-    w: var JsonWriter[F], v: ChainId
-) {.gcsafe, raises: [IOError].} =
-  w.stream.write "\"0x"
-  w.stream.toHex(distinctBase v)
-  w.stream.write "\""
-
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicBytes)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
@@ -269,14 +262,6 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
   wrapValueError:
     val = Quantity strutils.fromHex[uint64](hexStr)
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var ChainId)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  let hexStr = r.parseString()
-  if hexStr.invalidQuantityPrefix:
-    r.raiseUnexpectedValue("ChainId value has invalid leading 0")
-  wrapValueError:
-    val = ChainId strutils.fromHex[uint64](hexStr)
-
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   const enumStrings = static: getEnumStringTable(PayloadExecutionStatus)
@@ -293,6 +278,25 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExec
 proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: PayloadExecutionStatus)
       {.gcsafe, raises: [IOError].} =
   w.writeValue($v)
+
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], val: UInt256)
+      {.gcsafe, raises: [IOError].} =
+  w.writeValue("0x" & val.toHex)
+
+# allows UInt256 to be passed as a json string
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
+      {.gcsafe, raises: [IOError, JsonReaderError].} =
+  # expects base 16 string, starting with "0x"
+  let tok = r.tokKind
+  if tok != JsonValueKind.String:
+    r.raiseUnexpectedValue("Expected string for UInt256, got=" & $tok)
+  let hexStr = r.parseString()
+  if hexStr.len > 64 + 2: # including "0x"
+    r.raiseUnexpectedValue("String value too long for UInt256: " & $hexStr.len)
+  if hexStr.invalidQuantityPrefix:
+    r.raiseUnexpectedValue("UInt256 value has invalid leading 0")
+  wrapValueError:
+    val = hexStr.parse(StUint[256], 16)
 
 #------------------------------------------------------------------------------
 # Exclusive to JrpcConv
@@ -311,25 +315,6 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var uint64)
     r.raiseUnexpectedValue("Uint64 value has invalid leading 0")
   wrapValueError:
     val = strutils.fromHex[uint64](hexStr)
-
-proc writeValue*(w: var JsonWriter[JrpcConv], val: UInt256)
-      {.gcsafe, raises: [IOError].} =
-  w.writeValue("0x" & val.toHex)
-
-# allows UInt256 to be passed as a json string
-proc readValue*(r: var JsonReader[JrpcConv], val: var UInt256)
-      {.gcsafe, raises: [IOError, JsonReaderError].} =
-  # expects base 16 string, starting with "0x"
-  let tok = r.tokKind
-  if tok != JsonValueKind.String:
-    r.raiseUnexpectedValue("Expected string for UInt256, got=" & $tok)
-  let hexStr = r.parseString()
-  if hexStr.len > 64 + 2: # including "0x"
-    r.raiseUnexpectedValue("String value too long for UInt256: " & $hexStr.len)
-  if hexStr.invalidQuantityPrefix:
-    r.raiseUnexpectedValue("UInt256 value has invalid leading 0")
-  wrapValueError:
-    val = hexStr.parse(StUint[256], 16)
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[byte])
       {.gcsafe, raises: [IOError].} =
