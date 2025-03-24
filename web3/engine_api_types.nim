@@ -130,7 +130,7 @@ type
 
   AuthorizationPayloadV1* = object
     magic*: Opt[Quantity]
-    chainId*: Opt[Quantity]
+    chainId*: Opt[UInt256]
     address*: Opt[Address]
     nonce*: Opt[Quantity]
 
@@ -140,7 +140,7 @@ type
 
   TransactionPayloadV1* = object
     `type`*: Opt[Quantity]
-    chainId*: Opt[Quantity]
+    chainId*: Opt[UInt256]
     nonce*: Opt[Quantity]
     maxFeesPerGas*: Opt[FeesPerGasV1]
     gas*: Opt[Quantity]
