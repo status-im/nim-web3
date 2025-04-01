@@ -56,8 +56,6 @@ type
     shouldOverrideBuilder*: Opt[bool]
     executionRequests*: Opt[seq[seq[byte]]]
 
-  GetBlobsResponse* = seq[BlobAndProofV1]
-
   Version* {.pure.} = enum
     V1
     V2
@@ -89,9 +87,6 @@ func version*(res: GetPayloadResponse): Version =
     Version.V2
   else:
     Version.V1
-
-func version*(res: GetBlobsResponse): Version =
-  Version.V1
 
 func V1V2*(attr: PayloadAttributes): PayloadAttributesV1OrV2 =
   PayloadAttributesV1OrV2(
@@ -393,9 +388,6 @@ func V4*(res: GetPayloadResponse): GetPayloadV4Response =
     executionRequests: res.executionRequests.get,
   )
 
-func V1*(res: GetBlobsResponse): GetBlobsV1Response =
-  res
-
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
   GetPayloadResponse(executionPayload: x.executionPayload)
 
@@ -421,6 +413,3 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
     executionRequests: Opt.some(x.executionRequests),
   )
-
-func getBlobsResponse*(x: GetBlobsV1Response): GetBlobsResponse =
-  x
