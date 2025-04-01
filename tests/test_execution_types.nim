@@ -57,12 +57,19 @@ suite "Execution types tests":
       blobs: @[Blob.conv(3)],
     )
 
+    blobAndProof = BlobAndProofV1(
+      blob: Blob.conv(1),
+      proof: KzgProof.conv(2),
+    )
+
     response = GetPayloadResponse(
       executionPayload: payload,
       blockValue: Opt.some(1.u256),
       blobsBundle: Opt.some(blobs),
       shouldOverrideBuilder: Opt.some(false),
     )
+
+    response_blob = @[blobAndProof]
 
   test "payload version":
     var badv31 = payload
@@ -121,6 +128,14 @@ suite "Execution types tests":
     let v32 = badv32.V3
     check v32.blobsBundle == response.blobsBundle.get
     check v32.shouldOverrideBuilder == false
+
+  test "response blob version":
+    var v11 = response_blob
+    v11[0].blob = default(Blob)
+    v11[0].proof = default(KzgProof)
+
+    check v11.version == Version.V1
+    check response_blob.version == Version.V1
 
   test "ExecutionPayload roundtrip":
     let v3 = payload.V3
