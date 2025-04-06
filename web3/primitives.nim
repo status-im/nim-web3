@@ -29,6 +29,7 @@ const
   # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/engine/cancun.md#blobsbundlev1
   fieldElementsPerBlob = 4096
 
+  # https://github.com/ethereum/consensus-specs/blob/v1.5.0-beta.4/specs/fulu/polynomial-commitments-sampling.md#cells
   cellsPerExternalBlob* = 128
 
 type
