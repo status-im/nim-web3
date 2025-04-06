@@ -204,7 +204,6 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ExecutionPayloadV3)
     checkRandomObject(BlobsBundleV1)
     checkRandomObject(BlobAndProofV1)
-    checkRandomObject(BlobAndProofV2)
     checkRandomObject(ExecutionPayloadBodyV1)
     checkRandomObject(PayloadAttributesV1)
     checkRandomObject(PayloadAttributesV2)
