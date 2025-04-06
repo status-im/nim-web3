@@ -91,7 +91,7 @@ proc rand[T](_: type seq[T]): seq[T] =
 
 proc rand[T](_: type openArray[T]): array[cellsPerExternalBlob, T] =
   var a: array[cellsPerExternalBlob, T]
-  for i in 0..a.len:
+  for i in 0..<a.len:
     a[i] = rand(T)
   a
 
