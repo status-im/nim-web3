@@ -29,6 +29,9 @@ const
   # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/engine/cancun.md#blobsbundlev1
   fieldElementsPerBlob = 4096
 
+  # https://github.com/0x00101010/execution-apis/blob/eip-7594/src/engine/osaka.md#blobandproofv2
+  cellsPerExternalBlob* = 128
+
 type
   # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/schemas/base-types.yaml
 
