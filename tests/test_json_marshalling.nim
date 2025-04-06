@@ -89,6 +89,12 @@ proc rand[T](_: type seq[T]): seq[T] =
   for i in 0..<3:
     result[i] = rand(T)
 
+proc rand[T](_: type openArray[T]): array[cellsPerExternalBlob, T] =
+  var a: array[cellsPerExternalBlob, T]
+  for i in 0..<a.len:
+    a[i] = rand(T)
+  a
+
 proc rand(_: type seq[seq[byte]]): seq[seq[byte]] =
   var z = newSeq[byte](10)
   discard randomBytes(z)
@@ -204,6 +210,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ExecutionPayloadV3)
     checkRandomObject(BlobsBundleV1)
     checkRandomObject(BlobAndProofV1)
+    checkRandomObject(BlobAndProofV2)
     checkRandomObject(ExecutionPayloadBodyV1)
     checkRandomObject(PayloadAttributesV1)
     checkRandomObject(PayloadAttributesV2)

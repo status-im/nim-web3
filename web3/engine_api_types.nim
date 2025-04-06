@@ -127,9 +127,14 @@ type
     proofs*: seq[KzgProof]
     blobs*: seq[Blob]
 
+  # https://github.com/ethereum/execution-apis/blob/40088597b8b4f48c45184da002e27ffc3c37641f/src/engine/cancun.md#blobandproofv1
   BlobAndProofV1* = object
     blob*: Blob
     proof*: KzgProof
+
+  BlobAndProofV2* = object
+    blob*: Blob
+    proofs*: array[cellsPerExternalBlob, KzgProof]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
@@ -222,6 +227,8 @@ type
     executionRequests*: seq[seq[byte]]
 
   GetBlobsV1Response* = seq[BlobAndProofV1]
+
+  GetBlobsV2Response* = seq[BlobAndProofV2]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
