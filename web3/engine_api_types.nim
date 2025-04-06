@@ -127,7 +127,7 @@ type
     proofs*: seq[KzgProof]
     blobs*: seq[Blob]
 
-  # https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#blobandproofv1
+  # https://github.com/ethereum/execution-apis/blob/40088597b8b4f48c45184da002e27ffc3c37641f/src/engine/cancun.md#blobandproofv1
   BlobAndProofV1* = object
     blob*: Blob
     proof*: KzgProof
