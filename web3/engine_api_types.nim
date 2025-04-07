@@ -134,7 +134,7 @@ type
 
   BlobAndProofV2* = object
     blob*: Blob
-    proofs*: array[cellsPerExternalBlob, KzgProof]
+    proofs*: array[CELLS_PER_EXT_BLOB, KzgProof]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
