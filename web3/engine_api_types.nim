@@ -127,6 +127,11 @@ type
     proofs*: seq[KzgProof]
     blobs*: seq[Blob]
 
+  BlobsBundleV2* = object
+    commitments*: seq[KzgCommitment]
+    proofs*: seq[KzgProof]
+    blobs*: seq[Blob]
+
   # https://github.com/ethereum/execution-apis/blob/40088597b8b4f48c45184da002e27ffc3c37641f/src/engine/cancun.md#blobandproofv1
   BlobAndProofV1* = object
     blob*: Blob
@@ -223,6 +228,13 @@ type
     executionPayload*: ExecutionPayloadV3
     blockValue*: UInt256
     blobsBundle*: BlobsBundleV1
+    shouldOverrideBuilder*: bool
+    executionRequests*: seq[seq[byte]]
+
+  GetPayloadV5Response* = object
+    executionPayload*: ExecutionPayloadV3
+    blockValue*: UInt256
+    blobsBundle*: BlobsBundleV2
     shouldOverrideBuilder*: bool
     executionRequests*: seq[seq[byte]]
 
