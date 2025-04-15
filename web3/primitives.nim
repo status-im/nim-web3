@@ -27,7 +27,10 @@ export
 
 const
   # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/engine/cancun.md#blobsbundlev1
-  fieldElementsPerBlob = 4096
+  FIELD_ELEMENTS_PER_BLOB = 4096
+
+  # https://github.com/ethereum/consensus-specs/blob/v1.5.0-beta.4/specs/fulu/polynomial-commitments-sampling.md#cells
+  CELLS_PER_EXT_BLOB* = 128
 
 type
   # https://github.com/ethereum/execution-apis/blob/c4089414bbbe975bbc4bf1ccf0a3d31f76feb3e1/src/schemas/base-types.yaml
@@ -40,7 +43,7 @@ type
     # Quantity is use in lieu of an ordinary `uint64` to avoid the default
     # format that comes with json_serialization
 
-  Blob* = FixedBytes[fieldElementsPerBlob * 32]
+  Blob* = FixedBytes[FIELD_ELEMENTS_PER_BLOB * 32]
 
 template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
   distinctBase(a) == distinctBase(b)
