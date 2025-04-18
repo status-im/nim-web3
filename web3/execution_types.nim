@@ -53,6 +53,7 @@ type
     executionPayload*: ExecutionPayload
     blockValue*: Opt[UInt256]
     blobsBundle*: Opt[BlobsBundleV1]
+    blobsBundleV2*: Opt[BlobsBundleV2]
     shouldOverrideBuilder*: Opt[bool]
     executionRequests*: Opt[seq[seq[byte]]]
 
@@ -61,6 +62,7 @@ type
     V2
     V3
     V4
+    V5
 
 func version*(payload: ExecutionPayload): Version =
   if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
@@ -79,7 +81,10 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  if res.executionRequests.isSome:
+  if res.blobsBundleV2.isSome and
+      res.blobsBundleV2.get.proofs.len == (CELLS_PER_EXT_BLOB * res.blobsBundleV2.get.blobs.len):
+     Version.V5
+  elif res.executionRequests.isSome:
     Version.V4
   elif res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
     Version.V3
@@ -388,6 +393,15 @@ func V4*(res: GetPayloadResponse): GetPayloadV4Response =
     executionRequests: res.executionRequests.get,
   )
 
+func V5*(res: GetPayloadResponse): GetPayloadV5Response =
+  GetPayloadV5Response(
+    executionPayload: res.executionPayload.V3,
+    blockValue: res.blockValue.get,
+    blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
+    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
+    executionRequests: res.executionRequests.get,
+  )
+
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
   GetPayloadResponse(executionPayload: x.executionPayload)
 
@@ -402,6 +416,7 @@ func getPayloadResponse*(x: GetPayloadV3Response): GetPayloadResponse =
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),
     blobsBundle: Opt.some(x.blobsBundle),
+    blobsBundleV2: Opt.none(BlobsBundleV2),
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder)
   )
 
@@ -410,6 +425,16 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),
     blobsBundle: Opt.some(x.blobsBundle),
+    shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
+    executionRequests: Opt.some(x.executionRequests),
+  )
+
+func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
+  GetPayloadResponse(
+    executionPayload: x.executionPayload.executionPayload,
+    blockValue: Opt.some(x.blockValue),
+    blobsBundle: Opt.none(BlobsBundleV1),
+    blobsBundleV2: Opt.some(x.blobsBundle),
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
     executionRequests: Opt.some(x.executionRequests),
   )
