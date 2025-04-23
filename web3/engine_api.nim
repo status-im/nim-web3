@@ -36,6 +36,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV2_exact(payloadId: Bytes8): GetPayloadV2ResponseExact
   proc engine_getPayloadV3(payloadId: Bytes8): GetPayloadV3Response
   proc engine_getPayloadV4(payloadId: Bytes8): GetPayloadV4Response
+  proc engine_getPayloadV5(payloadId: Bytes8): GetPayloadV5Response
   proc engine_getPayloadBodiesByHashV1(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
@@ -108,6 +109,12 @@ template getPayload*(
     T: type GetPayloadV4Response,
     payloadId: Bytes8): Future[GetPayloadV4Response] =
   engine_getPayloadV4(rpcClient, payloadId)
+
+template getPayload*(
+    rpcClient: RpcClient,
+    T: type GetPayloadV5Response,
+    payloadId: Bytes8): Future[GetPayloadV5Response] =
+  engine_getPayloadV5(rpcClient, payloadId)
 
 template getBlobs*(
     rpcClient: RpcClient,
