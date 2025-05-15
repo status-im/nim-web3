@@ -94,23 +94,6 @@ func encodeTransactionEip7702(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   tr.authorizationList = s.authorizationList.value
   rlp.encode(tr)
 
-func encodeTransactionEip7873(s: TransactionArgs, pk: PrivateKey): seq[byte] =
-  var tr = Transaction(txType: TxEip7873)
-  tr.gasLimit = s.gas.get(0.Quantity).GasInt
-  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get(0.Quantity).GasInt
-  tr.maxFeePerGas = s.maxFeePerGas.get(0.Quantity).GasInt
-  tr.to = s.to
-  if s.value.isSome:
-    tr.value = s.value.value
-  tr.nonce = uint64(s.nonce.get(0.Quantity))
-  tr.payload = s.payload
-  tr.chainId = s.chainId.get(0.u256)
-  tr.signature = tr.sign(pk, true)
-  if s.accessList.isSome:
-    tr.accessList = s.accessList.value
-  tr.initCodes = s.initCodes.value
-  rlp.encode(tr)
-
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType): seq[byte] =
   case txType
   of TxLegacy:
@@ -123,12 +106,8 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType): seq
     encodeTransactionEip4844(s, pk)
   of TxEip7702:
     encodeTransactionEip7702(s, pk)
-  of TxEip7873:
-    encodeTransactionEip7873(s, pk)
 
 func txType(s: TransactionArgs): TxType =
-  if s.initCodes.isSome:
-    return TxEip7873
   if s.authorizationList.isSome:
     return TxEip7702
   if s.blobVersionedHashes.isSome:
