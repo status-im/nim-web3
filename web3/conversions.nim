@@ -59,6 +59,7 @@ ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
 BlobsBundleV1.useDefaultSerializationIn JrpcConv
+BlobsBundleV2.useDefaultSerializationIn JrpcConv
 BlobAndProofV1.useDefaultSerializationIn JrpcConv
 BlobAndProofV2.useDefaultSerializationIn JrpcConv
 ExecutionPayloadBodyV1.useDefaultSerializationIn JrpcConv
@@ -73,6 +74,7 @@ GetPayloadV2Response.useDefaultSerializationIn JrpcConv
 GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
 GetPayloadV3Response.useDefaultSerializationIn JrpcConv
 GetPayloadV4Response.useDefaultSerializationIn JrpcConv
+GetPayloadV5Response.useDefaultSerializationIn JrpcConv
 ClientVersionV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------

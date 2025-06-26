@@ -8,7 +8,7 @@
 # those terms.
 
 mode        = ScriptMode.Verbose
-version     = "0.5.0"
+version     = "0.7.0"
 author      = "Status Research & Development GmbH"
 description = "These are the humble beginnings of library similar to web3.[js|py]"
 license     = "MIT or Apache License 2.0"
@@ -18,7 +18,7 @@ requires "nim >= 2.0.0"
 requires "chronicles"
 requires "chronos"
 requires "bearssl"
-requires "eth"
+requires "eth >= 0.8.0"
 requires "faststreams"
 requires "json_rpc"
 requires "json_serialization"
