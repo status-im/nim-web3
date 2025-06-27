@@ -8,6 +8,7 @@
 # those terms.
 
 import
+  std/sequtils,
   eth_api_types,
   eth/common/[keys, transactions_rlp, transaction_utils]
 
@@ -91,7 +92,13 @@ func encodeTransactionEip7702(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   tr.signature = tr.sign(pk, true)
   if s.accessList.isSome:
     tr.accessList = s.accessList.value
-  tr.authorizationList = s.authorizationList.value
+  tr.authorizationList = s.authorizationList.value.mapIt Authorization(
+    chainId: it.chainId,
+    address: it.address,
+    nonce: it.nonce,
+    v: it.yParity.uint64,
+    r: it.r,
+    s: it.s)
   rlp.encode(tr)
 
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType): seq[byte] =

@@ -39,6 +39,7 @@ type
     minLen: static[int] = 0,
     maxLen: static[int] = high(int)] = distinct seq[byte]
 
+  U8Quantity* = distinct uint8
   Quantity* = distinct uint64
     # Quantity is use in lieu of an ordinary `uint64` to avoid the default
     # format that comes with json_serialization
@@ -57,6 +58,7 @@ template ethQuantity(typ: type) {.dirty.} =
   func `==`*(a, b: typ): bool {.borrow.}
 
 ethQuantity Quantity
+ethQuantity U8Quantity
 
 template toHex*(x: DynamicBytes): string =
   toHex(distinctBase x)
