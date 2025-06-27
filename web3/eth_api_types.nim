@@ -10,6 +10,7 @@
 {.push raises: [].}
 
 import
+  std/macros,
   stint,
   ./primitives
 
@@ -298,6 +299,19 @@ func payload*(args: TransactionArgs): seq[byte] =
 
 func isEIP4844*(args: TransactionArgs): bool =
   args.maxFeePerBlobGas.isSome or args.blobVersionedHashes.isSome
+
+macro makeEthereumTypes(): untyped =
+  ## This macro creates all the various types of Eth contracts and maps
+  ## them to the type used for their encoding.
+  result = newStmtList()
+  for i in [256, 128, 64, 32, 16, 8]:
+    let
+      identUint = newIdentNode("EthereumUint" & $i)
+
+    result.add quote do:
+      type `identUint`* = StUint[`i`]
+
+makeEthereumTypes()
 
 # Backwards compatibility
 
