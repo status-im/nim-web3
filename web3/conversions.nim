@@ -211,9 +211,9 @@ proc writeValue*[F: CommonJsonFlavors](
     w: var JsonWriter[F], v: Quantity
 ) {.gcsafe, raises: [IOError].} =
   w.streamElement(s):
-    w.stream.write "\"0x"
-    w.stream.toHex(distinctBase v)
-    w.stream.write "\""
+    s.write "\"0x"
+    s.toHex(distinctBase v)
+    s.write "\""
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicBytes)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
