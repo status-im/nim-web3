@@ -155,13 +155,11 @@ jobs:
           echo "ncpu=$ncpu" >> $GITHUB_ENV
           echo "MAKE_CMD=${MAKE_CMD}" >> $GITHUB_ENV
 
-      - name: Build Nim and Nimble
-        run: |
-          curl -O -L -s -S https://raw.githubusercontent.com/status-im/nimbus-build-system/master/scripts/build_nim.sh
-          env MAKE="${MAKE_CMD} -j${ncpu}" ARCH_OVERRIDE=${PLATFORM} NIM_COMMIT=${{ matrix.branch }} \
-            QUICK_AND_DIRTY_COMPILER=1 QUICK_AND_DIRTY_NIMBLE=1 CC=gcc \
-            bash build_nim.sh nim csources dist/nimble NimBinaries
-          echo '${{ github.workspace }}/nim/bin' >> $GITHUB_PATH
+      - name: Setup Nimble
+        uses: nim-lang/setup-nimble-action@v1
+        with:
+          nimble-version: 'nightly'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Use gcc 14
         # Should be removed when ubuntu-latest is 26.04
@@ -174,7 +172,6 @@ jobs:
 
       - name: Run tests
         run: |
-          nim --version
           nimble --version
           gcc --version
           ./ci-test.sh
