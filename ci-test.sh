@@ -16,4 +16,4 @@ if [[ -n "${TEST_LANG}" ]]; then
 fi
 nimble dump --solve
 nimble list -i --ver
-nimble test 
+nimble test --debug
