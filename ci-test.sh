@@ -15,5 +15,5 @@ if [[ -n "${TEST_LANG}" ]]; then
   export TEST_LANG
 fi
 nimble dump --solve
-nimble list -l --ver
+nimble list -i --ver
 nimble test 
