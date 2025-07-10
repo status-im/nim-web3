@@ -4,7 +4,7 @@ set -ex
 npm install hardhat
 touch hardhat.config.js
 nohup npx hardhat node &
-nimble install -y --depsOnly --debug
+nimble install -y --depsOnly
 
 # Wait until hardhat responds
 while ! curl -X POST --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":67}' localhost:8545 2>/dev/null
@@ -16,4 +16,4 @@ if [[ -n "${TEST_LANG}" ]]; then
 fi
 nimble dump --solve
 nimble list -i --ver
-nimble test --debug
+nimble test 
