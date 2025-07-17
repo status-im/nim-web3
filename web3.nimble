@@ -43,8 +43,3 @@ proc test(args, path: string) =
 task test, "Run all tests":
   test "--mm:refc", "tests/all_tests.nim"
   test "--mm:orc", "tests/all_tests.nim"
-
-task showPaths, "Show the paths":
-  exec "nimble setup"
-  let file = "./nimble.paths"
-  echo readFile(file)

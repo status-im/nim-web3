@@ -14,7 +14,4 @@ done
 if [[ -n "${TEST_LANG}" ]]; then
   export TEST_LANG
 fi
-nimble dump --solve
-nimble list -i --ver
-nimble showPaths # show the paths to make sure they match the ones in the CI
 nimble test
