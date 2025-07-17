@@ -17,7 +17,14 @@ nimble install https://github.com/status-im/nim-web3@#master
 
 ## Development
 
-You should first run `./simulator.sh` which runs `hardhat node`
+Install hardhat locally and create a `hardhat.config.js` file:
+
+```bash
+npm install hardhat
+echo "module.exports = {};" > hardhat.config.js
+```
+
+Then you should run `./simulator.sh` which runs `hardhat node`
 
 This creates a local simulated Ethereum network on your local machine and the tests will use this for their E2E processing
 
