@@ -17,6 +17,12 @@ nimble install https://github.com/status-im/nim-web3@#master
 
 ## Development
 
+First, fetch the submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
 Install nodemon globally, hardhat locally and create a `hardhat.config.js` file:
 
 ```bash
