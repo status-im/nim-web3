@@ -13,7 +13,8 @@ import
   json_rpc/rpcserver,
   ../../web3/conversions,
   ../../web3/eth_api_types,
-  ../../web3/primitives as w3
+  ../../web3/primitives as w3,
+  ./min_blobtx_rlp
 
 type
   Hash32 = w3.Hash32
@@ -29,8 +30,8 @@ proc installHandlers*(server: RpcServer) =
     return SyncingStatus(syncing: false)
 
   server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> Hash32:
-    let tx = rlp.decode(data, PooledTransaction)
-    let h = rlpHash(tx)
+    let tx = rlp.decode(data, BlobTransaction)
+    let h = computeRlpHash(tx.tx)
     return Hash32(h.data)
 
   server.rpc("eth_getTransactionReceipt") do(x: JsonString, data: Hash32) -> ReceiptObject:
