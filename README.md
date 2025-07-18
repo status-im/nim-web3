@@ -17,9 +17,10 @@ nimble install https://github.com/status-im/nim-web3@#master
 
 ## Development
 
-Install hardhat locally and create a `hardhat.config.js` file:
+Install nodemon globally, hardhat locally and create a `hardhat.config.js` file:
 
 ```bash
+npm install -g nodemon
 npm install hardhat
 echo "module.exports = {};" > hardhat.config.js
 ```
