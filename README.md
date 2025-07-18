@@ -9,7 +9,7 @@ The humble beginnings of a Nim library similar to web3.[js|py]
 
 ## Installation
 
-You can install the developement version of the library through nimble with the following command
+You can install the development version of the library through nimble with the following command
 
 ```console
 nimble install https://github.com/status-im/nim-web3@#master
