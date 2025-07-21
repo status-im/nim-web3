@@ -21,6 +21,7 @@ type
   Split = object
     head: Slice[int]
     tail: seq[byte]
+  AbiEncodingError* = ref object of CatchableError
 
 func write*[T](encoder: var AbiEncoder, value: T)
 func encode*[T](_: type AbiEncoder, value: T): seq[byte]
@@ -160,9 +161,12 @@ func write*[T](encoder: var AbiEncoder, value: T) =
   encoder.encode(writer.finish())
 
 func encode*[T](_: type AbiEncoder, value: T): seq[byte] =
-  var encoder = AbiEncoder.init()
-  encoder.write(value)
-  encoder.finish().bytes
+  try:
+    var encoder = AbiEncoder.init()
+    encoder.write(value)
+    encoder.finish().bytes
+  except Exception as e:
+    raise AbiEncodingError(msg: "Failed to encode value: " & e.msg)
 
 proc isDynamic*(_: type AbiEncoder, T: type): bool {.compileTime.} =
   var encoder = AbiEncoder.init()
@@ -179,13 +183,13 @@ func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
 func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
   AbiEncoder.encode(x)
 
-func encode*(b: Address): seq[byte] = 
+func encode*(b: Address): seq[byte] =
   AbiEncoder.encode(b)
 
-func encode*[N: static int](b: FixedBytes[N]): seq[byte] = 
+func encode*[N: static int](b: FixedBytes[N]): seq[byte] =
   AbiEncoder.encode(b)
 
-func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = 
+func encode*[N](b: array[N, byte]): seq[byte] {.inline.} =
   AbiEncoder.encode(b)
 
 func encode*(x: seq[byte]): seq[byte] {.inline.} =
@@ -194,7 +198,7 @@ func encode*(x: seq[byte]): seq[byte] {.inline.} =
 func encode*(value: SomeUnsignedInt | StUint): seq[byte] =
   AbiEncoder.encode(value)
 
-func encode*(x: bool): seq[byte] = 
+func encode*(x: bool): seq[byte] =
   AbiEncoder.encode(x)
 
 func encode*(x: string): seq[byte] {.inline.} =

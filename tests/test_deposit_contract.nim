@@ -25,7 +25,7 @@ contract(DepositContract):
 suite "Deposit contract":
 
   test "deposits":
-    proc test() {.async: (raises: [CancelledError, Exception]).} =
+    proc test() {.async.} =
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
       let accounts = await web3.provider.eth_accounts()
       let gasPrice = int(await web3.provider.eth_gasPrice())

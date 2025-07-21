@@ -123,7 +123,7 @@ suite "Signed transactions":
     check txHex == "0x02f8a5848404bf1f820288832c7e6384346d9246819d946eb893e3466931517a04a17d153a6330c3f2f1dd82c854b5889e365e59664fb881554ba1175519b5195b1d20390beb806d8f2cda7893e6f79848195dba4c905db6d7257ffb5eefea35f18ae33cc080a0f1003f96c6c6620dd46db36d2ae9f12d363947eb0db088c678b6ad1cf494aa6fa06085b5abbf448de5d622dc820da590cfdb6bb77b41c6650962b998a941f8d701"
 
   test "contract creation and method invocation":
-    proc test() {.async: (raises: [CancelledError, Exception]).} =
+    proc test() {.async.} =
       let theRNG = HmacDrbgContext.new()
 
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
