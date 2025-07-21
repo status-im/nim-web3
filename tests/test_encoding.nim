@@ -23,12 +23,16 @@ suite "ABI encoding":
     let length = rand(0..<20)
     newSeqWith(length, rand(byte)) 
 
+  template checkCompatibility(value: untyped, expected: untyped) =
+    check AbiEncoder.encode(value) == expected
+    check encode(value) == expected
+
   test "encodes uint8":
     check AbiEncoder.encode(42'u8) == 31.zeroes & 42'u8
 
   test "encodes booleans":
-    check AbiEncoder.encode(false) == 31.zeroes & 0'u8
-    check AbiEncoder.encode(true) == 31.zeroes & 1'u8
+    checkCompatibility false, 31.zeroes & 0'u8
+    checkCompatibility true, 31.zeroes & 1'u8
 
   test "encodes uint16, 32, 64":
     check AbiEncoder.encode(0xABCD'u16) ==
@@ -41,6 +45,7 @@ suite "ABI encoding":
       0x55'u8 & 0x66'u8 & 0x77'u8 & 0x88'u8
 
   test "encodes int8, 16, 32, 64":
+    check AbiEncoder.encode(1'i8) == 31.zeroes & 0x01'u8
     check AbiEncoder.encode(1'i8) == 31.zeroes & 0x01'u8
     check AbiEncoder.encode(-1'i8) == 0xFF'u8.repeat(32)
     check AbiEncoder.encode(1'i16) == 31.zeroes & 0x01'u8
@@ -64,16 +69,30 @@ suite "ABI encoding":
   test "encodes stints":
     let uint256 = UInt256.fromBytes(randomBytes[32](), bigEndian)
     let uint128 = UInt128.fromBytes(randomBytes[32](), bigEndian)
-    check AbiEncoder.encode(uint256) == @(uint256.toBytesBE)
-    check AbiEncoder.encode(uint128) == 16.zeroes & @(uint128.toBytesBE)
-    check AbiEncoder.encode(1.i256) == 31.zeroes & 0x01'u8
-    check AbiEncoder.encode(1.i128) == 31.zeroes & 0x01'u8
-    check AbiEncoder.encode(-1.i256) == 0xFF'u8.repeat(32)
-    check AbiEncoder.encode(-1.i128) == 0xFF'u8.repeat(32)
+    checkCompatibility uint256, @(uint256.toBytesBE)
+    checkCompatibility uint128, 16.zeroes & @(uint128.toBytesBE)
+    checkCompatibility 1.i256, 31.zeroes & 0x01'u8
+    checkCompatibility 1.i128, 31.zeroes & 0x01'u8
+    checkCompatibility -1.i256, 0xFF'u8.repeat(32)
+    checkCompatibility -1.i128, 0xFF'u8.repeat(32)
 
   test "encodes addresses":
     let address = address(3)
-    check AbiEncoder.encode(address) == 12.zeroes & @(array[20, byte](address))
+    checkCompatibility address, 12.zeroes & @(array[20, byte](address))
+
+  test "keeps compatibility with encodes addresses":
+    let address = address(3)
+    check encode(address) == 12.zeroes & @(array[20, byte](address))
+
+  test "encodes FixedBytes":
+    let bytes3 = FixedBytes[3]([1'u8, 2'u8, 3'u8])
+    checkCompatibility bytes3, @[1'u8, 2'u8, 3'u8] & 29.zeroes
+
+    let bytes32 = FixedBytes[32](randomBytes[32]())
+    checkCompatibility bytes32, @(bytes32.data)
+
+    let bytes33 = FixedBytes[33](randomBytes[33]())
+    checkCompatibility bytes33, @(bytes33.data) & 31.zeroes
 
   test "encodes hashes":
     let hash =  txhash(3)
@@ -81,29 +100,29 @@ suite "ABI encoding":
 
   test "encodes byte arrays":
     let bytes3 = [1'u8, 2'u8, 3'u8]
-    check AbiEncoder.encode(bytes3) == @bytes3 & 29.zeroes
+    checkCompatibility bytes3, @bytes3 & 29.zeroes
     let bytes32 = randomBytes[32]()
-    check AbiEncoder.encode(bytes32) == @bytes32
+    checkCompatibility bytes32, @bytes32
     let bytes33 =randomBytes[33]()
-    check AbiEncoder.encode(bytes33) == @bytes33 & 31.zeroes
+    checkCompatibility bytes33, @bytes33 & 31.zeroes
 
   test "encodes byte sequences":
     let bytes3 = @[1'u8, 2'u8, 3'u8]
     let bytes3len = AbiEncoder.encode(bytes3.len.uint64)
-    check AbiEncoder.encode(bytes3) == bytes3len & bytes3 & 29.zeroes
+    checkCompatibility bytes3, bytes3len & bytes3 & 29.zeroes
     let bytes32 = @(randomBytes[32]())
     let bytes32len = AbiEncoder.encode(bytes32.len.uint64)
-    check AbiEncoder.encode(bytes32) == bytes32len & bytes32
+    checkCompatibility bytes32, bytes32len & bytes32
     let bytes33 = @(randomBytes[33]())
     let bytes33len = AbiEncoder.encode(bytes33.len.uint64)
-    check AbiEncoder.encode(bytes33) == bytes33len & bytes33 & 31.zeroes
+    checkCompatibility bytes33, bytes33len & bytes33 & 31.zeroes
 
   test "encodes tuples":
     let a = true
     let b = @[1'u8, 2'u8, 3'u8]
     let c = 0xAABBCCDD'u32
     let d = @[4'u8, 5'u8, 6'u8]
-    check AbiEncoder.encode( (a, b, c, d) ) ==
+    checkCompatibility ( (a, b, c, d) ),
       AbiEncoder.encode(a) &
       AbiEncoder.encode(4 * 32'u8) & # offset in tuple
       AbiEncoder.encode(c) &
@@ -116,7 +135,7 @@ suite "ABI encoding":
     let b = @[1'u8, 2'u8, 3'u8]
     let c = 0xAABBCCDD'u32
     let d = @[4'u8, 5'u8, 6'u8]
-    check AbiEncoder.encode( (a, b, (c, d)) ) ==
+    checkCompatibility ( (a, b, (c, d)) ),
       AbiEncoder.encode(a) &
       AbiEncoder.encode(3 * 32'u8) & # offset of b in outer tuple
       AbiEncoder.encode(5 * 32'u8) & # offset of inner tuple in outer tuple
@@ -128,6 +147,11 @@ suite "ABI encoding":
   test "encodes arrays":
     let a, b = randomSeq()
     check AbiEncoder.encode([a, b]) == AbiEncoder.encode( (a,b) )
+
+  test "encodes openArray":
+    let a = [1'u8, 2'u8, 3'u8, 4'u8, 5'u8]
+    check encode(a[1..3]) ==
+      AbiEncoder.encode(3'u64) & @[2'u8, 3'u8, 4'u8] & 29.zeroes
 
   test "encodes sequences":
     let a, b = randomSeq()
@@ -141,6 +165,19 @@ suite "ABI encoding":
       AbiEncoder.encode(32'u8) & # offset in tuple
       AbiEncoder.encode(s)
 
+  test "encodes DynamicBytes":
+    let bytes3 = DynamicBytes(@[1'u8, 2'u8, 3'u8])
+    checkCompatibility bytes3,
+      AbiEncoder.encode(3'u64) & bytes3.data & 29.zeroes
+
+    let bytes32 = DynamicBytes(@(randomBytes[32]()))
+    checkCompatibility bytes32,
+      AbiEncoder.encode(32'u64) & bytes32.data
+
+    let bytes33 = DynamicBytes(@(randomBytes[33]()))
+    checkCompatibility bytes33,
+      AbiEncoder.encode(33'u64) & bytes33.data & 31.zeroes
+
   test "encodes array of static elements as static element":
     let a = [[42'u8], [43'u8]]
     check AbiEncoder.encode( (a,) ) == AbiEncoder.encode(a)
@@ -153,6 +190,7 @@ suite "ABI encoding":
 
   test "encodes strings as UTF-8 byte sequence":
     check AbiEncoder.encode("hello!☺") == AbiEncoder.encode("hello!☺".toBytes)
+    check encode("hello!☺") == encode("hello!☺".toBytes)
 
   test "encodes distinct types as their base type":
     type SomeDistinctType = distinct uint16
