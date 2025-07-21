@@ -19,6 +19,6 @@ import
   test_signed_tx,
   test_execution_types,
   test_string_decoder,
+  test_encoding,
   test_contract_dsl,
-  test_execution_api,
-  test_encoding
+  test_execution_api
