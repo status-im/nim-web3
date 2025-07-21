@@ -172,12 +172,65 @@ proc isDynamic*(_: type AbiEncoder, T: type): bool {.compileTime.} =
 proc isStatic*(_: type AbiEncoder, T: type): bool {.compileTime.} =
   not AbiEncoder.isDynamic(T)
 
-
+# Keep the old encode functions for compatibility
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
-  @(x.toBytesBE())
+  AbiEncoder.encode(x)
 
 func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
-  @(x.toBytesBE())
+  AbiEncoder.encode(x)
+
+func encode*(b: Address): seq[byte] = 
+  AbiEncoder.encode(b)
+
+func encode*[N: static int](b: FixedBytes[N]): seq[byte] = 
+  AbiEncoder.encode(b)
+
+func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = 
+  AbiEncoder.encode(b)
+
+func encode*(x: seq[byte]): seq[byte] {.inline.} =
+  AbiEncoder.encode(x)
+
+func encode*(value: SomeUnsignedInt | StUint): seq[byte] =
+  AbiEncoder.encode(value)
+
+func encode*(x: bool): seq[byte] = 
+  AbiEncoder.encode(x)
+
+func encode*(x: string): seq[byte] {.inline.} =
+  AbiEncoder.encode(x)
+
+func encode*(x: tuple): seq[byte] =
+  AbiEncoder.encode(x)
+
+func encode*[T](x: openArray[T]): seq[byte] =
+  AbiEncoder.encode(@x)
+
+func encode*(x: DynamicBytes): seq[byte] {.inline.} =
+  AbiEncoder.encode(x)
+
+func isDynamicObject(T: typedesc): bool
+
+template isDynamicType(a: typedesc): bool =
+  when a is seq | openArray | string | DynamicBytes:
+    true
+  elif a is object:
+    const r = isDynamicObject(a)
+    r
+  else:
+    false
+
+func isDynamicObject(T: typedesc): bool =
+  var a: T
+  for v in fields(a):
+    if isDynamicType(typeof(v)): return true
+  false
+
+func getTupleImpl(t: NimNode): NimNode =
+  getTypeImpl(t)[1].getTypeImpl()
+
+macro typeListLen*(t: typedesc[tuple]): int =
+  newLit(t.getTupleImpl().len)
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int =
   const meaningfulLen = to.bits div 8
@@ -190,16 +243,6 @@ func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N
   let offset = offset + baseOffset
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
-
-func encodeFixed(a: openArray[byte]): seq[byte] =
-  var padding = a.len mod 32
-  if padding != 0: padding = 32 - padding
-  result.setLen(padding) # Zero fill padding
-  result.add(a)
-
-func encode*[N: static int](b: FixedBytes[N]): seq[byte] = encodeFixed(b.data)
-func encode*(b: Address): seq[byte] = encodeFixed(b.data)
-func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = encodeFixed(b)
 
 func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
   let meaningfulLen = to.len
@@ -216,22 +259,6 @@ func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBy
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline.} =
   decodeFixed(input, baseOffset, offset, array[20, byte](to))
-
-func encodeDynamic(v: openArray[byte]): seq[byte] =
-  result = encode(v.len.u256)
-  result.add(v)
-  let pad = v.len mod 32
-  if pad != 0:
-    result.setLen(result.len + 32 - pad)
-
-func encode*(x: DynamicBytes): seq[byte] {.inline.} =
-  encodeDynamic(distinctBase x)
-
-func encode*(x: seq[byte]): seq[byte] {.inline.} =
-  encodeDynamic(x)
-
-func encode*(x: string): seq[byte] {.inline.} =
-  encodeDynamic(x.toOpenArrayByte(0, x.high))
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int =
   var dataOffsetBig, dataLenBig: UInt256
@@ -272,24 +299,7 @@ func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T])
   for i in 0 ..< dataLen:
     offset += decode(input, baseOffset, offset, to[i])
 
-func isDynamicObject(T: typedesc): bool
 
-template isDynamicType(a: typedesc): bool =
-  when a is seq | openArray | string | DynamicBytes:
-    true
-  elif a is object:
-    const r = isDynamicObject(a)
-    r
-  else:
-    false
-
-func isDynamicObject(T: typedesc): bool =
-  var a: T
-  for v in fields(a):
-    if isDynamicType(typeof(v)): return true
-  false
-
-func encode*(x: bool): seq[byte] = encode(x.int.u256)
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var bool): int =
   var i: Int256
@@ -313,44 +323,6 @@ func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): 
       offset += sz
       result += sz
 
-func encode*(x: tuple): seq[byte]
-
-func encode*[T](x: openArray[T]): seq[byte] =
-  result = encode(x.len.u256)
-  when isDynamicType(T):
-    result.setLen((1 + x.len) * 32)
-    for i in 0 ..< x.len:
-      let offset = result.len - 32
-      result &= encode(x[i])
-      result[(i + 1) * 32 .. (i + 2) * 32 - 1] = encode(offset.u256)
-  else:
-    for i in 0 ..< x.len:
-      result &= encode(x[i])
-
-func getTupleImpl(t: NimNode): NimNode =
-  getTypeImpl(t)[1].getTypeImpl()
-
-macro typeListLen*(t: typedesc[tuple]): int =
-  newLit(t.getTupleImpl().len)
-
-func encode*(x: tuple): seq[byte] =
-  var offsets {.used.}: array[typeListLen(typeof(x)), int]
-  var i = 0
-  for v in fields(x):
-    when isDynamicType(typeof(v)):
-      offsets[i] = result.len
-      result.setLen(result.len + 32)
-    else:
-      result &= encode(v)
-    inc i
-  i = 0
-  for v in fields(x):
-    when isDynamicType(typeof(v)):
-      let offset = result.len
-      let o = offsets[i]
-      result[o .. o + 31] = encode(offset.u256)
-      result &= encode(v)
-    inc i
 
 # Obsolete
 func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openArray[byte], ...) instead".} =
