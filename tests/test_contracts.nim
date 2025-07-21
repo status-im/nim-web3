@@ -157,7 +157,7 @@ suite "Contracts":
     waitFor asyncteardown()
 
   test "encoding test":
-    proc asynctest {.async: (raises: [CancelledError, Exception]).} =
+    proc asynctest {.async.} =
       let
         receipt = await web3.deployContract(EncodingTestCode)
         cc = receipt.contractAddress.get
@@ -193,7 +193,7 @@ suite "Contracts":
     waitFor asynctest()
 
   test "number storage":
-    proc asynctest {.async: (raises: [CancelledError, Exception]).} =
+    proc asynctest {.async.} =
       let
         receipt = await web3.deployContract(NumberStorageCode)
         cc = receipt.contractAddress.get
@@ -209,7 +209,7 @@ suite "Contracts":
     waitFor asynctest()
 
   test "metacoin":
-    proc asynctest {.async: (raises: [CancelledError, Exception]).} =
+    proc asynctest {.async.} =
       let
         receipt = await web3.deployContract(MetaCoinCode)
         cc = receipt.contractAddress.get
