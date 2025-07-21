@@ -41,7 +41,7 @@ var contractAddress = Address.fromHex("0xEA255DeA28c84F698Fa195f87fC83D1d4125ef9
 suite "Logs":
 
   test "subscribe":
-    proc test() {.async.} =
+    proc test() {.async: (raises: [CancelledError, Exception]).} =
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
       let accounts = await web3.provider.eth_accounts()
       echo "accounts: ", accounts
@@ -56,7 +56,7 @@ suite "Logs":
 
         let ns = web3.contractSender(LoggerContract, contractAddress)
 
-        proc testInvoke() {.async.} =
+        proc testInvoke() {.async: (raises: [CancelledError, Exception]).} =
           let r = rand(1 .. 1000000)
           echo "invoke(", r, "): ", await ns.invoke(r.u256).send()
 
