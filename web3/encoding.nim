@@ -11,6 +11,8 @@ import
   std/macros,
   stint, ./eth_api_types, stew/[assign2, byteutils, endians2]
 
+{.push raises: [].}
+
 type
   AbiEncoder* = object
     stack: seq[Tuple]
@@ -23,8 +25,8 @@ type
     tail: seq[byte]
   AbiEncodingError* = ref object of CatchableError
 
-func write*[T](encoder: var AbiEncoder, value: T)
-func encode*[T](_: type AbiEncoder, value: T): seq[byte]
+func write*[T](encoder: var AbiEncoder, value: T) {.raises: [AbiEncodingError].}
+func encode*[T](_: type AbiEncoder, value: T): seq[byte] {.raises: [AbiEncodingError].}
 
 func init(_: type AbiEncoder): AbiEncoder =
   AbiEncoder(stack: @[Tuple()])
@@ -32,7 +34,7 @@ func init(_: type AbiEncoder): AbiEncoder =
 func append(tupl: var Tuple, bytes: openArray[byte]) =
   tupl.bytes.add(bytes)
 
-func postpone(tupl: var Tuple, bytes: seq[byte]) =
+func postpone(tupl: var Tuple, bytes: seq[byte]) {.raises: [AbiEncodingError].} =
   var split: Split
   split.head.a = tupl.bytes.len
   tupl.append(AbiEncoder.encode(0'u64))
@@ -40,7 +42,7 @@ func postpone(tupl: var Tuple, bytes: seq[byte]) =
   split.tail = bytes
   tupl.postponed.add(split)
 
-func finish(tupl: Tuple): seq[byte] =
+func finish(tupl: Tuple): seq[byte] {.raises: [AbiEncodingError].} =
   var bytes = tupl.bytes
   for split in tupl.postponed:
     let offset = bytes.len
@@ -51,7 +53,7 @@ func finish(tupl: Tuple): seq[byte] =
 func append(encoder: var AbiEncoder, bytes: openArray[byte]) =
   encoder.stack[^1].append(bytes)
 
-func postpone(encoder: var AbiEncoder, bytes: seq[byte]) =
+func postpone(encoder: var AbiEncoder, bytes: seq[byte]) {.raises: [AbiEncodingError].} =
   if encoder.stack.len > 1:
     encoder.stack[^1].postpone(bytes)
   else:
@@ -63,14 +65,14 @@ func setDynamic(encoder: var AbiEncoder) =
 func startTuple*(encoder: var AbiEncoder) =
   encoder.stack.add(Tuple())
 
-func encode(encoder: var AbiEncoder, tupl: Tuple) =
+func encode(encoder: var AbiEncoder, tupl: Tuple) {.raises: [AbiEncodingError].} =
   if tupl.dynamic:
     encoder.postpone(tupl.finish())
     encoder.setDynamic()
   else:
     encoder.append(tupl.finish())
 
-func finishTuple*(encoder: var AbiEncoder) =
+func finishTuple*(encoder: var AbiEncoder) {.raises: [AbiEncodingError].} =
   encoder.encode(encoder.stack.pop())
 
 func pad(encoder: var AbiEncoder, len: int, padding=0'u8) =
@@ -123,13 +125,13 @@ func encode(encoder: var AbiEncoder, bytes: seq[byte]) =
   encoder.padright(bytes)
   encoder.setDynamic()
 
-func encode[I, T](encoder: var AbiEncoder, value: array[I, T]) =
+func encode[I, T](encoder: var AbiEncoder, value: array[I, T]) {.raises: [AbiEncodingError].} =
   encoder.startTuple()
   for element in value:
     encoder.write(element)
   encoder.finishTuple()
 
-func encode[T](encoder: var AbiEncoder, value: seq[T]) =
+func encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [AbiEncodingError].} =
   encoder.encode(value.len.uint64)
   encoder.startTuple()
   for element in value:
@@ -140,13 +142,13 @@ func encode[T](encoder: var AbiEncoder, value: seq[T]) =
 func encode(encoder: var AbiEncoder, value: string) =
   encoder.encode(value.toBytes)
 
-func encode(encoder: var AbiEncoder, tupl: tuple) =
+func encode(encoder: var AbiEncoder, tupl: tuple) {.raises: [AbiEncodingError].} =
   encoder.startTuple()
   for element in tupl.fields:
     encoder.write(element)
   encoder.finishTuple()
 
-func encode(encoder: var AbiEncoder, value: distinct) =
+func encode(encoder: var AbiEncoder, value: distinct) {.raises: [AbiEncodingError].} =
   type Base = distinctBase(typeof(value))
   encoder.write(Base(value))
 
@@ -155,12 +157,12 @@ func finish(encoder: var AbiEncoder): Tuple =
   doAssert encoder.stack[0].bytes.len mod 32 == 0, "encoding invariant broken"
   encoder.stack[0]
 
-func write*[T](encoder: var AbiEncoder, value: T) =
+func write*[T](encoder: var AbiEncoder, value: T) {.raises: [AbiEncodingError].} =
   var writer = AbiEncoder.init()
   writer.encode(value)
   encoder.encode(writer.finish())
 
-func encode*[T](_: type AbiEncoder, value: T): seq[byte] =
+func encode*[T](_: type AbiEncoder, value: T): seq[byte] {.raises: [AbiEncodingError].} =
   try:
     var encoder = AbiEncoder.init()
     encoder.write(value)
@@ -168,49 +170,49 @@ func encode*[T](_: type AbiEncoder, value: T): seq[byte] =
   except Exception as e:
     raise AbiEncodingError(msg: "Failed to encode value: " & e.msg)
 
-proc isDynamic*(_: type AbiEncoder, T: type): bool {.compileTime.} =
+proc isDynamic*(_: type AbiEncoder, T: type): bool {.compileTime, raises: [AbiEncodingError].} =
   var encoder = AbiEncoder.init()
   encoder.write(T.default)
   encoder.finish().dynamic
 
-proc isStatic*(_: type AbiEncoder, T: type): bool {.compileTime.} =
+proc isStatic*(_: type AbiEncoder, T: type): bool {.compileTime, raises: [AbiEncodingError].} =
   not AbiEncoder.isDynamic(T)
 
 # Keep the old encode functions for compatibility
-func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
+func encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(x)
 
-func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
+func encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(x)
 
-func encode*(b: Address): seq[byte] =
+func encode*(b: Address): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(b)
 
-func encode*[N: static int](b: FixedBytes[N]): seq[byte] =
+func encode*[N: static int](b: FixedBytes[N]): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(b)
 
-func encode*[N](b: array[N, byte]): seq[byte] {.inline.} =
+func encode*[N](b: array[N, byte]): seq[byte] {.inline, raises: [AbiEncodingError].} =
   AbiEncoder.encode(b)
 
-func encode*(x: seq[byte]): seq[byte] {.inline.} =
+func encode*(x: seq[byte]): seq[byte] {.inline, raises: [AbiEncodingError].} =
   AbiEncoder.encode(x)
 
-func encode*(value: SomeUnsignedInt | StUint): seq[byte] =
+func encode*(value: SomeUnsignedInt | StUint): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(value)
 
-func encode*(x: bool): seq[byte] =
+func encode*(x: bool): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(x)
 
-func encode*(x: string): seq[byte] {.inline.} =
+func encode*(x: string): seq[byte] {.inline, raises: [AbiEncodingError].} =
   AbiEncoder.encode(x)
 
-func encode*(x: tuple): seq[byte] =
+func encode*(x: tuple): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(x)
 
-func encode*[T](x: openArray[T]): seq[byte] =
+func encode*[T](x: openArray[T]): seq[byte] {.raises: [AbiEncodingError].} =
   AbiEncoder.encode(@x)
 
-func encode*(x: DynamicBytes): seq[byte] {.inline.} =
+func encode*(x: DynamicBytes): seq[byte] {.inline, raises: [AbiEncodingError].} =
   AbiEncoder.encode(x)
 
 func isDynamicObject(T: typedesc): bool
