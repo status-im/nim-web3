@@ -170,11 +170,17 @@ func valid(hex: string): bool =
     if x notin HexDigits: return false
   true
 
+when not declared(json_serialization.streamElement): # json_serialization < 0.3.0
+  template streamElement(w: var JsonWriter, s, body: untyped) =
+    template s: untyped = w.stream
+    body
+
 proc writeHexValue(w: var JsonWriter, v: openArray[byte])
       {.gcsafe, raises: [IOError].} =
-  w.stream.write "\"0x"
-  w.stream.writeHex v
-  w.stream.write "\""
+  w.streamElement(s):
+    s.write "\"0x"
+    s.writeHex v
+    s.write "\""
 
 #------------------------------------------------------------------------------
 # Well, both rpc and chronicles share the same encoding of these types
@@ -209,9 +215,10 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
 proc writeValue*[F: CommonJsonFlavors](
     w: var JsonWriter[F], v: Quantity
 ) {.gcsafe, raises: [IOError].} =
-  w.stream.write "\"0x"
-  w.stream.toHex(distinctBase v)
-  w.stream.write "\""
+  w.streamElement(s):
+    s.write "\"0x"
+    s.toHex(distinctBase v)
+    s.write "\""
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicBytes)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -299,9 +306,10 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: uint64)
       {.gcsafe, raises: [IOError].} =
-  w.stream.write "\"0x"
-  w.stream.toHex(v)
-  w.stream.write "\""
+  w.streamElement(s):
+    s.write "\"0x"
+    s.toHex(v)
+    s.write "\""
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var uint64)
        {.gcsafe, raises: [IOError, JsonReaderError].} =

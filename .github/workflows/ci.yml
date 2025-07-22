@@ -162,6 +162,11 @@ jobs:
             QUICK_AND_DIRTY_COMPILER=1 QUICK_AND_DIRTY_NIMBLE=1 CC=gcc \
             bash build_nim.sh nim csources dist/nimble NimBinaries
           echo '${{ github.workspace }}/nim/bin' >> $GITHUB_PATH
+      - name: Setup Nimble
+        uses: nim-lang/setup-nimble-action@v1
+        with:
+          nimble-version: 'latest'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Use gcc 14
         # Should be removed when ubuntu-latest is 26.04
