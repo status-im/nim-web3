@@ -170,6 +170,11 @@ func valid(hex: string): bool =
     if x notin HexDigits: return false
   true
 
+when not declared(json_serialization.streamElement): # json_serialization < 0.3.0
+  template streamElement(w: var JsonWriter, s, body: untyped) =
+    template s: untyped = w.stream
+    body
+
 proc writeHexValue(w: var JsonWriter, v: openArray[byte])
       {.gcsafe, raises: [IOError].} =
   w.streamElement(s):
