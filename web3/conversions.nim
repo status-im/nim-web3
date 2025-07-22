@@ -48,6 +48,9 @@ BlockHeader.useDefaultSerializationIn JrpcConv
 BlockObject.useDefaultSerializationIn JrpcConv
 TransactionObject.useDefaultSerializationIn JrpcConv
 ReceiptObject.useDefaultSerializationIn JrpcConv
+BlobScheduleObject.useDefaultSerializationIn JrpcConv
+ConfigObject.useDefaultSerializationIn JrpcConv
+EthConfigObject.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # engine_api_types
