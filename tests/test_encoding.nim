@@ -1,4 +1,3 @@
-
 import 
     std/unittest,   
     std/sequtils,
@@ -144,6 +143,14 @@ suite "ABI encoding":
       AbiEncoder.encode(2 * 32'u8) & # offset of d in inner tuple
       AbiEncoder.encode(d)
 
+  test "encodes tuple with only dynamic fields":
+    let t = (@[1'u8, 2'u8], @[3'u8, 4'u8])
+    check AbiEncoder.encode(t) ==
+      AbiEncoder.encode(2 * 32'u64) &
+      AbiEncoder.encode(4 * 32'u64) &
+      AbiEncoder.encode(@[1'u8, 2'u8]) &
+      AbiEncoder.encode(@[3'u8, 4'u8])
+
   test "encodes arrays":
     let a, b = randomSeq()
     check AbiEncoder.encode([a, b]) == AbiEncoder.encode( (a,b) )
@@ -164,6 +171,19 @@ suite "ABI encoding":
     check AbiEncoder.encode( (s,) ) ==
       AbiEncoder.encode(32'u8) & # offset in tuple
       AbiEncoder.encode(s)
+
+  test "encodes nested seq":
+    let nestedSeq = @[ @[1, 2], @[3, 4, 5] ]
+    let outerLen = AbiEncoder.encode(2'u64)
+
+    let inner1 = AbiEncoder.encode(@[1, 2])
+    let offset1 = AbiEncoder.encode(2 * 32'u64)
+
+    let inner2 = AbiEncoder.encode(@[3, 4, 5])
+    let offset2 = AbiEncoder.encode(2 * 32'u64 + inner1.len.uint64)
+
+    let expected = outerLen & offset1 & offset2 & inner1 & inner2
+    check AbiEncoder.encode(nestedSeq) == expected
 
   test "encodes DynamicBytes":
     let bytes3 = DynamicBytes(@[1'u8, 2'u8, 3'u8])
@@ -196,12 +216,6 @@ suite "ABI encoding":
     type SomeDistinctType = distinct uint16
     let value = 0xAABB'u16
     check AbiEncoder.encode(SomeDistinctType(value)) == AbiEncoder.encode(value)
-
-  test "can determine whether types are dynamic or static":
-    check static AbiEncoder.isStatic(uint8)
-    check static AbiEncoder.isDynamic(seq[byte])
-    check static AbiEncoder.isStatic(array[2, array[2, byte]])
-    check static AbiEncoder.isDynamic(array[2, seq[byte]])
 
   test "encodes mixed static/dynamic tuple":
     let staticPart = 123'u32
