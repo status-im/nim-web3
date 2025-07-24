@@ -267,17 +267,31 @@ type
     max*: Quantity
     target*: Quantity
 
+  PrecompilePair* = object
+    address*: Address
+    name*: string
+
+  SystemContractPair* = object
+    name*: string
+    address*: Address
+
   ConfigObject* = object
     activationTime*: UInt256
     blobSchedule*: BlobScheduleObject
     chainId*: Hash32
-    # precompiles*: 
-    # systemContracts*:
+    precompiles*: seq[PrecompilePair]
+    systemContracts*: seq[SystemContractPair]
 
   EthConfigObject* = object
     current*: ConfigObject
+    currentHash*: Hash32
+    currentForkId*: Bytes4
     next*: Opt[ConfigObject]
+    nextHash*: Opt[Hash32]
+    nextForkId*: Opt[Bytes4]
     last*: Opt[ConfigObject]
+    lastHash*: Opt[Hash32]
+    lastForkId*: Opt[Bytes4]
 
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)

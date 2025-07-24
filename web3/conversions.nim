@@ -8,11 +8,11 @@
 # those terms.
 
 import
-  std/strutils,
+  std/[strutils, importutils],
   stew/byteutils,
   faststreams/textio,
   json_rpc/jsonmarshal,
-  json_serialization/stew/results,
+  json_serialization/pkg/results,
   json_serialization,
   ./primitives,
   ./engine_api_types,
@@ -175,6 +175,7 @@ func valid(hex: string): bool =
 
 proc writeHexValue(w: var JsonWriter, v: openArray[byte])
       {.gcsafe, raises: [IOError].} =
+  privateAccess(JsonWriter)
   w.stream.write "\"0x"
   w.stream.writeHex v
   w.stream.write "\""
@@ -212,6 +213,7 @@ proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
 proc writeValue*[F: CommonJsonFlavors](
     w: var JsonWriter[F], v: Quantity
 ) {.gcsafe, raises: [IOError].} =
+  privateAccess(JsonWriter)
   w.stream.write "\"0x"
   w.stream.toHex(distinctBase v)
   w.stream.write "\""
@@ -296,12 +298,23 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
   wrapValueError:
     val = hexStr.parse(StUint[256], 16)
 
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[PrecompilePair])
+      {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, Address, string):
+    val.add PrecompilePair(address: k, name: v)
+
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemContractPair])
+      {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, string, Address):
+    val.add SystemContractPair(name: k, address: v)
+
 #------------------------------------------------------------------------------
 # Exclusive to JrpcConv
 #------------------------------------------------------------------------------
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: uint64)
       {.gcsafe, raises: [IOError].} =
+  privateAccess(JsonWriter)
   w.stream.write "\"0x"
   w.stream.toHex(v)
   w.stream.write "\""
@@ -416,6 +429,20 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
     w.writeValue v.get
   else:
     w.writeValue JsonString("null")
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[PrecompilePair])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for x in v:
+    w.writeMember(x.address.to0xHex, x.name)
+  w.endObject()
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[SystemContractPair])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for x in v:
+    w.writeMember(x.name, x.address)
+  w.endObject()
 
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(v.uint64)
