@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/[strutils, importutils],
+  std/strutils,
   stew/byteutils,
   faststreams/textio,
   json_rpc/jsonmarshal,
