@@ -12,7 +12,7 @@ import
   stew/byteutils,
   faststreams/textio,
   json_rpc/jsonmarshal,
-  json_serialization/pkg/results,
+  json_serialization/stew/results,
   json_serialization,
   ./primitives,
   ./engine_api_types,
