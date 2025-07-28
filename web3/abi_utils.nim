@@ -13,6 +13,11 @@ func isDynamic*(T: type): bool =
   elif T is array:
     type t = typeof(default(T)[0])
     return isDynamic(t)
+  elif T is tuple:
+    for v in fields(default(T)):
+      if isDynamic(typeof(v)):
+        return true
+    return false
   elif T is object:
     return isDynamicObject(T)
   else:
