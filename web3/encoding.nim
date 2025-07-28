@@ -199,40 +199,40 @@ proc encode*[T](_: type AbiEncoder, value: T): seq[byte] {.raises: [AbiEncodingE
     raise newException(AbiEncodingError, "Failed to encode value: " & e.msg)
 
 # Keep the old encode functions for compatibility
-proc encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.raises: [AbiEncodingError]} =
+proc encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
 
-proc encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.raises: [AbiEncodingError]} =
+proc encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
 
-proc encode*(b: Address): seq[byte] {.raises: [AbiEncodingError]} =
+proc encode*(b: Address): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(b)
 
-proc encode*[N: static int](b: FixedBytes[N]): seq[byte] {.raises: [AbiEncodingError]} =
+proc encode*[N: static int](b: FixedBytes[N]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(b)
 
-proc encode*[N](b: array[N, byte]): seq[byte] {.inline, raises: [AbiEncodingError].} =
+proc encode*[N](b: array[N, byte]): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(b)
 
-proc encode*(x: seq[byte]): seq[byte] {.inline, raises: [AbiEncodingError].} =
+proc encode*(x: seq[byte]): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
 
-proc encode*(value: SomeUnsignedInt | StUint): seq[byte] =
+proc encode*(value: SomeUnsignedInt | StUint): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(value)
 
-proc encode*(x: bool): seq[byte] {.raises: [AbiEncodingError]} =
+proc encode*(x: bool): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
 
-proc encode*(x: string): seq[byte] {.inline, raises: [AbiEncodingError].} =
+proc encode*(x: string): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
 
-proc encode*(x: tuple): seq[byte] {.raises: [AbiEncodingError]} =
+proc encode*(x: tuple): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
 
-proc encode*[T](x: openArray[T]): seq[byte] {.raises: [AbiEncodingError]} =
+proc encode*[T](x: openArray[T]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(@x)
 
-proc encode*(x: DynamicBytes): seq[byte] {.inline, raises: [AbiEncodingError].} =
+proc encode*(x: DynamicBytes): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int =
