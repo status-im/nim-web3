@@ -196,17 +196,43 @@ proc decode(decoder: var AbiDecoder2, T: type seq[byte]): T =
 proc decode(decoder: var AbiDecoder2, T: type string): T =
   string.fromBytes(decoder.decode(seq[byte]))
 
-# func decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [AbiDecodingError].} =
-#   T(decoder.read(distinctBase T))
-
 proc decode[T: distinct](decoder: var AbiDecoder2, _: type T): T =
   T(decoder.decode(distinctBase T))
 
-# Decoding sequences is quite difficult when the length is dynamic,
-# because we need to get the offsets of each element before getting
-# the data. And nim-faststreams does not support reading
-# variable-length data directly.
-proc decode[T](decoder: var AbiDecoder2, _: type seq[T]): seq[T] =
+## When T is dynamic, ABI layout looks like:
+## +----------------------------+
+## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
+## +----------------------------+
+## | offset to element 0       |  <-- 32
+## +----------------------------+
+## | offset to element 1       |  <-- 32 + size of encoded element 0
+## +----------------------------+
+## | ...                        |
+## +----------------------------+
+## | encoded element 0         |  <-- item at offset 0
+## +----------------------------+
+## | encoded element 1         |  <-- item at offset 1
+## +----------------------------+
+## | ...                        |
+## +----------------------------+
+##
+## When T is static, ABI layout looks like:
+## +----------------------------+
+## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
+## +----------------------------+
+## | element 0                 |  <-- 32
+## +----------------------------+
+## | element 1                 |  <-- 32
+## +----------------------------+
+## | ...                        |
+## +----------------------------+
+## | element N-1               |
+## +----------------------------+
+##
+## The size of the static array is passed as an argument to the decoder.
+## For the dynamic array, the size is should be None,
+## and the decoder will read the size from the input stream.
+proc decodeCollection[T](decoder: var AbiDecoder2, size: Opt[uint64]): seq[T] =
   if isDynamic(T):
     # Since we cannot seek the position in the input stream,
     # we need to read the whole buffer first.
@@ -214,78 +240,51 @@ proc decode[T](decoder: var AbiDecoder2, _: type seq[T]): seq[T] =
     if not decoder.input.readInto(buf):
       raise newException(AbiDecodingError, "reading past end of bytes")
 
-    # We decode first the length of the sequence
-    let len =  AbiDecoder2.decode(buf[0 ..< abiSlotSize], uint64)
-    result = newSeq[T](len)
+    var offset = 0.uint64
+    var len = 0.uint64
+    if size.isNone:
+      # Get the length of the dynamic array from the first slot.
+      # Add assign one slot to the offset,
+      # so that the first element starts at the second slot.
+      len = AbiDecoder2.decode(buf[0 ..< abiSlotSize], uint64)
+      offset = 1
+    else:
+      len = size.get()
 
-    # Then we decode the offsets of each element.
-    # i + 2 corresponds to the slot position
-    # + the first slot which is the length of the sequence.
     var offsets = newSeq[uint64](len)
     for i in 0..<len:
-      let offsetStart = abiSlotSize * (i + 1).int
-      let value = AbiDecoder2.decode(
-        buf[offsetStart ..< offsetStart + abiSlotSize], uint64
-      )
-      # Here we add the size of the slot to the offset to 
-      # point to the start of the data.
-      offsets[i] = value + abiSlotSize
+      let start = abiSlotSize * (i + offset)
+      let value = AbiDecoder2.decode(buf[start ..< start + abiSlotSize], uint64)
+      offsets[i] = value + (abiSlotSize * offset).uint64
 
+    result = newSeq[T](len)
     for i in 0..<len:
-      let sizeOffsetStart = offsets[i]
-      let sizeOffsetEnd = sizeOffsetStart + abiSlotSize
-      let size = AbiDecoder2.decode(buf[sizeOffsetStart ..< sizeOffsetEnd], uint64)
-
-      let dataOffsetStart = sizeOffsetEnd
-      let dataOffsetEnd = dataOffsetStart + size
-      result[i] = buf[dataOffsetStart  ..< dataOffsetEnd]
+      let start = offsets[i].int
+      # Here we need to take only the data that is between the offsets.
+      let stop = if i+1 < result.len.uint64: offsets[i+1].int else: buf.len
+      let data = buf[start ..< stop]
+      var decoder = AbiDecoder2(input: memoryInput(data), len: data.len)
+      result[i] = decoder.decode(T)
 
     return result
   else:
-    # Get the length of the sequence as specified in the
-    # ABI specification
-    let len = decoder.decode(uint64)
+    let len = if size.isNone: decoder.decode(uint64) else: size.get()
     result = newSeq[T](len)
-
     for i in 0..<len:
       result[i] = decoder.decode(T)
 
     return result
 
+proc decode[T](decoder: var AbiDecoder2, _: type seq[T]): seq[T] =
+  return decodeCollection[T](decoder, Opt.none(uint64))
+
 proc decode[I,T](decoder: var AbiDecoder2, _: type array[I,T]): array[I,T] =
-  var arr: array[I, T]
+  var result: array[I, T]
+  let data = decodeCollection[T](decoder, Opt.some(result.len.uint64))
+  for i in 0..<result.len:
+    result[i] = data[i]
 
-  if isDynamic(T):
-    var buf: seq[byte] = newSeq[byte](decoder.len)
-    if not decoder.input.readInto(buf):
-      raise newException(AbiDecodingError, "reading past end of bytes")
-
-    var offsets = newSeq[uint64](arr.len)
-    for i in 0..<arr.len:
-      let offsetStart = abiSlotSize * i.int
-      let value = AbiDecoder2.decode(
-        buf[offsetStart ..< offsetStart + abiSlotSize], uint64
-      )
-
-      offsets[i] = value
-
-    for i in 0..<arr.len:
-      let sizeOffsetStart = offsets[i]
-      let sizeOffsetEnd = sizeOffsetStart + abiSlotSize
-      let size = AbiDecoder2.decode(buf[sizeOffsetStart ..< sizeOffsetEnd], uint64)
-
-      let dataOffsetStart = sizeOffsetEnd
-      let dataOffsetEnd = dataOffsetStart + size
-      let buf = buf[sizeOffsetStart ..< dataOffsetEnd.int]
-      var d = AbiDecoder2(input: memoryInput(buf), len: size.int + abiSlotSize)
-      arr[i] = d.decode(T)
-
-    return arr
-  else:
-    for i in 0..<arr.len:
-      arr[i] = decoder.decode(T)
-
-    return arr
+  return result
 
 proc decode*(_: type AbiDecoder2, bytes: seq[byte], T: type): T =
   var decoder = AbiDecoder2(input: memoryInput(bytes), len: bytes.len)
