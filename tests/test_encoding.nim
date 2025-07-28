@@ -1,5 +1,5 @@
 import 
-    std/unittest,   
+    std/unittest,
     std/sequtils,
     std/random,
     stint,
@@ -18,20 +18,16 @@ suite "ABI encoding":
         b = rand(byte)
     return a
 
-  proc randomSeq(): seq[byte] =
-    let length = rand(0..<20)
-    newSeqWith(length, rand(byte)) 
-
   template checkCompatibility(value: untyped, expected: untyped) =
     check AbiEncoder.encode(value) == expected
     check encode(value) == expected
 
   test "encodes uint8":
-    check AbiEncoder.encode(42'u8) == 31.zeroes & 42'u8
+    check AbiEncoder.encode(42'u8) == 31.zeroes & 42'u8 # [0, 0, ..., 0, 2a] (2a = 42)
 
   test "encodes booleans":
-    checkCompatibility false, 31.zeroes & 0'u8
-    checkCompatibility true, 31.zeroes & 1'u8
+    checkCompatibility false, 31.zeroes & 0'u8 # [0, 0, ..., 0, 0]
+    checkCompatibility true, 31.zeroes & 1'u8 # [0, 0, ..., 0, 1]
 
   test "encodes uint16, 32, 64":
     check AbiEncoder.encode(0xABCD'u16) ==
@@ -44,15 +40,15 @@ suite "ABI encoding":
       0x55'u8 & 0x66'u8 & 0x77'u8 & 0x88'u8
 
   test "encodes int8, 16, 32, 64":
-    check AbiEncoder.encode(1'i8) == 31.zeroes & 0x01'u8
-    check AbiEncoder.encode(1'i8) == 31.zeroes & 0x01'u8
-    check AbiEncoder.encode(-1'i8) == 0xFF'u8.repeat(32)
-    check AbiEncoder.encode(1'i16) == 31.zeroes & 0x01'u8
-    check AbiEncoder.encode(-1'i16) == 0xFF'u8.repeat(32)
-    check AbiEncoder.encode(1'i32) == 31.zeroes & 0x01'u8
-    check AbiEncoder.encode(-1'i32) == 0xFF'u8.repeat(32)
-    check AbiEncoder.encode(1'i64) == 31.zeroes & 0x01'u8
-    check AbiEncoder.encode(-1'i64) == 0xFF'u8.repeat(32)
+    check AbiEncoder.encode(1'i8) == 31.zeroes & 0x01'u8  # [0, 0, ..., 0, 1]
+    check AbiEncoder.encode(1'i16) == 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
+    check AbiEncoder.encode(1'i32) == 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
+    check AbiEncoder.encode(1'i64) == 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
+
+    check AbiEncoder.encode(-1'i8) == 0xFF'u8.repeat(32)  # [255, 255, ..., 255] (signed value)
+    check AbiEncoder.encode(-1'i16) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
+    check AbiEncoder.encode(-1'i32) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
+    check AbiEncoder.encode(-1'i64) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
 
   test "encodes ranges":
     type SomeRange = range[0x0000'u16..0xAAAA'u16]
@@ -62,59 +58,69 @@ suite "ABI encoding":
     type SomeEnum = enum
       one = 1
       two = 2
-    check AbiEncoder.encode(one) == 31.zeroes & 1'u8
-    check AbiEncoder.encode(two) == 31.zeroes & 2'u8
+    check AbiEncoder.encode(one) == 31.zeroes & 1'u8 # [0, 0, ..., 0, 1]
+    check AbiEncoder.encode(two) == 31.zeroes & 2'u8 # [0, 0, ..., 0, 2]
 
   test "encodes stints":
     let uint256 = UInt256.fromBytes(randomBytes[32](), bigEndian)
     let uint128 = UInt128.fromBytes(randomBytes[32](), bigEndian)
     checkCompatibility uint256, @(uint256.toBytesBE)
     checkCompatibility uint128, 16.zeroes & @(uint128.toBytesBE)
-    checkCompatibility 1.i256, 31.zeroes & 0x01'u8
-    checkCompatibility 1.i128, 31.zeroes & 0x01'u8
-    checkCompatibility -1.i256, 0xFF'u8.repeat(32)
-    checkCompatibility -1.i128, 0xFF'u8.repeat(32)
+
+    checkCompatibility 1.i256, 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
+    checkCompatibility 1.i128, 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
+
+    checkCompatibility -1.i256, 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
+    checkCompatibility -1.i128, 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
 
   test "encodes addresses":
     let address = address(3)
     checkCompatibility address, 12.zeroes & @(array[20, byte](address))
 
-  test "keeps compatibility with encodes addresses":
-    let address = address(3)
-    check encode(address) == 12.zeroes & @(array[20, byte](address))
+  test "encodes hashes":
+    let hash = txhash(3)
+    check AbiEncoder.encode(hash) == @(array[32, byte](hash))
 
   test "encodes FixedBytes":
     let bytes3 = FixedBytes[3]([1'u8, 2'u8, 3'u8])
-    checkCompatibility bytes3, @[1'u8, 2'u8, 3'u8] & 29.zeroes
+    checkCompatibility bytes3, @[1'u8, 2'u8, 3'u8] & 29.zeroes # Fixed array are right-padded with zeroes
 
     let bytes32 = FixedBytes[32](randomBytes[32]())
     checkCompatibility bytes32, @(bytes32.data)
 
     let bytes33 = FixedBytes[33](randomBytes[33]())
-    checkCompatibility bytes33, @(bytes33.data) & 31.zeroes
-
-  test "encodes hashes":
-    let hash =  txhash(3)
-    check AbiEncoder.encode(hash) == @(array[32, byte](hash))
+    checkCompatibility bytes33, @(bytes33.data) & 31.zeroes # Right-padded with another 32 zeroes
 
   test "encodes byte arrays":
     let bytes3 = [1'u8, 2'u8, 3'u8]
-    checkCompatibility bytes3, @bytes3 & 29.zeroes
+    checkCompatibility bytes3, @bytes3 & 29.zeroes # Fixed array are right-padded with zeroes.
+
     let bytes32 = randomBytes[32]()
     checkCompatibility bytes32, @bytes32
+
     let bytes33 =randomBytes[33]()
-    checkCompatibility bytes33, @bytes33 & 31.zeroes
+    checkCompatibility bytes33, @bytes33 & 31.zeroes # Right-padded with another 32 zeroes
 
   test "encodes byte sequences":
     let bytes3 = @[1'u8, 2'u8, 3'u8]
     let bytes3len = AbiEncoder.encode(bytes3.len.uint64)
     checkCompatibility bytes3, bytes3len & bytes3 & 29.zeroes
+    checkCompatibility bytes3,
+      31.zeroes & 3'u8 & # [0, 0, ..., 0, 3] (length)
+      bytes3 & 29.zeroes # [1, 2, 3, 0, ..., 0] (data)
+
     let bytes32 = @(randomBytes[32]())
     let bytes32len = AbiEncoder.encode(bytes32.len.uint64)
     checkCompatibility bytes32, bytes32len & bytes32
+
     let bytes33 = @(randomBytes[33]())
     let bytes33len = AbiEncoder.encode(bytes33.len.uint64)
     checkCompatibility bytes33, bytes33len & bytes33 & 31.zeroes
+
+  test "encodes empty seq of seq":
+    let v: seq[seq[int]] = @[]
+    check AbiEncoder.encode(v) == AbiEncoder.encode(0'u64)
+    check AbiEncoder.encode(v) == 32.zeroes # Encode the size only (zero)
 
   test "encodes tuples":
     let a = true
@@ -123,11 +129,18 @@ suite "ABI encoding":
     let d = @[4'u8, 5'u8, 6'u8]
     checkCompatibility ( (a, b, c, d) ),
       AbiEncoder.encode(a) &
-      AbiEncoder.encode(4 * 32'u8) & # offset in tuple
+      AbiEncoder.encode(4 * 32'u8) &
       AbiEncoder.encode(c) &
-      AbiEncoder.encode(6 * 32'u8) & # offset in tuple
+      AbiEncoder.encode(6 * 32'u8) &
       AbiEncoder.encode(b) &
       AbiEncoder.encode(d)
+    checkCompatibility ( (a, b, c, d) ),
+      31.zeroes & 1'u8 &                          # boolean value
+      31.zeroes & 128'u8 &                        # offset to b (4 (bool, offset, int, offset) * 32 bytes)
+      28.zeroes & 0xAA'u8 & 0xBB & 0xCC & 0xDD &
+      31.zeroes & 192'u8 &                        # offset to d ((4 + b length + b data) * 32 bytes)
+      31.zeroes & 3'u8 & b & 29.zeroes &          # b (length + data)
+      31.zeroes & 3'u8 & d & 29.zeroes            # d (length + data)
 
   test "encodes nested tuples":
     let a = true
@@ -142,6 +155,14 @@ suite "ABI encoding":
       AbiEncoder.encode(c) &
       AbiEncoder.encode(2 * 32'u8) & # offset of d in inner tuple
       AbiEncoder.encode(d)
+    checkCompatibility ( (a, b, (c, d)) ),
+      31.zeroes & 1'u8 &                            # boolean value
+      31.zeroes & 96'u8 &                           # offset to b ((bool, offset, tuple) * 32 bytes)
+      31.zeroes & 160'u8 &                          # offset to tuple ((3 + b length + b data) * 32 bytes)
+      31.zeroes & 3'u8 & b & 29.zeroes &            # b (length + data)
+      28.zeroes & 0xAA'u8 & 0xBB & 0xCC & 0xDD &
+      31.zeroes & 64'u8 &                           # offset to d ((static + offset) * 32 bytes)
+      31.zeroes & 3'u8 & d & 29.zeroes              # d (length + data)
 
   test "encodes tuple with only dynamic fields":
     let t = (@[1'u8, 2'u8], @[3'u8, 4'u8])
@@ -150,21 +171,54 @@ suite "ABI encoding":
       AbiEncoder.encode(4 * 32'u64) &
       AbiEncoder.encode(@[1'u8, 2'u8]) &
       AbiEncoder.encode(@[3'u8, 4'u8])
+    check AbiEncoder.encode(t) ==
+      31.zeroes & 64'u8 &                            # offset to first
+      31.zeroes & 128'u8 &                           # offset to second (first offset + length encoding + data length)
+      31.zeroes & 2'u8 & @[1'u8, 2'u8] & 30.zeroes & # first element (length + data)
+      31.zeroes & 2'u8 & @[3'u8, 4'u8] & 30.zeroes   # second element (length + data)
+
+  test "encodes tuple with empty dynamic fields":
+    var empty: seq[byte] = @[]
+    let t = (empty, empty)
+    check AbiEncoder.encode(t) ==
+      AbiEncoder.encode(2 * 32'u64) &
+      AbiEncoder.encode(2 * 32'u64 + AbiEncoder.encode(empty).len.uint64) &
+      AbiEncoder.encode(empty) &
+      AbiEncoder.encode(empty)
+    check AbiEncoder.encode(t) ==
+      31.zeroes & 64'u8 &  # offset to first
+      31.zeroes & 96'u8 &  # offset to second (first offset + length encoding + data length)
+      32.zeroes &          # empty sequence
+      32.zeroes            # empty sequence
+
+  test "encodes tuple with static and empty dynamic":
+    var empty: seq[byte] = @[]
+    let t = (42'u8, empty)
+    check AbiEncoder.encode(t) ==
+      AbiEncoder.encode(42'u8) &
+      AbiEncoder.encode(2 * 32'u64) &
+      AbiEncoder.encode(empty)
+    check AbiEncoder.encode(t) ==
+      31.zeroes & 42'u8 & # int left-padded with zeroes
+      31.zeroes & 64'u8 & # offset to empty (static + offset)
+      32.zeroes           # empty sequence
 
   test "encodes arrays":
-    let a, b = randomSeq()
-    check AbiEncoder.encode([a, b]) == AbiEncoder.encode( (a,b) )
+    let a, b = randomBytes[32]()
+    check AbiEncoder.encode([a, b]) ==
+      AbiEncoder.encode((a, b)) # Encode as tuple because fixed arrays are static.
 
   test "encodes openArray":
     let a = [1'u8, 2'u8, 3'u8, 4'u8, 5'u8]
     check encode(a[1..3]) ==
-      AbiEncoder.encode(3'u64) & @[2'u8, 3'u8, 4'u8] & 29.zeroes
+      AbiEncoder.encode(3'u64) & @[2'u8, 3'u8, 4'u8] & 29.zeroes # [2, 3, 4, ..., 0, 0]
 
   test "encodes sequences":
-    let a, b = randomSeq()
+    let a, b = @[randomBytes[32]()]
+    #
     check AbiEncoder.encode(@[a, b]) ==
-      AbiEncoder.encode(2'u64) &
-      AbiEncoder.encode( (a, b) )
+      AbiEncoder.encode(2'u64) &   # sequence length
+      AbiEncoder.encode( (a, b) )  # encode as tuple because sequences are dynamic.
 
   test "encodes sequence as dynamic element":
     let s = @[42.u256, 43.u256]
@@ -172,35 +226,57 @@ suite "ABI encoding":
       AbiEncoder.encode(32'u8) & # offset in tuple
       AbiEncoder.encode(s)
 
-  test "encodes nested seq":
-    let nestedSeq = @[ @[1, 2], @[3, 4, 5] ]
-    let outerLen = AbiEncoder.encode(2'u64)
+  test "encodes nested sequence":
+    let nestedSeq = @[ @[1'u8, 2'u8], @[3'u8, 4'u8, 5'u8] ]
+    check AbiEncoder.encode(nestedSeq) ==
+      AbiEncoder.encode(2'u64) &
+      AbiEncoder.encode(2 * 32'u64) &
+      AbiEncoder.encode(4 * 32'u64) &
+      AbiEncoder.encode(@[1'u8, 2'u8]) &
+      AbiEncoder.encode(@[3'u8, 4'u8, 5'u8])
+    check AbiEncoder.encode(nestedSeq) ==
+      31.zeroes & 2'u8 &                                 # sequence length
+      31.zeroes & 64'u8 &                                # offset to first item (2 offsets)
+      31.zeroes & 128'u8 &                               # offset to second item (first offset + length + data length)
+      31.zeroes & 2'u8 & @[1'u8, 2'u8] & 30.zeroes &     # first item (length + data)
+      31.zeroes & 3'u8 & @[3'u8, 4'u8, 5'u8] & 29.zeroes # second item (length + data)
 
-    let inner1 = AbiEncoder.encode(@[1, 2])
-    let offset1 = AbiEncoder.encode(2 * 32'u64)
-
-    let inner2 = AbiEncoder.encode(@[3, 4, 5])
-    let offset2 = AbiEncoder.encode(2 * 32'u64 + inner1.len.uint64)
-
-    let expected = outerLen & offset1 & offset2 & inner1 & inner2
-    check AbiEncoder.encode(nestedSeq) == expected
+  test "encodes seq of empty seqs":
+    let empty: seq[int] =  @[]
+    let v: seq[seq[int]] = @[ empty, empty ]
+    let expected =
+      AbiEncoder.encode(2'u64) &
+      AbiEncoder.encode(2 * 32'u64) &
+      AbiEncoder.encode(2 * 32'u64 + AbiEncoder.encode(empty).len.uint64) &
+      AbiEncoder.encode(empty) &
+      AbiEncoder.encode(empty)
+    check AbiEncoder.encode(v) ==
+      31.zeroes & 2'u8 &   # sequence length
+      31.zeroes & 64'u8 &  # offset to first item (2 offsets)
+      31.zeroes & 96'u8 &  # offset to second item (first offset + zero length)
+      32.zeroes         &  # empty sequence
+      32.zeroes            # empty sequence
 
   test "encodes DynamicBytes":
     let bytes3 = DynamicBytes(@[1'u8, 2'u8, 3'u8])
     checkCompatibility bytes3,
-      AbiEncoder.encode(3'u64) & bytes3.data & 29.zeroes
+      AbiEncoder.encode(3'u64) & # data length right-padded with zeroes
+      bytes3.data & 29.zeroes
 
     let bytes32 = DynamicBytes(@(randomBytes[32]()))
     checkCompatibility bytes32,
-      AbiEncoder.encode(32'u64) & bytes32.data
+      AbiEncoder.encode(32'u64) & # data length
+        bytes32.data
 
     let bytes33 = DynamicBytes(@(randomBytes[33]()))
     checkCompatibility bytes33,
-      AbiEncoder.encode(33'u64) & bytes33.data & 31.zeroes
+      AbiEncoder.encode(33'u64) & # data length right-padded with zeroes
+        bytes33.data & 31.zeroes
 
   test "encodes array of static elements as static element":
     let a = [[42'u8], [43'u8]]
-    check AbiEncoder.encode( (a,) ) == AbiEncoder.encode(a)
+    check AbiEncoder.encode( (a,) ) ==
+      AbiEncoder.encode(a) # The tuple encoding does not add offset for static elements (fixed length array).
 
   test "encodes array of dynamic elements as dynamic element":
     let a = [@[42'u8], @[43'u8]]
@@ -216,16 +292,6 @@ suite "ABI encoding":
     type SomeDistinctType = distinct uint16
     let value = 0xAABB'u16
     check AbiEncoder.encode(SomeDistinctType(value)) == AbiEncoder.encode(value)
-
-  test "encodes mixed static/dynamic tuple":
-    let staticPart = 123'u32
-    let dynamicPart = @[1'u8, 2'u8, 3'u8, 4'u8, 5'u8]
-    let anotherStatic = true
-    check AbiEncoder.encode((staticPart, dynamicPart, anotherStatic)) ==
-      AbiEncoder.encode(staticPart) &
-      AbiEncoder.encode(3 * 32'u8) &
-      AbiEncoder.encode(anotherStatic) &
-      AbiEncoder.encode(dynamicPart)
 
   test "encodes zero values":
     check AbiEncoder.encode(UInt256.zero) == 32.zeroes

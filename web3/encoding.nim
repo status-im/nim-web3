@@ -54,7 +54,7 @@ proc encode(encoder: var AbiEncoder, value: SomeUnsignedInt | StUint) {.raises: 
 
 proc encode(encoder: var AbiEncoder, value: SomeSignedInt | StInt) {.raises: [AbiEncodingError]} =
   when typeof(value) is StInt:
-    let unsignedValue = cast[StUint[(type value).bits]](value)
+    let unsignedValue = cast[StInt[(type value).bits]](value)
     let isNegative = value.isNegative
   else:
     let unsignedValue = cast[(type value).toUnsigned](value)
@@ -92,51 +92,88 @@ proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [AbiEncodingErro
 
 proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [AbiEncodingError].}
 
-# When encoding a seq or an array with dynamic data, we need first
-# to encode the offsets of each element, and then write the actual data.
+  ## When T is dynamic, ABI layout looks like:
+  ##
+  ## +----------------------------+
+  ## | offset to element 0       |  <-- 32
+  ## +----------------------------+
+  ## | offset to element 1       |  <-- 32 + size of encoded element 0
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | encoded element 0         |  <-- item at offset 0
+  ## +----------------------------+
+  ## | encoded element 1         |  <-- item at offset 1
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ##
+  ## When T is static, ABI layout looks like:
+  ##
+  ## +----------------------------+
+  ## | element 0                 |  <-- 32
+  ## +----------------------------+
+  ## | element 1                 |  <-- 32
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | element N-1               |
+  ## +----------------------------+
 template encodeCollection(encoder: var AbiEncoder, value: untyped) =
   if isDynamic(typeof(value[0])):
     var blocks: seq[seq[byte]] = @[]
-    # Each item here will occupy a slot of 32 bytes.
     var offset = value.len * abiSlotSize
 
+    # Encode offset first
     for element in value:
-      # Store the encoded element in order
-      # to add the data after the offsets
       var e = AbiEncoder(output: memoryOutput())
       e.encode(element)
       let bytes = e.finish()
       blocks.add(bytes)
 
-      # Encode the offset of the dynamic data
       encoder.encode(offset.uint64)
       offset += bytes.len
 
+    # Then encode the data
     for data in blocks:
       encoder.write(data)
   else:
     for element in value:
       encoder.encode(element)
 
+# Fixed array does not include the length in the ABI encoding.
 proc encode[T, I](encoder: var AbiEncoder, value: array[I, T]) {.raises: [AbiEncodingError].} =
   encodeCollection(encoder, value)
 
+# Sequences are dynamic by definition, so we always encode their length first.
 proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [AbiEncodingError].} =
-  # The ABI specification requires that the length of the sequence is encoded first.
   encoder.encode(value.len.uint64)
 
   encodeCollection(encoder, value)
 
-# When encoding a tuple, we need to handle each field separately.
-# If a field is dynamic, we encode its offset first, then the data.
-# Otherwise, we encode the field directly.
+## Tuple can contain both static and dynamic elements.
+## When the data is dynamic, the offset to the data is encoded first.
+##
+## Example: (static, dynamic, dynamic)
+##
+## +------------------------------+
+## | element 1                   |
+## +------------------------------+
+## | offset to element 2         |
+## +------------------------------+
+## | offset to element 3         |
+## +------------------------------+
+## | element 2                   |
+## +------------------------------+
+## | element 3                   |
+## +------------------------------+
 proc encode(encoder: var AbiEncoder, tupl: tuple) {.raises: [AbiEncodingError]} =
   var data: seq[seq[byte]] = @[]
   # Each item here will occupy a slot of 32 bytes.
   var offset = type(tupl).arity * abiSlotSize
 
   for field in tupl.fields:
-    when isDynamic(typeof(field)) or (typeof(field) is tuple):
+    when isDynamic(typeof(field)):
       # Store the encoded element in order
       # to add the data after the offsets
       var e = AbiEncoder(output: memoryOutput())
