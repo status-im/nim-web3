@@ -11,11 +11,9 @@ import
   std/[sequtils],
   faststreams/outputs,
   stint,
-  # TODO remove assign 2 when decoding.nim is updated
-  stew/[assign2, byteutils, endians2],
+  stew/[byteutils, endians2],
   ./eth_api_types,
   ./abi_utils
-
 
 {.push raises: [].}
 
@@ -234,99 +232,3 @@ proc encode*[T](x: openArray[T]): seq[byte] {.raises: [AbiEncodingError], deprec
 
 proc encode*(x: DynamicBytes): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
   AbiEncoder.encode(x)
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int =
-  const meaningfulLen = to.bits div 8
-  let offset = offset + baseOffset
-  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
-
-func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int =
-  const meaningfulLen = N div 8
-  let offset = offset + baseOffset
-  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
-
-func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
-  let meaningfulLen = to.len
-  var padding = to.len mod 32
-  if padding != 0:
-    padding = 32 - padding
-  let offset = baseOffset + offset + padding
-  if to.len != 0:
-    assign(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen + padding
-
-func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
-  decodeFixed(input, baseOffset, offset, array[N, byte](to))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline.} =
-  decodeFixed(input, baseOffset, offset, array[20, byte](to))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int =
-  var dataOffsetBig, dataLenBig: UInt256
-  result = decode(input, baseOffset, offset, dataOffsetBig)
-  let dataOffset = dataOffsetBig.truncate(int)
-  discard decode(input, baseOffset, dataOffset, dataLenBig)
-  let dataLen = dataLenBig.truncate(int)
-  let actualDataOffset = baseOffset + dataOffset + 32
-  to = input[actualDataOffset ..< actualDataOffset + dataLen]
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int =
-  var dataOffsetBig, dataLenBig: UInt256
-  result = decode(input, baseOffset, offset, dataOffsetBig)
-  let dataOffset = dataOffsetBig.truncate(int)
-  discard decode(input, baseOffset, dataOffset, dataLenBig)
-  let dataLen = dataLenBig.truncate(int)
-  let actualDataOffset = baseOffset + dataOffset + 32
-  to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
-  var s: seq[byte]
-  result = decode(input, baseOffset, offset, s)
-  # TODO: Check data len, and raise?
-  to = typeof(to)(move(s))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int
-
-func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline.} =
-  var dataOffsetBig, dataLenBig: UInt256
-  result = decode(input, baseOffset, offset, dataOffsetBig)
-  let dataOffset = dataOffsetBig.truncate(int)
-  discard decode(input, baseOffset, dataOffset, dataLenBig)
-  # TODO: Check data len, and raise?
-  let dataLen = dataLenBig.truncate(int)
-  to.setLen(dataLen)
-  let baseOffset = baseOffset + dataOffset + 32
-  var offset = 0
-  for i in 0 ..< dataLen:
-    offset += decode(input, baseOffset, offset, to[i])
-
-
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var bool): int =
-  var i: Int256
-  result = decode(input, baseOffset, offset, i)
-  to = not i.isZero()
-
-func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int =
-  when isDynamicObject(typeof(obj)):
-    var dataOffsetBig: UInt256
-    result = decode(input, baseOffset, offset, dataOffsetBig)
-    let dataOffset = dataOffsetBig.truncate(int)
-    let offset = baseOffset + dataOffset
-    var offset2 = 0
-    for k, field in fieldPairs(obj):
-      let sz = decode(input, offset, offset2, field)
-      offset2 += sz
-  else:
-    var offset = offset
-    for field in fields(obj):
-      let sz = decode(input, baseOffset, offset, field)
-      offset += sz
-      result += sz
-
-
-# Obsolete
-func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openArray[byte], ...) instead".} =
-  decode(hexToSeqByte(input), 0, offset div 2, to) * 2

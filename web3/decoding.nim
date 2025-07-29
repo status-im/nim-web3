@@ -2,89 +2,19 @@ import
     std/typetraits,
     stint,
     faststreams/inputs,
-    stew/[byteutils, endians2],
+    stew/[byteutils, endians2, assign2],
     ./eth_api_types,
     ./abi_utils
 
+{.push raises: [].}
+
 type
-  AbiDecoder2* = object
+  AbiDecoder* = object
     input: InputStream
     len: int
-  AbiDecoder* = object
-    bytes: seq[byte]
-    stack: seq[Tuple]
-    last: int
-  Tuple = object
-    start: int
-    index: int
-  Padding = enum
-    padLeft,
-    padRight
   UInt = SomeUnsignedInt | StUint
   Int = SomeSignedInt | StInt
   AbiDecodingError* = object of CatchableError
-
-func read*(decoder: var AbiDecoder, T: type): T {.raises: [AbiDecodingError].}
-
-func init(_: type Tuple, offset: int): Tuple =
-  Tuple(start: offset, index: offset)
-
-func init(_: type AbiDecoder, bytes: seq[byte], offset=0): AbiDecoder =
-  AbiDecoder(bytes: bytes, stack: @[Tuple.init(offset)])
-
-func currentTuple(decoder: var AbiDecoder): var Tuple =
-  decoder.stack[^1]
-
-func index(decoder: var AbiDecoder): var int =
-  decoder.currentTuple.index
-
-func `index=`(decoder: var AbiDecoder, value: int) =
-  decoder.currentTuple.index = value
-
-func startTuple*(decoder: var AbiDecoder) =
-  decoder.stack.add(Tuple.init(decoder.index))
-
-func finishTuple*(decoder: var AbiDecoder) =
-  doAssert decoder.stack.len > 1, "unable to finish a tuple that hasn't started"
-  let tupl = decoder.stack.pop()
-  decoder.index = tupl.index
-
-func updateLast(decoder: var AbiDecoder, index: int) =
-  if index > decoder.last:
-    decoder.last = index
-
-func advance(decoder: var AbiDecoder, amount: int): void {.raises: [AbiDecodingError].} =
-  decoder.index += amount
-  decoder.updateLast(decoder.index)
-  if decoder.index > decoder.bytes.len:
-    raise newException(AbiDecodingError, "reading past end of bytes")
-
-func skipPadding(decoder: var AbiDecoder, amount: int): void {.raises: [AbiDecodingError].} =
-  let index = decoder.index
-  decoder.advance(amount)
-  for i in index..<index+amount:
-    if decoder.bytes[i] notin [0x00'u8, 0xFF'u8]:
-      raise newException(AbiDecodingError, "invalid padding found")
-
-func read(decoder: var AbiDecoder, amount: int, padding=padLeft): seq[byte] {.raises: [AbiDecodingError].} =
-  let padlen = (32 - amount mod 32) mod 32
-  if padding == padLeft:
-    decoder.skipPadding(padlen)
-  let index = decoder.index
-  decoder.advance(amount)
-  result = decoder.bytes[index..<index+amount]
-  if padding == padRight:
-    decoder.skipPadding(padlen)
-
-template unsigned*(T: type SomeSignedInt): type SomeUnsignedInt =
-  when T is int8: uint8
-  elif T is int16: uint16
-  elif T is int32: uint32
-  elif T is int64: uint64
-  else: {.error "unsupported signed integer type".}
-
-template unsigned*(T: type StInt): type StUint =
-  StUint[T.bits]
 
 template basetype(Range: type range): untyped =
   when Range isnot SomeUnsignedInt: {.error: "only uint ranges supported".}
@@ -95,15 +25,21 @@ template basetype(Range: type range): untyped =
   else:
     {.error "unsupported range type".}
 
-proc finish(decoder: var AbiDecoder2) =
-  if decoder.input.readable:
-    raise newException(AbiDecodingError, "unread trailing bytes found")
+proc finish(decoder: var AbiDecoder) {.raises: [AbiDecodingError].} =
+  try:
+    if decoder.input.readable:
+      raise newException(AbiDecodingError, "unread trailing bytes found")
+  except IOError as e:
+    raise newException(AbiDecodingError, "Failed to finish decoding: " & e.msg)
 
-proc read(decoder: var AbiDecoder2, size = abiSlotSize): seq[byte] =
+proc read(decoder: var AbiDecoder, size = abiSlotSize): seq[byte] {.raises: [AbiDecodingError].} =
   var buf = newSeq[byte]((size + 31) div 32 * 32)
 
-  if not decoder.input.readInto(buf):
-    raise newException(AbiDecodingError, "reading past end of bytes")
+  try:
+    if not decoder.input.readInto(buf):
+      raise newException(AbiDecodingError, "reading past end of bytes")
+  except IOError as e:
+    raise newException(AbiDecodingError, "Failed to read bytes: " & e.msg)
 
   return buf
 
@@ -117,7 +53,7 @@ template checkRightPadding(buf: openArray[byte], paddingStart: int, paddingEnd: 
     if buf[i] != 0x00'u8:
       raise newException(AbiDecodingError, "invalid padding found")
 
-proc decode(decoder: var AbiDecoder2, T: type UInt): T =
+proc decode(decoder: var AbiDecoder, T: type UInt): T {.raises: [AbiDecodingError].} =
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
@@ -125,7 +61,7 @@ proc decode(decoder: var AbiDecoder2, T: type UInt): T =
 
   return T.fromBytesBE(buf[padding ..< abiSlotSize])
 
-proc decode(decoder: var AbiDecoder2, T: type StInt): T =
+proc decode(decoder: var AbiDecoder, T: type StInt): T {.raises: [AbiDecodingError].} =
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
@@ -136,7 +72,7 @@ proc decode(decoder: var AbiDecoder2, T: type StInt): T =
 
   return value
 
-proc decode(decoder: var AbiDecoder2, T: type SomeSignedInt): T =
+proc decode(decoder: var AbiDecoder, T: type SomeSignedInt): T {.raises: [AbiDecodingError].} =
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
@@ -148,33 +84,38 @@ proc decode(decoder: var AbiDecoder2, T: type SomeSignedInt): T =
 
   return value
 
-proc decode(decoder: var AbiDecoder2, T: type bool): T =
+proc decode(decoder: var AbiDecoder, T: type bool): T {.raises: [AbiDecodingError].} =
   case decoder.decode(uint8)
     of 0: false
     of 1: true
     else: raise newException(AbiDecodingError, "invalid boolean value")
 
-proc decode(decoder: var AbiDecoder2, T: type range): T  =
+proc decode(decoder: var AbiDecoder, T: type range): T {.raises: [AbiDecodingError].} =
   let value = decoder.decode(basetype(T))
   if value in T.low..T.high:
     T(value)
   else:
     raise newException(AbiDecodingError, "value not in range")
 
-proc decode(decoder: var AbiDecoder2, T: type enum): T =
+proc decode(decoder: var AbiDecoder, T: type enum): T {.raises: [AbiDecodingError].}=
   let value = decoder.decode(uint64)
   if value in T.low.uint64..T.high.uint64:
     T(value)
   else:
     raise newException(AbiDecodingError, "invalid enum value")
 
-proc decode(decoder: var AbiDecoder2, T: type Address): T=
+proc decode(decoder: var AbiDecoder, T: type Address): T {.raises: [AbiDecodingError].} =
   var bytes: array[sizeof(T), byte]
   let padding = abiSlotSize - sizeof(T)
-  bytes[0..<sizeof(T)] =(decoder.read(sizeof(T)))[padding ..< abiSlotSize]
+
+  try:
+    bytes[0..<sizeof(T)] =(decoder.read(sizeof(T)))[padding ..< abiSlotSize]
+  except IOError as e:
+    raise newException(AbiDecodingError, "Failed to read address: " & e.msg)
+
   T(bytes)
 
-proc decode[I](decoder: var AbiDecoder2, T: type array[I, byte]): T =
+proc decode[I](decoder: var AbiDecoder, T: type array[I, byte]): T {.raises: [AbiDecodingError].} =
   var arr: T
   let bytes = (arr.len + 31) div 32 * 32
   let buf = decoder.read(bytes)
@@ -184,7 +125,7 @@ proc decode[I](decoder: var AbiDecoder2, T: type array[I, byte]): T =
 
   return arr
 
-proc decode(decoder: var AbiDecoder2, T: type seq[byte]): T =
+proc decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [AbiDecodingError].} =
   let len = decoder.decode(uint64)
   let bytes = ((len + 31) div 32 * 32).int
   let buf = decoder.read(bytes)
@@ -193,10 +134,10 @@ proc decode(decoder: var AbiDecoder2, T: type seq[byte]): T =
 
   return buf[0 ..< len]
 
-proc decode(decoder: var AbiDecoder2, T: type string): T =
+proc decode(decoder: var AbiDecoder, T: type string): T {.raises: [AbiDecodingError].} =
   string.fromBytes(decoder.decode(seq[byte]))
 
-proc decode[T: distinct](decoder: var AbiDecoder2, _: type T): T =
+proc decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [AbiDecodingError].} =
   T(decoder.decode(distinctBase T))
 
 ## When T is dynamic, ABI layout looks like:
@@ -232,13 +173,16 @@ proc decode[T: distinct](decoder: var AbiDecoder2, _: type T): T =
 ## The size of the static array is passed as an argument to the decoder.
 ## For the dynamic array, the size is should be None,
 ## and the decoder will read the size from the input stream.
-proc decodeCollection[T](decoder: var AbiDecoder2, size: Opt[uint64]): seq[T] =
+proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.raises: [AbiDecodingError].} =
   if isDynamic(T):
     # Since we cannot seek the position in the input stream,
     # we need to read the whole buffer first.
     var buf: seq[byte] = newSeq[byte](decoder.len)
-    if not decoder.input.readInto(buf):
-      raise newException(AbiDecodingError, "reading past end of bytes")
+    try:
+      if not decoder.input.readInto(buf):
+        raise newException(AbiDecodingError, "reading past end of bytes")
+    except IOError as e:
+      raise newException(AbiDecodingError, "Failed to read bytes: " & e.msg)
 
     var offset = 0.uint64
     var len = 0.uint64
@@ -246,7 +190,7 @@ proc decodeCollection[T](decoder: var AbiDecoder2, size: Opt[uint64]): seq[T] =
       # Get the length of the dynamic array from the first slot.
       # Add assign one slot to the offset,
       # so that the first element starts at the second slot.
-      len = AbiDecoder2.decode(buf[0 ..< abiSlotSize], uint64)
+      len = AbiDecoder.decode(buf[0 ..< abiSlotSize], uint64)
       offset = 1
     else:
       len = size.get()
@@ -254,7 +198,7 @@ proc decodeCollection[T](decoder: var AbiDecoder2, size: Opt[uint64]): seq[T] =
     var offsets = newSeq[uint64](len)
     for i in 0..<len:
       let start = abiSlotSize * (i + offset)
-      let value = AbiDecoder2.decode(buf[start ..< start + abiSlotSize], uint64)
+      let value = AbiDecoder.decode(buf[start ..< start + abiSlotSize], uint64)
       offsets[i] = value + (abiSlotSize * offset).uint64
 
     result = newSeq[T](len)
@@ -263,7 +207,7 @@ proc decodeCollection[T](decoder: var AbiDecoder2, size: Opt[uint64]): seq[T] =
       # Here we need to take only the data that is between the offsets.
       let stop = if i+1 < result.len.uint64: offsets[i+1].int else: buf.len
       let data = buf[start ..< stop]
-      var decoder = AbiDecoder2(input: memoryInput(data), len: data.len)
+      var decoder = AbiDecoder(input: memoryInput(data), len: data.len)
       result[i] = decoder.decode(T)
 
     return result
@@ -275,10 +219,10 @@ proc decodeCollection[T](decoder: var AbiDecoder2, size: Opt[uint64]): seq[T] =
 
     return result
 
-proc decode[T](decoder: var AbiDecoder2, _: type seq[T]): seq[T] =
+proc decode[T](decoder: var AbiDecoder, _: type seq[T]): seq[T] {.raises: [AbiDecodingError].} =
   return decodeCollection[T](decoder, Opt.none(uint64))
 
-proc decode[I,T](decoder: var AbiDecoder2, _: type array[I,T]): array[I,T] =
+proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.raises: [AbiDecodingError].} =
   var result: array[I, T]
   let data = decodeCollection[T](decoder, Opt.some(result.len.uint64))
   for i in 0..<result.len:
@@ -286,134 +230,165 @@ proc decode[I,T](decoder: var AbiDecoder2, _: type array[I,T]): array[I,T] =
 
   return result
 
-proc decode*(_: type AbiDecoder2, bytes: seq[byte], T: type): T =
-  var decoder = AbiDecoder2(input: memoryInput(bytes), len: bytes.len)
+## When T is a tuple, ABI layout looks like:
+## +----------------------------+
+## | static field 0 or offset   |  <-- 32
+## +----------------------------+
+## | static field 1 or offset   |  <-- 32
+## +----------------------------+
+## | ...                        |
+## +----------------------------+
+## | static field N-1 or offset |  <-- 32
+## +----------------------------+
+## | dynamic field 0 data       |  <-- at offset
+## +----------------------------+
+## | dynamic field 1 data       |  <-- at offset
+## +----------------------------+
+## | ...                        |
+## +----------------------------+
+proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [AbiDecodingError].} =
+  var res: T
+  let arity = type(res).arity
+  var offsets = newSeq[uint64](arity)
+
+  # Since we cannot seek the position in the input stream,
+  # we need to read the whole buffer first.
+  var buf: seq[byte]
+  try:
+    buf = newSeq[byte](decoder.len)
+    if not decoder.input.readInto(buf):
+      raise newException(AbiDecodingError, "reading past end of bytes")
+  except IOError as e:
+    raise newException(AbiDecodingError, "Failed to read bytes: " & e.msg)
+
+  var i = 0
+  for field in res.fields:
+    if buf.len == 0:
+      discard
+    else:
+      let start = abiSlotSize * i
+      let data = buf[start ..< start + abiSlotSize]
+      when isDynamic(typeof(field)):
+        let value = AbiDecoder.decode(data, uint64)
+        offsets[i] = value
+      else:
+        let value = AbiDecoder.decode(data, typeof(field))
+        field = value
+    inc i
+
+  i = 0
+  for field in res.fields:
+    if offsets[i] > 0:
+      let start = offsets[i].int
+
+      var stop = decoder.len
+      for j in i+1 ..< arity:
+        if offsets[j] > 0:
+          stop = offsets[j].int
+          break
+
+      let data = buf[start ..< stop]
+      var decoder = AbiDecoder(input: memoryInput(data), len: data.len)
+      field = decoder.decode(typeof(field))
+    inc i
+
+  res
+
+proc decode*(_: type AbiDecoder, bytes: seq[byte], T: type): T {.raises: [AbiDecodingError]} =
+  var decoder = AbiDecoder(input: memoryInput(bytes), len: bytes.len)
   let value = decoder.decode(T)
   decoder.finish()
   return value
 
-func unsigned*(value: SomeSignedInt): SomeUnsignedInt =
-  cast[typeof(value).unsigned](value)
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use AbiDecoder.decode instead"} =
+  const meaningfulLen = to.bits div 8
+  let offset = offset + baseOffset
+  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
+  meaningfulLen
 
-func unsigned*[bits](value: StInt[bits]): StUint[bits] =
-  cast[typeof(value).unsigned](value)
+func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int {.deprecated: "use AbiDecoder.decode instead"} =
+  const meaningfulLen = N div 8
+  let offset = offset + baseOffset
+  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
+  meaningfulLen
 
-func decode(decoder: var AbiDecoder, T: type UInt): T =
-  T.fromBytesBE(decoder.read(sizeof(T)))
+func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int {.deprecated: "use AbiDecoder.decode instead"} =
+  let meaningfulLen = to.len
+  var padding = to.len mod 32
+  if padding != 0:
+    padding = 32 - padding
+  let offset = baseOffset + offset + padding
+  if to.len != 0:
+    assign(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
+  meaningfulLen + padding
 
-func decode(decoder: var AbiDecoder, T: type Int): T =
-  let unsigned = decoder.read(T.unsigned)
-  cast[T](unsigned)
+func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+  decodeFixed(input, baseOffset, offset, array[N, byte](to))
 
-template basetype(Range: type range): untyped =
-  when Range isnot SomeUnsignedInt: {.error: "only uint ranges supported".}
-  elif sizeof(Range) == sizeof(uint8): uint8
-  elif sizeof(Range) == sizeof(uint16): uint16
-  elif sizeof(Range) == sizeof(uint32): uint32
-  elif sizeof(Range) == sizeof(uint64): uint64
-  else: {.error "unsupported range type".}
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+  decodeFixed(input, baseOffset, offset, array[20, byte](to))
 
-func decode(decoder: var AbiDecoder, T: type range): T {.raises: [AbiDecodingError].} =
-  let bytes = decoder.read(sizeof(T))
-  let value = basetype(T).fromBytesBE(bytes)
-  if value in T.low..T.high:
-    T(value)
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int {.deprecated: "use AbiDecoder.decode instead"} =
+  var dataOffsetBig, dataLenBig: UInt256
+  result = decode(input, baseOffset, offset, dataOffsetBig)
+  let dataOffset = dataOffsetBig.truncate(int)
+  discard decode(input, baseOffset, dataOffset, dataLenBig)
+  let dataLen = dataLenBig.truncate(int)
+  let actualDataOffset = baseOffset + dataOffset + 32
+  to = input[actualDataOffset ..< actualDataOffset + dataLen]
+
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int {.deprecated: "use AbiDecoder.decode instead"} =
+  var dataOffsetBig, dataLenBig: UInt256
+  result = decode(input, baseOffset, offset, dataOffsetBig)
+  let dataOffset = dataOffsetBig.truncate(int)
+  discard decode(input, baseOffset, dataOffset, dataLenBig)
+  let dataLen = dataLenBig.truncate(int)
+  let actualDataOffset = baseOffset + dataOffset + 32
+  to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
+
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+  var s: seq[byte]
+  result = decode(input, baseOffset, offset, s)
+  # TODO: Check data len, and raise?
+  to = typeof(to)(move(s))
+
+func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use AbiDecoder.decode instead"}
+
+func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+  var dataOffsetBig, dataLenBig: UInt256
+  result = decode(input, baseOffset, offset, dataOffsetBig)
+  let dataOffset = dataOffsetBig.truncate(int)
+  discard decode(input, baseOffset, dataOffset, dataLenBig)
+  # TODO: Check data len, and raise?
+  let dataLen = dataLenBig.truncate(int)
+  to.setLen(dataLen)
+  let baseOffset = baseOffset + dataOffset + 32
+  var offset = 0
+  for i in 0 ..< dataLen:
+    offset += decode(input, baseOffset, offset, to[i])
+
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var bool): int {.deprecated: "use AbiDecoder.decode instead"} =
+  var i: Int256
+  result = decode(input, baseOffset, offset, i)
+  to = not i.isZero()
+
+func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use AbiDecoder.decode instead"} =
+  when isDynamicObject(typeof(obj)):
+    var dataOffsetBig: UInt256
+    result = decode(input, baseOffset, offset, dataOffsetBig)
+    let dataOffset = dataOffsetBig.truncate(int)
+    let offset = baseOffset + dataOffset
+    var offset2 = 0
+    for k, field in fieldPairs(obj):
+      let sz = decode(input, offset, offset2, field)
+      offset2 += sz
   else:
-    raise newException(AbiDecodingError, "value not in range")
+    var offset = offset
+    for field in fields(obj):
+      let sz = decode(input, baseOffset, offset, field)
+      offset += sz
+      result += sz
 
-func decode(decoder: var AbiDecoder, T: type bool): T {.raises: [AbiDecodingError].} =
-  case decoder.read(uint8)
-    of 0: false
-    of 1: true
-    else: raise newException(AbiDecodingError, "invalid boolean value")
-
-func decode(decoder: var AbiDecoder, T: type enum): T {.raises: [AbiDecodingError].} =
-  let value = decoder.read(uint64)
-  if value in T.low.uint64..T.high.uint64:
-    T(value)
-  else:
-    raise newException(AbiDecodingError, "invalid enum value")
-
-func decode(decoder: var AbiDecoder, T: type Address): T {.raises: [AbiDecodingError].} =
-  var bytes: array[20, byte]
-  bytes[0..<20] =(decoder.read(20))[0..<20]
-  T(bytes)
-
-func decode[I](decoder: var AbiDecoder, T: type array[I, byte]): T {.raises: [AbiDecodingError].} =
-  var arr: T
-  arr[0..<arr.len] = decoder.read(arr.len, padRight)
-  arr
-
-func decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [AbiDecodingError].} =
-  let len = decoder.read(uint64)
-  decoder.read(len.int, padRight)
-
-func decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [AbiDecodingError].} =
-  var tupl: T
-  decoder.startTuple()
-  for element in tupl.fields:
-    element = decoder.read(typeof(element))
-  decoder.finishTuple()
-  tupl
-
-func decode[T](decoder: var AbiDecoder, _: type seq[T]): seq[T] {.raises: [AbiDecodingError].} =
-  var sequence: seq[T]
-  let len = decoder.read(uint64)
-  decoder.startTuple()
-  for _ in 0..<len:
-    sequence.add(decoder.read(T))
-  decoder.finishTuple()
-  sequence
-
-func decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.raises: [AbiDecodingError].} =
-  var arr: array[I, T]
-  decoder.startTuple()
-  for i in 0..<arr.len:
-    arr[i] = decoder.read(T)
-  decoder.finishTuple()
-  arr
-
-func decode(decoder: var AbiDecoder, T: type string): T {.raises: [AbiDecodingError].} =
-  string.fromBytes(decoder.read(seq[byte]))
-
-func decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [AbiDecodingError].} =
-  T(decoder.read(distinctBase T))
-
-func readOffset(decoder: var AbiDecoder): int {.raises: [AbiDecodingError].} =
-  let offset = decoder.read(uint64)
-  decoder.currentTuple.start + offset.int
-
-func readTail*(decoder: var AbiDecoder, T: type): T {.raises: [AbiDecodingError].} =
-  let offset = decoder.readOffset()
-  var tailDecoder = AbiDecoder.init(decoder.bytes, offset.int)
-  result = tailDecoder.read(T)
-  decoder.updateLast(tailDecoder.last)
-
-func read*(decoder: var AbiDecoder, T: type): T {.raises: [AbiDecodingError].} =
-  const dynamic = isDynamic(typeof(result))
-  if dynamic and decoder.stack.len > 1:
-    decoder.readTail(T)
-  else:
-    decoder.decode(T)
-
-func finish(decoder: var AbiDecoder): void {.raises: [AbiDecodingError].} =
-  doAssert decoder.stack.len == 1, "not all tuples were finished"
-  doAssert decoder.last mod 32 == 0, "encoding invariant broken"
-  if decoder.last != decoder.bytes.len:
-    raise newException(AbiDecodingError, "unread trailing bytes found")
-
-func decode*(_: type AbiDecoder, bytes: seq[byte], T: type): T {.raises: [AbiDecodingError].} =
-  var decoder = AbiDecoder.init(bytes)
-  var value = decoder.decode(T)
-  decoder.finish()
-  value
-
-func decodeRecord*(_: type AbiDecoder, bytes: seq[byte], T: type): T {.raises: [AbiDecodingError].} =
-  var decoder = AbiDecoder.init(bytes)
-  var res: T
-  decoder.startTuple()
-  for value in res.fields:
-    value = decoder.read(typeof(value))
-  decoder.finishTuple()
-  decoder.finish()
-  res
+# Obsolete
+func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openArray[byte], ...) instead".} =
+  decode(hexToSeqByte(input), 0, offset div 2, to) * 2

@@ -21,6 +21,6 @@ import
   test_string_decoder,
   test_abi_utils,
   test_encoding,
-  # test_decoding,
+  test_decoding,
   test_contract_dsl,
   test_execution_api
