@@ -15,7 +15,7 @@ import
   json_rpc/private/jrpc_sys,
   eth/common/keys,
   chronos/apps/http/httpclient,
-  web3/[eth_api_types, conversions, transaction_signing, encoding, contract_dsl],
+  web3/[eth_api_types, conversions, transaction_signing, encoding, decoding, contract_dsl],
   web3/eth_api
 
 from eth/common/eth_types import ChainId

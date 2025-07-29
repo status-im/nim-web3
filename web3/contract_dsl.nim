@@ -1,7 +1,7 @@
 import
   std/[macros, strutils],
   json_serialization,
-  ./[encoding, eth_api_types],
+  ./[encoding, decoding, eth_api_types],
   ./conversions,
   stint,
   stew/byteutils
