@@ -34,11 +34,13 @@ export eth_types_json_serialization except Topic
 # JrpcConv configuration
 #------------------------------------------------------------------------------
 
-# Disable automatic primitive serialization, especially uint64 and uint8
-# We don't want they are serialized into ordinary number, but hex.
-JrpcConv.automaticSerialization(SomeInteger, false)
-JrpcConv.automaticSerialization(uint64, false)
-JrpcConv.automaticSerialization(uint8, false)
+JrpcConv.automaticSerialization(string, true)
+JrpcConv.automaticSerialization(JsonString, true)
+JrpcConv.automaticSerialization(ref, true)
+JrpcConv.automaticSerialization(seq, true)
+JrpcConv.automaticSerialization(bool, true)
+JrpcConv.automaticSerialization(float64, true)
+JrpcConv.automaticSerialization(array, true)
 
 #------------------------------------------------------------------------------
 # eth_api_types
