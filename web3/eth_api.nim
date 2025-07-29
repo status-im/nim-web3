@@ -19,6 +19,8 @@ export
   eth_api_types,
   conversions
 
+JrpcConv.automaticSerialization(seq[string], true)
+
 createRpcSigsFromNim(RpcClient):
   proc web3_clientVersion(): string
   proc web3_sha3(data: seq[byte]): Hash32
