@@ -25,6 +25,7 @@ export
   eth_api_types,
   conversions,
   encoding,
+  decoding,
   contract_dsl,
   HttpClientFlag,
   HttpClientFlags,
