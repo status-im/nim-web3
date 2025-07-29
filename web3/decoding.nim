@@ -300,6 +300,7 @@ proc decode*(_: type AbiDecoder, bytes: seq[byte], T: type): T {.raises: [AbiDec
   decoder.finish()
   return value
 
+# Keep the old encode functions for compatibility
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use AbiDecoder.decode instead"} =
   const meaningfulLen = to.bits div 8
   let offset = offset + baseOffset
