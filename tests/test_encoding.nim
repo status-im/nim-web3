@@ -240,7 +240,7 @@ suite "ABI encoding":
   test "encodes seq of empty seqs":
     let empty: seq[int] =  @[]
     let v: seq[seq[int]] = @[ empty, empty ]
-    let expected =
+    check AbiEncoder.encode(v) ==
       AbiEncoder.encode(2'u64) &
       AbiEncoder.encode(2 * 32'u64) &
       AbiEncoder.encode(2 * 32'u64 + AbiEncoder.encode(empty).len.uint64) &

@@ -185,6 +185,10 @@ proc encode(encoder: var AbiEncoder, tupl: tuple) {.raises: [AbiEncodingError]} 
     else:
       encoder.encode(field)
 
+  # Avoid compiler hint message about unused variable
+  # when tuple has no dynamic fields
+  discard offset
+
   for data in data:
     encoder.write(data)
 
