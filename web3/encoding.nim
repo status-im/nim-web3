@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/[sequtils],
+  std/[sequtils, macros],
   faststreams/outputs,
   stint,
   stew/[byteutils, endians2],
@@ -197,38 +197,75 @@ proc encode*[T](_: type AbiEncoder, value: T): seq[byte] {.raises: [AbiEncodingE
     raise newException(AbiEncodingError, "Failed to encode value: " & e.msg)
 
 # Keep the old encode functions for compatibility
-proc encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(x)
+func encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
+  @(x.toBytesBE())
 
-proc encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(x)
+func encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
+  @(x.toBytesBE())
 
-proc encode*(b: Address): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(b)
+func encodeFixed(a: openArray[byte]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
+  var padding = a.len mod 32
+  if padding != 0: padding = 32 - padding
+  result.setLen(padding) # Zero fill padding
+  result.add(a)
 
-proc encode*[N: static int](b: FixedBytes[N]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(b)
+func encode*[N: static int](b: FixedBytes[N]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} = encodeFixed(b.data)
+func encode*(b: Address): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} = encodeFixed(b.data)
+func encode*[N](b: array[N, byte]): seq[byte] {.inline, deprecated: "use AbiEncode.encode instead".} = encodeFixed(b)
 
-proc encode*[N](b: array[N, byte]): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(b)
+func encodeDynamic(v: openArray[byte]): seq[byte] =
+  result = encode(v.len.u256)
+  result.add(v)
+  let pad = v.len mod 32
+  if pad != 0:
+    result.setLen(result.len + 32 - pad)
 
-proc encode*(x: seq[byte]): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(x)
+func encode*(x: DynamicBytes): seq[byte] {.inline, deprecated: "use AbiEncode.encode instead".} =
+  encodeDynamic(distinctBase x)
 
-proc encode*(value: SomeUnsignedInt | StUint): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(value)
+func encode*(x: seq[byte]): seq[byte] {.inline, deprecated: "use AbiEncode.encode instead".} =
+  encodeDynamic(x)
 
-proc encode*(x: bool): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(x)
+func encode*(x: string): seq[byte] {.inline, deprecated: "use AbiEncode.encode instead".} =
+  encodeDynamic(x.toOpenArrayByte(0, x.high))
 
-proc encode*(x: string): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(x)
+func encode*(x: bool): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} = encode(x.int.u256)
 
-proc encode*(x: tuple): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(x)
+func encode*(x: tuple): seq[byte] {.deprecated: "use AbiEncode.encode instead" .}
 
-proc encode*[T](x: openArray[T]): seq[byte] {.raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(@x)
+func encode*[T](x: openArray[T]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
+  result = encode(x.len.u256)
+  when isDynamicType(T):
+    result.setLen((1 + x.len) * 32)
+    for i in 0 ..< x.len:
+      let offset = result.len - 32
+      result &= encode(x[i])
+      result[(i + 1) * 32 .. (i + 2) * 32 - 1] = encode(offset.u256)
+  else:
+    for i in 0 ..< x.len:
+      result &= encode(x[i])
 
-proc encode*(x: DynamicBytes): seq[byte] {.inline, raises: [AbiEncodingError], deprecated: "use AbiEncode.encode" .} =
-  AbiEncoder.encode(x)
+func getTupleImpl(t: NimNode): NimNode =
+  getTypeImpl(t)[1].getTypeImpl()
+
+macro typeListLen*(t: typedesc[tuple]): int =
+  newLit(t.getTupleImpl().len)
+
+func encode*(x: tuple): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
+  var offsets {.used.}: array[typeListLen(typeof(x)), int]
+  var i = 0
+  for v in fields(x):
+    when isDynamicType(typeof(v)):
+      offsets[i] = result.len
+      result.setLen(result.len + 32)
+    else:
+      result &= encode(v)
+    inc i
+  i = 0
+  for v in fields(x):
+    when isDynamicType(typeof(v)):
+      let offset = result.len
+      let o = offsets[i]
+      result[o .. o + 31] = encode(offset.u256)
+      result &= encode(v)
+    inc i

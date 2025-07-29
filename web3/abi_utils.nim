@@ -23,7 +23,7 @@ func isDynamic*(T: type): bool =
   else:
     return false
 
-func isDynamicType(a: typedesc): bool =
+func isDynamicType*(a: typedesc): bool =
   when a is seq | openArray | string | DynamicBytes:
     true
   elif a is object:
@@ -31,7 +31,7 @@ func isDynamicType(a: typedesc): bool =
   else:
     false
 
-func isDynamicObject(T: typedesc): bool {.compileTime.} =
+func isDynamicObject*(T: typedesc): bool {.compileTime.} =
   for v in fields(default(T)):
     if isDynamicType(typeof(v)):
       return true
