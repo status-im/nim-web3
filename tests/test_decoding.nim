@@ -1,5 +1,5 @@
 import
-  std/[unittest, random, sequtils],
+  std/[unittest, random],
   stew/[endians2],
   stint,
   ../web3/eth_api_types,
@@ -52,7 +52,7 @@ suite "ABI decoding":
     encoded.delete(encoded.len-1)
 
     try:
-      let value = AbiDecoder.decode(encoded, uint8)
+      discard AbiDecoder.decode(encoded, uint8)
       fail()
     except AbiDecodingError as decoded:
       check decoded.msg == "reading past end of bytes"

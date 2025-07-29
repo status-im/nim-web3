@@ -13,7 +13,6 @@ type
     input: InputStream
     len: int
   UInt = SomeUnsignedInt | StUint
-  Int = SomeSignedInt | StInt
   AbiDecodingError* = object of CatchableError
 
 template basetype(Range: type range): untyped =
@@ -223,12 +222,12 @@ proc decode[T](decoder: var AbiDecoder, _: type seq[T]): seq[T] {.raises: [AbiDe
   return decodeCollection[T](decoder, Opt.none(uint64))
 
 proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.raises: [AbiDecodingError].} =
-  var result: array[I, T]
-  let data = decodeCollection[T](decoder, Opt.some(result.len.uint64))
-  for i in 0..<result.len:
-    result[i] = data[i]
+  var res: array[I, T]
+  let data = decodeCollection[T](decoder, Opt.some(res.len.uint64))
+  for i in 0..<res.len:
+    res[i] = data[i]
 
-  return result
+  return res
 
 ## When T is a tuple, ABI layout looks like:
 ## +----------------------------+
@@ -292,7 +291,11 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Abi
       field = decoder.decode(typeof(field))
     inc i
 
-  res
+  # Avoid compiler hint message about unused variable
+  # when tuple has no dynamic fields
+  discard offsets
+
+  return res
 
 proc decode*(_: type AbiDecoder, bytes: seq[byte], T: type): T {.raises: [AbiDecodingError]} =
   var decoder = AbiDecoder(input: memoryInput(bytes), len: bytes.len)
