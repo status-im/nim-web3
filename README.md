@@ -35,6 +35,41 @@ Then you should run `./simulator.sh` which runs `hardhat node`
 
 This creates a local simulated Ethereum network on your local machine and the tests will use this for their E2E processing
 
+### ABI encoder / decoder
+
+Implements encoding of parameters according to the Ethereum
+[Contract ABI Specification][1].
+
+Usage
+-----
+
+```nim
+import web3[encoding, decoding]
+
+# encode unsigned integers, booleans, enums
+AbiEncoder.encode(42'u8)
+
+# encode uint256
+import stint
+AbiEncoder.encode(42.u256)
+
+# encode byte arrays and sequences
+AbiEncoder.encode([1'u8, 2'u8, 3'u8])
+AbiEncoder.encode(@[1'u8, 2'u8, 3'u8])
+
+# encode tuples
+AbiEncoder.encode( (42'u8, @[1'u8, 2'u8, 3'u8], true) )
+
+# decode values of different types
+AbiDecoder.decode(bytes, uint8)
+AbiDecoder.decode(bytes, UInt256)
+AbiDecoder.decode(bytes, array[3, uint8])
+AbiDecoder.decode(bytes, seq[uint8])
+
+# decode tuples
+AbiDecoder.decode(bytes, (uint32, bool, seq[byte]) )
+```
+
 ## License
 
 Licensed and distributed under either of
@@ -46,3 +81,5 @@ or
 - Apache License, Version 2.0, ([LICENSE-APACHEv2](LICENSE-APACHEv2) or http://www.apache.org/licenses/LICENSE-2.0)
 
 at your option. This file may not be copied, modified, or distributed except according to those terms.
+
+[1]: https://docs.soliditylang.org/en/latest/abi-spec.html
