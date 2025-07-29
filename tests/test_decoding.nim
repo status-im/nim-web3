@@ -25,10 +25,6 @@ suite "ABI decoding":
         b = rand(byte)
     return a
 
-  proc randomSeq(): seq[byte] =
-    let length = rand(0..<20)
-    newSeqWith(length, rand(byte))
-
   proc checkDecode(T: type) =
     checkDecode(T.default)
     checkDecode(T.low)
@@ -65,6 +61,7 @@ suite "ABI decoding":
     var encoded = AbiEncoder.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
     encoded.add(uint8.fromBytes(randomBytes[8](), bigEndian))
 
+    try:
       discard AbiDecoder.decode(encoded, uint8)
       fail()
     except AbiDecodingError as decoded:
