@@ -3,6 +3,7 @@ import
     stint,
     faststreams/inputs,
     stew/[byteutils, endians2, assign2],
+    json_serialization,
     ./eth_api_types,
     ./abi_utils
 
@@ -11,7 +12,6 @@ import
 type
   AbiDecoder* = object
     input: InputStream
-    len: int
   UInt = SomeUnsignedInt | StUint
   AbiDecodingError* = object of CatchableError
 
@@ -41,6 +41,14 @@ proc read(decoder: var AbiDecoder, size = abiSlotSize): seq[byte] {.raises: [Abi
     raise newException(AbiDecodingError, "Failed to read bytes: " & e.msg)
 
   return buf
+
+proc readAll(decoder: var AbiDecoder) : seq[byte] {.raises: [AbiDecodingError].} =
+  try:
+    while decoder.input.readable:
+      result.add decoder.input.read
+    return result
+  except IOError as e:
+    raise newException(AbiDecodingError, "Failed to read bytes: " & e.msg)
 
 template checkLeftPadding(buf: openArray[byte], padding: int, expected: uint8) =
   for i in 0 ..< padding:
@@ -176,13 +184,7 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
   if isDynamic(T):
     # Since we cannot seek the position in the input stream,
     # we need to read the whole buffer first.
-    var buf: seq[byte] = newSeq[byte](decoder.len)
-    try:
-      if not decoder.input.readInto(buf):
-        raise newException(AbiDecodingError, "reading past end of bytes")
-    except IOError as e:
-      raise newException(AbiDecodingError, "Failed to read bytes: " & e.msg)
-
+    var buf = decoder.readAll()
     var offset = 0.uint64
     var len = 0.uint64
     if size.isNone:
@@ -206,7 +208,7 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
       # Here we need to take only the data that is between the offsets.
       let stop = if i+1 < result.len.uint64: offsets[i+1].int else: buf.len
       let data = buf[start ..< stop]
-      var decoder = AbiDecoder(input: memoryInput(data), len: data.len)
+      var decoder = AbiDecoder(input: memoryInput(data))
       result[i] = decoder.decode(T)
 
     return result
@@ -252,13 +254,7 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Abi
 
   # Since we cannot seek the position in the input stream,
   # we need to read the whole buffer first.
-  var buf: seq[byte]
-  try:
-    buf = newSeq[byte](decoder.len)
-    if not decoder.input.readInto(buf):
-      raise newException(AbiDecodingError, "reading past end of bytes")
-  except IOError as e:
-    raise newException(AbiDecodingError, "Failed to read bytes: " & e.msg)
+  var buf = decoder.readAll()
 
   var i = 0
   for field in res.fields:
@@ -280,14 +276,14 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Abi
     if offsets[i] > 0:
       let start = offsets[i].int
 
-      var stop = decoder.len
+      var stop = buf.len
       for j in i+1 ..< arity:
         if offsets[j] > 0:
           stop = offsets[j].int
           break
 
       let data = buf[start ..< stop]
-      var decoder = AbiDecoder(input: memoryInput(data), len: data.len)
+      var decoder = AbiDecoder(input: memoryInput(data))
       field = decoder.decode(typeof(field))
     inc i
 
@@ -298,7 +294,13 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Abi
   return res
 
 proc decode*(_: type AbiDecoder, bytes: seq[byte], T: type): T {.raises: [AbiDecodingError]} =
-  var decoder = AbiDecoder(input: memoryInput(bytes), len: bytes.len)
+  var decoder = AbiDecoder(input: memoryInput(bytes))
+  let value = decoder.decode(T)
+  decoder.finish()
+  return value
+
+proc decode*(_: type AbiDecoder, input: InputStream, T: type): T {.raises: [AbiDecodingError]} =
+  var decoder = AbiDecoder(input: input)
   let value = decoder.decode(T)
   decoder.finish()
   return value
