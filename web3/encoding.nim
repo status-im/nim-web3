@@ -165,7 +165,7 @@ proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [AbiEncodingErr
 ## +------------------------------+
 ## | element 3                   |
 ## +------------------------------+
-proc encode(encoder: var AbiEncoder, tupl: tuple) {.raises: [AbiEncodingError]} =
+proc encode*[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [AbiEncodingError]} =
   var data: seq[seq[byte]] = @[]
   # Each item here will occupy a slot of 32 bytes.
   var offset = type(tupl).arity * abiSlotSize
@@ -207,7 +207,7 @@ func encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.deprecated: "use A
 func encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
   @(x.toBytesBE())
 
-func encodeFixed(a: openArray[byte]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
+func encodeFixed(a: openArray[byte]): seq[byte] =
   var padding = a.len mod 32
   if padding != 0: padding = 32 - padding
   result.setLen(padding) # Zero fill padding

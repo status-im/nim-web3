@@ -68,6 +68,19 @@ AbiDecoder.decode(bytes, seq[uint8])
 
 # decode tuples
 AbiDecoder.decode(bytes, (uint32, bool, seq[byte]) )
+
+# custom type
+type CustomType = object
+  a: uint16
+  b: string
+
+proc encode(encoder: var AbiEncoder, custom: CustomType) {.raises: [AbiEncodingError]} =
+  encoder.encode((custom.a, custom.b))
+
+proc decode(decoder: var AbiDecoder, T: type CustomType): T {.raises: [AbiDecodingError]}  =
+  let (a, b) = decoder.decode( (uint16, string) )
+  return CustomType(a: a, b: b)
+
 ```
 
 ## License

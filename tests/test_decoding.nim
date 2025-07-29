@@ -11,6 +11,17 @@ randomize()
 
 type SomeDistinctType = distinct uint16
 
+type CustomType = object
+    a: uint16
+    b: string
+
+proc encode(encoder: var AbiEncoder, custom: CustomType) {.raises: [AbiEncodingError]} =
+  encoder.encode((custom.a, custom.b))
+
+proc decode(decoder: var AbiDecoder, T: type CustomType): T {.raises: [AbiDecodingError]}  =
+  let (a, b) = decoder.decode( (uint16, string) )
+  return CustomType(a: a, b: b)
+
 func `==`*(a, b: SomeDistinctType): bool =
   uint16(a) == uint16(b)
 
@@ -232,3 +243,8 @@ suite "ABI decoding":
 
   test "reads empty tuple":
     checkDecodee( (), )
+
+  test "decodes custom type":
+
+    let c : CustomType = CustomType(a: 42'u16, b: "hello")
+    checkDecodee(c)

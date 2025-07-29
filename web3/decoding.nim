@@ -247,7 +247,7 @@ proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.rais
 ## +----------------------------+
 ## | ...                        |
 ## +----------------------------+
-proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [AbiDecodingError].} =
+proc decode*[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [AbiDecodingError].} =
   var res: T
   let arity = type(res).arity
   var offsets = newSeq[uint64](arity)
