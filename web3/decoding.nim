@@ -7,6 +7,9 @@ import
     ./eth_api_types,
     ./abi_utils
 
+from ./abi_serialization import AbiReader
+from stew/shims/macros import hasCustomPragmaFixed
+
 {.push raises: [].}
 
 type
@@ -247,6 +250,8 @@ proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.rais
 ## +----------------------------+
 ## | ...                        |
 ## +----------------------------+
+## This method is exposed to be able to define encoding
+## for custom types.
 proc decode*[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [AbiDecodingError].} =
   var res: T
   let arity = type(res).arity
@@ -304,6 +309,16 @@ proc decode*(_: type AbiDecoder, input: InputStream, T: type): T {.raises: [AbiD
   let value = decoder.decode(T)
   decoder.finish()
   return value
+
+proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [AbiDecodingError]} =
+  var resultObj: T
+  var decoder = AbiDecoder(input: r.getStream)
+
+  for name, val in fieldPairs(resultObj):
+    when not hasCustomPragmaFixed(type(resultObj), name, dontSerialize):
+      val = decoder.decode(typeof(val))
+
+  result = resultObj
 
 # Keep the old encode functions for compatibility
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use AbiDecoder.decode instead"} =
