@@ -73,7 +73,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_config(): EthConfigObject
 
   proc eth_getWork(): seq[UInt256]
-  proc eth_submitWork(nonce: int64, powHash: Hash32, mixDigest: Hash32): bool
+  proc eth_submitWork(nonce: uint64, powHash: Hash32, mixDigest: Hash32): bool
   proc eth_submitHashrate(hashRate: UInt256, id: UInt256): bool
   proc eth_subscribe(name: string, options: FilterOptions): string
   proc eth_subscribe(name: string): string
