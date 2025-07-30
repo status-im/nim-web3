@@ -54,7 +54,7 @@ LogObject.useDefaultSerializationIn JrpcConv
 StorageProof.useDefaultSerializationIn JrpcConv
 ProofResponse.useDefaultSerializationIn JrpcConv
 FilterOptions.useDefaultSerializationIn JrpcConv
-TransactionArgs.useDefaultSerializationIn JrpcConv
+TransactionArgs.useDefaultReaderIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
 Authorization.useDefaultSerializationIn JrpcConv
 
@@ -434,6 +434,27 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
     w.writeValue v.get
   else:
     w.writeValue JsonString("null")
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+  var
+    noInput = true
+    noData = true
+
+  w.beginObject()
+  for k, val in fieldPairs(v):
+    when k == "input":
+      if v.input.isSome and noData:
+        w.writeMember(k, val)
+        noInput = false
+    elif k == "data":
+      if v.data.isSome and noInput:
+        w.writeMember(k, val)
+        noData = false
+    else:
+      w.writeMember(k, val)
+  w.endObject()
 
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(distinctBase(v))
