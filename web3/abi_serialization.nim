@@ -1,8 +1,8 @@
 
 import serialization
 import faststreams
-import ./encoding
-import ./decoding
+
+{.push raises: [].}
 
 serializationFormat Abi,
                    mimeType = "application/ethereum‑abi"
@@ -26,11 +26,14 @@ proc init*(T: type AbiWriter, s: OutputStream): T =
 proc init*(T: type AbiReader, s: InputStream): AbiReader =
   AbiReader(stream: s)
 
-proc readValue*[T](r: var AbiReader, _: typedesc[T]): T =
-  result = AbiDecoder.decode(r.stream, T)
+proc getStream*(r: AbiWriter): OutputStream =
+  r.stream
 
-proc writeValue*[T](w: var AbiWriter, value: T) =
-  w.stream.write AbiEncoder.encode(value)
+proc getStream*(r: AbiReader): InputStream =
+  r.stream
+
+proc write*(w: AbiWriter, bytes: seq[byte]) {.raises: [IOError]} =
+  w.stream.write bytes
 
 Abi.setReader AbiReader
 Abi.setWriter AbiWriter, PreferredOutput = seq[byte]

@@ -12,8 +12,10 @@ import
   faststreams/outputs,
   stint,
   stew/[byteutils, endians2],
+  serialization,
   ./eth_api_types,
-  ./abi_utils
+  ./abi_utils,
+  ./abi_serialization
 
 {.push raises: [].}
 
@@ -199,6 +201,13 @@ proc encode*[T](_: type AbiEncoder, value: T): seq[byte] {.raises: [AbiEncodingE
     encoder.finish()
   except IOError as e:
     raise newException(AbiEncodingError, "Failed to encode value: " & e.msg)
+
+proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [AbiEncodingError]} =
+  value.enumInstanceSerializedFields(fieldName, fieldValue):
+    try:
+      w.write AbiEncoder.encode(fieldValue)
+    except IOError as e:
+      raise newException(AbiEncodingError, "Failed to write value: " & e.msg)
 
 # Keep the old encode functions for compatibility
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
