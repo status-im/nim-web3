@@ -278,7 +278,7 @@ type
   ConfigObject* = object
     activationTime*: UInt256
     blobSchedule*: BlobScheduleObject
-    chainId*: Hash32
+    chainId*: UInt256
     precompiles*: seq[PrecompilePair]
     systemContracts*: seq[SystemContractPair]
 
