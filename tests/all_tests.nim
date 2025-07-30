@@ -22,5 +22,6 @@ import
   test_abi_utils,
   test_encoding,
   test_decoding,
+  test_abi_serialization,
   test_contract_dsl,
   test_execution_api
