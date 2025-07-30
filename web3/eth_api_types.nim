@@ -276,7 +276,7 @@ type
     address*: Address
 
   ConfigObject* = object
-    activationTime*: UInt256
+    activationTime*: Quantity
     blobSchedule*: BlobScheduleObject
     chainId*: UInt256
     precompiles*: seq[PrecompilePair]
