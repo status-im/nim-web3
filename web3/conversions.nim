@@ -7,12 +7,14 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+{.push gcsafe, raises: [].}
+
 import
   std/strutils,
   stew/byteutils,
   faststreams/textio,
   json_rpc/jsonmarshal,
-  json_serialization/stew/results,
+  json_serialization/pkg/results,
   json_serialization,
   ./primitives,
   ./engine_api_types,
@@ -29,6 +31,18 @@ export
 export eth_types_json_serialization except Topic
 
 #------------------------------------------------------------------------------
+# JrpcConv configuration
+#------------------------------------------------------------------------------
+
+JrpcConv.automaticSerialization(string, true)
+JrpcConv.automaticSerialization(JsonString, true)
+JrpcConv.automaticSerialization(ref, true)
+JrpcConv.automaticSerialization(seq, true)
+JrpcConv.automaticSerialization(bool, true)
+JrpcConv.automaticSerialization(float64, true)
+JrpcConv.automaticSerialization(array, true)
+
+#------------------------------------------------------------------------------
 # eth_api_types
 #------------------------------------------------------------------------------
 
@@ -40,7 +54,7 @@ LogObject.useDefaultSerializationIn JrpcConv
 StorageProof.useDefaultSerializationIn JrpcConv
 ProofResponse.useDefaultSerializationIn JrpcConv
 FilterOptions.useDefaultSerializationIn JrpcConv
-TransactionArgs.useDefaultSerializationIn JrpcConv
+TransactionArgs.useDefaultReaderIn JrpcConv
 FeeHistoryResult.useDefaultSerializationIn JrpcConv
 Authorization.useDefaultSerializationIn JrpcConv
 
@@ -85,8 +99,6 @@ ExecutionPayload.useDefaultSerializationIn JrpcConv
 PayloadAttributes.useDefaultSerializationIn JrpcConv
 GetPayloadResponse.useDefaultSerializationIn JrpcConv
 
-{.push gcsafe, raises: [].}
-
 #------------------------------------------------------------------------------
 # Private helpers
 #------------------------------------------------------------------------------
@@ -122,7 +134,7 @@ template toHexImpl(hex, pos: untyped) =
     dec pos
     hex[pos] = c
 
-  for _ in 0 ..< 16:
+  for _ in 0 ..< maxDigits:
     prepend(hexChars[int(n and 0xF)])
     if n == 0: break
     n = n shr 4
@@ -139,7 +151,7 @@ func getEnumStringTable(enumType: typedesc): Table[string, enumType]
     res[$value] = value
   res
 
-proc toHex(s: OutputStream, x: uint64) {.gcsafe, raises: [IOError].} =
+proc toHex(s: OutputStream, x: uint8|uint64) {.gcsafe, raises: [IOError].} =
   toHexImpl(hex, pos)
   write s, hex.toOpenArray(pos, static(hex.len - 1))
 
@@ -256,13 +268,14 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var RlpEncodedB
       # skip empty hex
       val = RlpEncodedBytes hexToSeqByte(hexStr)
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var Quantity)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*[F: CommonJsonFlavors](
+    r: var JsonReader[F], val: var Quantity
+) {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("Quantity value has invalid leading 0")
   wrapValueError:
-    val = Quantity strutils.fromHex[uint64](hexStr)
+    val = typeof(val) strutils.fromHex[typeof(distinctBase(val))](hexStr)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
@@ -304,20 +317,20 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
 # Exclusive to JrpcConv
 #------------------------------------------------------------------------------
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: uint64)
+proc writeValue*(w: var JsonWriter[JrpcConv], v: uint64 | uint8)
       {.gcsafe, raises: [IOError].} =
   w.streamElement(s):
     s.write "\"0x"
     s.toHex(v)
     s.write "\""
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var uint64)
+proc readValue*(r: var JsonReader[JrpcConv], val: var (uint8 | uint64))
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("Uint64 value has invalid leading 0")
   wrapValueError:
-    val = strutils.fromHex[uint64](hexStr)
+    val = strutils.fromHex[typeof(val)](hexStr)
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[byte])
       {.gcsafe, raises: [IOError].} =
@@ -422,8 +435,29 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
   else:
     w.writeValue JsonString("null")
 
+proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+  var
+    noInput = true
+    noData = true
+
+  w.beginObject()
+  for k, val in fieldPairs(v):
+    when k == "input":
+      if v.input.isSome and noData:
+        w.writeMember(k, val)
+        noInput = false
+    elif k == "data":
+      if v.data.isSome and noInput:
+        w.writeMember(k, val)
+        noData = false
+    else:
+      w.writeMember(k, val)
+  w.endObject()
+
 func `$`*(v: Quantity): string {.inline.} =
-  encodeQuantity(v.uint64)
+  encodeQuantity(distinctBase(v))
 
 func `$`*(v: TypedTransaction): string {.inline.} =
   "0x" & distinctBase(v).toHex

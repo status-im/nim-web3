@@ -36,9 +36,9 @@ proc rand(_: type uint64): uint64 =
   uint64.fromBytesBE(res)
 
 proc rand[T: Quantity](_: type T): T =
-  var res: array[8, byte]
+  var res: array[sizeof(T), byte]
   discard randomBytes(res)
-  T(uint64.fromBytesBE(res))
+  T(distinctBase(T).fromBytesBE(res))
 
 proc rand[T: ChainId](_: type T): T =
   var res: array[8, byte]
@@ -51,7 +51,7 @@ proc rand(_: type RlpEncodedBytes): RlpEncodedBytes =
 proc rand(_: type TypedTransaction): TypedTransaction =
   discard randomBytes(distinctBase result)
 
-proc rand(_: type string): string =
+func rand(_: type string): string =
   "random bytes"
 
 proc rand(_: type bool): bool =
@@ -130,11 +130,8 @@ template checkRandomObject(T: type) =
 
 suite "JSON-RPC Quantity":
   test "Valid":
-    template checkType(typeName: typedesc): untyped =
-      for (validStr, validValue) in [
-          ("0x0", typeName 0),
-          ("0x123", typeName 291),
-          ("0x1234", typeName 4660)]:
+    template checkType(typeName: typedesc, tests: auto): untyped =
+      for (validStr, validValue) in tests:
         let
           validJson = JrpcConv.encode(validStr)
           res = JrpcConv.decode(validJson, typeName)
@@ -142,16 +139,15 @@ suite "JSON-RPC Quantity":
           resUInt256Ref = JrpcConv.decode(validJson, ref UInt256)
 
         check:
-          JrpcConv.decode(validJson, typeName) == validValue
-          JrpcConv.encode(validValue) == validJson
-          res == validValue
-          resUInt256 == validValue.distinctBase.u256
-          resUInt256Ref[] == validValue.distinctBase.u256
+          JrpcConv.decode(validJson, typeName) == typeName validValue
+          JrpcConv.encode(typeName validValue) == validJson
+          res == typeName(validValue)
+          resUInt256 == typeName(validValue).distinctBase.u256
+          resUInt256Ref[] == typeName(validValue).distinctBase.u256
 
-    checkType(Quantity)
-    checkType(Quantity)
+    checkType(Quantity, [("0x0", 0), ("0x123", 291), ("0x1234", 4660)])
 
-  test "Invalid Quantity/Quantity/UInt256/ref UInt256":
+  test "Invalid Quantity/UInt256/ref UInt256":
     # TODO once https://github.com/status-im/nimbus-eth2/pull/3850 addressed,
     # re-add "0x0400" test case as invalid.
     for invalidStr in [
@@ -168,7 +164,6 @@ suite "JSON-RPC Quantity":
         except CatchableError:
           check: false
 
-      checkInvalids(Quantity)
       checkInvalids(Quantity)
       checkInvalids(UInt256)
       checkInvalids(ref UInt256)
@@ -266,7 +261,7 @@ suite "JSON-RPC Quantity":
   test "AccessListResult":
     let z = AccessListResult()
     let w = JrpcConv.encode(z)
-    check w == """{"accessList":[],"gasUsed":"0x0"}"""
+    check w == """{"accessList":[],"error":null,"gasUsed":"0x0"}"""
 
   test "AccessListResult with error":
     let z = AccessListResult(
@@ -276,8 +271,8 @@ suite "JSON-RPC Quantity":
     check w == """{"accessList":[],"error":"error","gasUsed":"0x0"}"""
 
   test "Authorization":
-    let z = Authorization()
+    let z = Authorization(yParity: 3, nonce: 11)
     let w = JrpcConv.encode(z)
-    check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0x0","v":"0x0","r":"0x0","s":"0x0"}"""
+    check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0xb","yParity":"0x3","r":"0x0","s":"0x0"}"""
     let x = JrpcConv.decode(w, Authorization)
     check x == z

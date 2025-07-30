@@ -21,6 +21,8 @@ const
 
 {.push raises: [].}
 
+JrpcConv.automaticSerialization(JsonValueRef, true)
+
 func compareValue(lhs, rhs: JsonValueRef): bool
 
 func compareObject(lhs, rhs: JsonValueRef): bool =
@@ -222,7 +224,7 @@ suite "Test eth api":
     let res = waitFor client.eth_getBlockReceipts("latest")
     check res.isSome
     waitFor client.close()
-    
+
   waitFor srv.stop()
   waitFor srv.closeWait()
 
