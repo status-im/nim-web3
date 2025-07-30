@@ -51,7 +51,7 @@ proc rand(_: type RlpEncodedBytes): RlpEncodedBytes =
 proc rand(_: type TypedTransaction): TypedTransaction =
   discard randomBytes(distinctBase result)
 
-proc rand(_: type string): string =
+func rand(_: type string): string =
   "random bytes"
 
 proc rand(_: type bool): bool =
@@ -261,7 +261,7 @@ suite "JSON-RPC Quantity":
   test "AccessListResult":
     let z = AccessListResult()
     let w = JrpcConv.encode(z)
-    check w == """{"accessList":[],"gasUsed":"0x0"}"""
+    check w == """{"accessList":[],"error":null,"gasUsed":"0x0"}"""
 
   test "AccessListResult with error":
     let z = AccessListResult(
