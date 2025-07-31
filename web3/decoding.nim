@@ -8,7 +8,6 @@ import
     ./abi_utils
 
 from ./abi_serialization import AbiReader
-from stew/shims/macros import hasCustomPragmaFixed
 
 {.push raises: [].}
 
@@ -320,9 +319,8 @@ proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [AbiDecodingEr
   var resultObj: T
   var decoder = AbiDecoder(input: r.getStream)
 
-  for name, val in fieldPairs(resultObj):
-    when not hasCustomPragmaFixed(type(resultObj), name, dontSerialize):
-      val = decoder.decode(typeof(val))
+  resultObj.enumInstanceSerializedFields(fieldName, fieldValue):
+    fieldValue = decoder.decode(typeof(fieldValue))
 
   result = resultObj
 
