@@ -38,58 +38,40 @@ This creates a local simulated Ethereum network on your local machine and the te
 ### ABI encoder / decoder
 
 Implements encoding of parameters according to the Ethereum
-[Contract ABI Specification][1].
+[Contract ABI Specification][1] using nim-serialization interface.
 
 Usage
 -----
 
 ```nim
-import web3[encoding, decoding]
+import
+  serialization,
+  stint,
+  web3/[encoding, decoding]
 
 # encode unsigned integers, booleans, enums
-AbiEncoder.encode(42'u8)
+Abi.encode(42'u8)
 
 # encode uint256
-import stint
-AbiEncoder.encode(42.u256)
+Abi.encode(42.u256)
 
 # encode byte arrays and sequences
-AbiEncoder.encode([1'u8, 2'u8, 3'u8])
-AbiEncoder.encode(@[1'u8, 2'u8, 3'u8])
+Abi.encode([1'u8, 2'u8, 3'u8])
+Abi.encode(@[1'u8, 2'u8, 3'u8])
 
 # encode tuples
-AbiEncoder.encode( (42'u8, @[1'u8, 2'u8, 3'u8], true) )
+Abi.encode( (42'u8, @[1'u8, 2'u8, 3'u8], true) )
 
 # decode values of different types
-AbiDecoder.decode(bytes, uint8)
-AbiDecoder.decode(bytes, UInt256)
-AbiDecoder.decode(bytes, array[3, uint8])
-AbiDecoder.decode(bytes, seq[uint8])
+Abi.decode(bytes, uint8)
+Abi.decode(bytes, UInt256)
+Abi.decode(bytes, array[3, uint8])
+Abi.decode(bytes, seq[uint8])
 
 # decode tuples
-AbiDecoder.decode(bytes, (uint32, bool, seq[byte]) )
+Abi.decode(bytes, (uint32, bool, seq[byte]))
 
 # custom type
-type CustomType = object
-  a: uint16
-  b: string
-
-proc encode(encoder: var AbiEncoder, custom: CustomType) {.raises: [AbiEncodingError]} =
-  encoder.encode((custom.a, custom.b))
-
-proc decode(decoder: var AbiDecoder, T: type CustomType): T {.raises: [AbiDecodingError]}  =
-  let (a, b) = decoder.decode( (uint16, string) )
-  return CustomType(a: a, b: b)
-```
-
-### Serialization
-
-The ABI encoder / decoder is compatible with nim-serialization module.
-
-Usage
------
-
-```nim
 type Contract = object
   a: uint64
   b {.dontSerialize.}: string
