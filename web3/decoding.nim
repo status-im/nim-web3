@@ -11,6 +11,8 @@ from ./abi_serialization import AbiReader
 
 {.push raises: [].}
 
+export abi_serialization
+
 type
   AbiDecoder* = object
     input: InputStream
@@ -320,19 +322,19 @@ proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [Serialization
   result = resultObj
 
 # Keep the old encode functions for compatibility
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use AbiDecoder.decode instead"} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use Abi.decode instead"} =
   const meaningfulLen = to.bits div 8
   let offset = offset + baseOffset
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
 
-func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int {.deprecated: "use AbiDecoder.decode instead"} =
+func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int {.deprecated: "use Abi.decode instead"} =
   const meaningfulLen = N div 8
   let offset = offset + baseOffset
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen
 
-func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int {.deprecated: "use AbiDecoder.decode instead"} =
+func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int {.deprecated: "use Abi.decode instead"} =
   let meaningfulLen = to.len
   var padding = to.len mod 32
   if padding != 0:
@@ -342,13 +344,13 @@ func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openAr
     assign(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
   meaningfulLen + padding
 
-func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline, deprecated: "use Abi.decode instead".} =
   decodeFixed(input, baseOffset, offset, array[N, byte](to))
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline, deprecated: "use Abi.decode instead".} =
   decodeFixed(input, baseOffset, offset, array[20, byte](to))
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int {.deprecated: "use AbiDecoder.decode instead"} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int {.deprecated: "use Abi.decode instead"} =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
@@ -357,7 +359,7 @@ func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte])
   let actualDataOffset = baseOffset + dataOffset + 32
   to = input[actualDataOffset ..< actualDataOffset + dataLen]
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int {.deprecated: "use AbiDecoder.decode instead"} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int {.deprecated: "use Abi.decode instead"} =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
@@ -366,15 +368,15 @@ func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): i
   let actualDataOffset = baseOffset + dataOffset + 32
   to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline, deprecated: "use Abi.decode instead".} =
   var s: seq[byte]
   result = decode(input, baseOffset, offset, s)
   # TODO: Check data len, and raise?
   to = typeof(to)(move(s))
 
-func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use AbiDecoder.decode instead"}
+func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use Abi.decode instead"}
 
-func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline, deprecated: "use AbiDecoder.decode instead".} =
+func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline, deprecated: "use Abi.decode instead".} =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
@@ -387,12 +389,12 @@ func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T])
   for i in 0 ..< dataLen:
     offset += decode(input, baseOffset, offset, to[i])
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var bool): int {.deprecated: "use AbiDecoder.decode instead"} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var bool): int {.deprecated: "use Abi.decode instead"} =
   var i: Int256
   result = decode(input, baseOffset, offset, i)
   to = not i.isZero()
 
-func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use AbiDecoder.decode instead"} =
+func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use Abi.decode instead"} =
   when isDynamicObject(typeof(obj)):
     var dataOffsetBig: UInt256
     result = decode(input, baseOffset, offset, dataOffsetBig)
