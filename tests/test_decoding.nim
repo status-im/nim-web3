@@ -2,33 +2,24 @@ import
   std/[unittest, random],
   stew/[endians2],
   stint,
+  serialization,
   ../web3/eth_api_types,
   ../web3/decoding,
   ../web3/encoding,
+  ../web3/abi_serialization,
   ./helpers/primitives_utils
 
 randomize()
 
 type SomeDistinctType = distinct uint16
 
-type CustomType = object
-    a: uint16
-    b: string
-
-proc encode(encoder: var AbiEncoder, custom: CustomType) {.raises: [AbiEncodingError]} =
-  encoder.encode((custom.a, custom.b))
-
-proc decode(decoder: var AbiDecoder, T: type CustomType): T {.raises: [AbiDecodingError]}  =
-  let (a, b) = decoder.decode( (uint16, string) )
-  return CustomType(a: a, b: b)
-
 func `==`*(a, b: SomeDistinctType): bool =
   uint16(a) == uint16(b)
 
 suite "ABI decoding":
   proc checkDecode[T](value: T) =
-    let encoded = AbiEncoder.encode(value)
-    check AbiDecoder.decode(encoded, T) == value
+    let encoded = Abi.encode(value)
+    check Abi.decode(encoded, T) == value
 
   proc randomBytes[N: static int](): array[N, byte] =
     var a: array[N, byte]
@@ -54,43 +45,43 @@ suite "ABI decoding":
     checkDecode(int64)
 
   test "fails to decode when reading past end":
-    var encoded = AbiEncoder.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
+    var encoded = Abi.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
     encoded.delete(encoded.len-1)
 
     try:
-      discard AbiDecoder.decode(encoded, uint8)
+      discard Abi.decode(encoded, uint8)
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "reading past end of bytes"
 
   test "fails to decode when trailing bytes remain":
-    var encoded = AbiEncoder.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
+    var encoded = Abi.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
     encoded.add(uint8.fromBytes(randomBytes[8](), bigEndian))
 
     try:
-      discard AbiDecoder.decode(encoded, uint8)
+      discard Abi.decode(encoded, uint8)
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "unread trailing bytes found"
 
   test "fails to decode when padding does not consist of zeroes with unsigned value":
-    var encoded = AbiEncoder.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
+    var encoded = Abi.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
     encoded[3] = 42'u8
 
     try:
-      discard AbiDecoder.decode(encoded, uint8)
+      discard Abi.decode(encoded, uint8)
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "invalid padding found"
 
   test "fails to decode when padding does not consist of zeroes":
-    var encoded = AbiEncoder.encode(8.int8)
+    var encoded = Abi.encode(8.int8)
     encoded[3] = 42'u8
 
     try:
-      discard AbiDecoder.decode(encoded, int8)
+      discard Abi.decode(encoded, int8)
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "invalid padding found"
 
   test "decodes booleans":
@@ -98,12 +89,12 @@ suite "ABI decoding":
     checkDecode(true)
 
   test "fails to decode boolean when value is not 0 or 1":
-    let encoded = AbiEncoder.encode(2'u8)
+    let encoded = Abi.encode(2'u8)
 
     try:
-      discard AbiDecoder.decode(encoded, bool)
+      discard Abi.decode(encoded, bool)
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "invalid boolean value"
 
   test "decodes ranges":
@@ -114,12 +105,12 @@ suite "ABI decoding":
 
   test "fails to decode when value not in range":
     type SomeRange = range[0x0000'u16..0xAAAA'u16]
-    let encoded = AbiEncoder.encode(0xFFFF'u16)
+    let encoded = Abi.encode(0xFFFF'u16)
 
     try:
-      discard AbiDecoder.decode(encoded, SomeRange)
+      discard Abi.decode(encoded, SomeRange)
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "value not in range"
 
   test "decodes enums":
@@ -133,12 +124,12 @@ suite "ABI decoding":
     type SomeEnum = enum
       one = 1
       two = 2
-    let encoded = AbiEncoder.encode(3'u8)
+    let encoded = Abi.encode(3'u8)
 
     try:
-      discard AbiDecoder.decode(encoded, SomeEnum)
+      discard Abi.decode(encoded, SomeEnum)
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "invalid enum value"
 
   test "decodes stints":
@@ -157,13 +148,13 @@ suite "ABI decoding":
 
   test "fails to decode array when padding does not consist of zeroes":
     var arr = randomBytes[33]()
-    var encoded = AbiEncoder.encode(arr)
+    var encoded = Abi.encode(arr)
     encoded[62] = 42'u8
 
     try:
-      discard AbiDecoder.decode(encoded, type(arr))
+      discard Abi.decode(encoded, type(arr))
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "invalid padding found"
 
   test "decodes byte sequences":
@@ -176,9 +167,9 @@ suite "ABI decoding":
     value[62] = 42'u8
 
     try:
-      discard AbiDecoder.decode(value, seq[byte])
+      discard Abi.decode(value, seq[byte])
       fail()
-    except AbiDecodingError as decoded:
+    except SerializationError as decoded:
       check decoded.msg == "invalid padding found"
 
   test "decodes sequences":
@@ -238,8 +229,3 @@ suite "ABI decoding":
 
   test "reads empty tuple":
     checkDecode( (), )
-
-  test "decodes custom type":
-
-    let c : CustomType = CustomType(a: 42'u16, b: "hello")
-    checkDecode(c)
