@@ -80,7 +80,27 @@ proc encode(encoder: var AbiEncoder, custom: CustomType) {.raises: [AbiEncodingE
 proc decode(decoder: var AbiDecoder, T: type CustomType): T {.raises: [AbiDecodingError]}  =
   let (a, b) = decoder.decode( (uint16, string) )
   return CustomType(a: a, b: b)
+```
 
+### Serialization
+
+The ABI encoder / decoder is compatible with nim-serialization module.
+
+Usage
+-----
+
+```nim
+type Contract = object
+  a: uint64
+  b {.dontSerialize.}: string
+  c: bool
+
+let encoded = Abi.encode(x)
+let decoded = Abi.decode(encoded, Contract)
+
+# encoded.a == decoded.a
+# encoded.b == ""
+# encoded.c == decoded.c
 ```
 
 ## License
