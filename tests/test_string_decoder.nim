@@ -1,7 +1,7 @@
 import
   pkg/unittest2,
   stew/byteutils,
-  ../web3/encoding,
+  ../web3/decoding,
   ../web3/primitives
 
 type

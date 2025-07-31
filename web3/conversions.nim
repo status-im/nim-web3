@@ -313,6 +313,14 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
   wrapValueError:
     val = hexStr.parse(StUint[256], 16)
 
+proc readValue*(r: var JsonReader[JrpcConv], val: var uint8)
+      {.gcsafe, raises: [IOError, JsonReaderError].} =
+  let hexStr = r.parseString()
+  if hexStr.invalidQuantityPrefix:
+    r.raiseUnexpectedValue("Uint8 value has invalid leading 0")
+  wrapValueError:
+    val = strutils.fromHex[uint8](hexStr)
+
 #------------------------------------------------------------------------------
 # Exclusive to JrpcConv
 #------------------------------------------------------------------------------
