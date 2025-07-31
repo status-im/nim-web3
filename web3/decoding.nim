@@ -310,6 +310,12 @@ proc decode*(_: type AbiDecoder, input: InputStream, T: type): T {.raises: [AbiD
   decoder.finish()
   return value
 
+proc readValue*[T](r: var AbiReader, value: T): T =
+  try:
+    readValue[T](r, T)
+  except AbiDecodingError as e:
+    return T.default
+
 proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [AbiDecodingError]} =
   var resultObj: T
   var decoder = AbiDecoder(input: r.getStream)
