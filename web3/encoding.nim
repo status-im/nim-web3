@@ -22,18 +22,17 @@ import
 type
   AbiEncoder* = object
     output: OutputStream
-  AbiEncodingError* = object of CatchableError
 
 func finish(encoder: var AbiEncoder): seq[byte] =
   encoder.output.getOutput(seq[byte])
 
-proc write(encoder: var AbiEncoder, bytes: openArray[byte]) {.raises: [AbiEncodingError]} =
+proc write(encoder: var AbiEncoder, bytes: openArray[byte]) {.raises: [SerializationError]} =
   try:
     encoder.output.write(bytes)
   except IOError as e:
-    raise newException(AbiEncodingError, "Failed to write bytes: " & e.msg)
+    raise newException(SerializationError, "Failed to write bytes: " & e.msg)
 
-proc padleft(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [AbiEncodingError]} =
+proc padleft(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [SerializationError]} =
   let padSize = abiSlotSize - bytes.len
   if padSize > 0:
     encoder.write(repeat(padding, padSize))
@@ -43,16 +42,16 @@ proc padleft(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'
 # So we first apply a modulo operation to compute the remainder.
 # If the result is 0, we apply a second modulo  to avoid adding
 # a full slot of padding.
-proc padright(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [AbiEncodingError]} =
+proc padright(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [SerializationError]} =
   encoder.write(bytes)
   let padSize = (abiSlotSize - (bytes.len mod abiSlotSize)) mod abiSlotSize
   if padSize > 0:
     encoder.write(repeat(padding, padSize))
 
-proc encode(encoder: var AbiEncoder, value: SomeUnsignedInt | StUint) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: SomeUnsignedInt | StUint) {.raises: [SerializationError]} =
   encoder.padleft(value.toBytesBE)
 
-proc encode(encoder: var AbiEncoder, value: SomeSignedInt | StInt) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: SomeSignedInt | StInt) {.raises: [SerializationError]} =
   when typeof(value) is StInt:
     let unsignedValue = cast[StInt[(type value).bits]](value)
     let isNegative = value.isNegative
@@ -64,33 +63,33 @@ proc encode(encoder: var AbiEncoder, value: SomeSignedInt | StInt) {.raises: [Ab
   let padding = if isNegative: 0xFF'u8 else: 0x00'u8
   encoder.padleft(bytes, padding)
 
-proc encode(encoder: var AbiEncoder, value: bool) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: bool) {.raises: [SerializationError]} =
   encoder.padleft([if value: 1'u8 else: 0'u8])
 
-proc encode(encoder: var AbiEncoder, value: enum) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: enum) {.raises: [SerializationError]} =
   encoder.encode(uint64(ord(value)))
 
-proc encode(encoder: var AbiEncoder, value: Address) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: Address) {.raises: [SerializationError]} =
   encoder.padleft(array[20, byte](value))
 
-proc encode(encoder: var AbiEncoder, value: Bytes32) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: Bytes32) {.raises: [SerializationError]} =
   encoder.padleft(array[32, byte](value))
 
-proc encode[I](encoder: var AbiEncoder, bytes: array[I, byte]) {.raises: [AbiEncodingError]} =
+proc encode[I](encoder: var AbiEncoder, bytes: array[I, byte]) {.raises: [SerializationError]} =
   encoder.padright(bytes)
 
-proc encode(encoder: var AbiEncoder, bytes: seq[byte]) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, bytes: seq[byte]) {.raises: [SerializationError]} =
   encoder.encode(bytes.len.uint64)
   encoder.padright(bytes)
 
-proc encode(encoder: var AbiEncoder, value: string) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: string) {.raises: [SerializationError]} =
   encoder.encode(value.toBytes)
 
-proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [AbiEncodingError]} =
+proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationError]} =
   type Base = distinctBase(typeof(value))
   encoder.encode(Base(value))
 
-proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [AbiEncodingError].}
+proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
 
   ## When T is dynamic, ABI layout looks like:
   ##
@@ -142,11 +141,11 @@ template encodeCollection(encoder: var AbiEncoder, value: untyped) =
       encoder.encode(element)
 
 # Fixed array does not include the length in the ABI encoding.
-proc encode[T, I](encoder: var AbiEncoder, value: array[I, T]) {.raises: [AbiEncodingError].} =
+proc encode[T, I](encoder: var AbiEncoder, value: array[I, T]) {.raises: [SerializationError].} =
   encodeCollection(encoder, value)
 
 # Sequences are dynamic by definition, so we always encode their length first.
-proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [AbiEncodingError].} =
+proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].} =
   encoder.encode(value.len.uint64)
 
   encodeCollection(encoder, value)
@@ -167,7 +166,7 @@ proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [AbiEncodingErr
 ## +------------------------------+
 ## | element 3                   |
 ## +------------------------------+
-proc encode*[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [AbiEncodingError]} =
+proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]} =
   var data: seq[seq[byte]] = @[]
   # Each item here will occupy a slot of 32 bytes.
   var offset = type(tupl).arity * abiSlotSize
@@ -194,20 +193,23 @@ proc encode*[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [AbiEncodingE
   for data in data:
     encoder.write(data)
 
-proc encode*[T](_: type AbiEncoder, value: T): seq[byte] {.raises: [AbiEncodingError]} =
-  try:
-    var encoder = AbiEncoder(output: memoryOutput())
-    encoder.encode(value)
-    encoder.finish()
-  except IOError as e:
-    raise newException(AbiEncodingError, "Failed to encode value: " & e.msg)
+proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [CatchableError]} =
+  var encoder = AbiEncoder(output: memoryOutput())
+  type StInts = StInt | StUint
 
-proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [AbiEncodingError]} =
-  value.enumInstanceSerializedFields(fieldName, fieldValue):
+  when T is object and T is not StInts:
+    value.enumInstanceSerializedFields(fieldName, fieldValue):
+      try:
+        encoder.encode(fieldValue)
+        w.write encoder.finish()
+      except IOError as e:
+        raise newException(CatchableError, "Failed to write value: " & e.msg)
+  else:
     try:
-      w.write AbiEncoder.encode(fieldValue)
+        encoder.encode(value)
+        w.write encoder.finish()
     except IOError as e:
-      raise newException(AbiEncodingError, "Failed to write value: " & e.msg)
+      raise newException(CatchableError, "Failed to write value: " & e.msg)
 
 # Keep the old encode functions for compatibility
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.deprecated: "use AbiEncode.encode instead" .} =
