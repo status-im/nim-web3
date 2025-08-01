@@ -282,7 +282,7 @@ type
     precompiles*: seq[PrecompilePair]
     systemContracts*: seq[SystemContractPair]
 
-  EthConfigObject* = object
+  EthConfigObject* = ref object
     current*: ConfigObject
     currentHash*: Hash32
     currentForkId*: Bytes4
