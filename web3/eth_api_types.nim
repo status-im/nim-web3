@@ -279,19 +279,14 @@ type
     activationTime*: Quantity
     blobSchedule*: BlobScheduleObject
     chainId*: UInt256
+    forkId*: Bytes4
     precompiles*: seq[PrecompilePair]
     systemContracts*: seq[SystemContractPair]
 
   EthConfigObject* = ref object
     current*: ConfigObject
-    currentHash*: Hash32
-    currentForkId*: Bytes4
     next*: Opt[ConfigObject]
-    nextHash*: Opt[Hash32]
-    nextForkId*: Opt[Bytes4]
     last*: Opt[ConfigObject]
-    lastHash*: Opt[Hash32]
-    lastForkId*: Opt[Bytes4]
 
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)
