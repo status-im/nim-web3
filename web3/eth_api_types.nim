@@ -262,6 +262,32 @@ type
     blobGasUsedRatio*: seq[float64]
     reward*: Opt[seq[FeeHistoryReward]]
 
+  BlobScheduleObject* = object
+    baseFeeUpdateFraction*: Quantity
+    max*: Quantity
+    target*: Quantity
+
+  PrecompilePair* = object
+    address*: Address
+    name*: string
+
+  SystemContractPair* = object
+    name*: string
+    address*: Address
+
+  ConfigObject* = object
+    activationTime*: Quantity
+    blobSchedule*: BlobScheduleObject
+    chainId*: UInt256
+    forkId*: Bytes4
+    precompiles*: seq[PrecompilePair]
+    systemContracts*: seq[SystemContractPair]
+
+  EthConfigObject* = ref object
+    current*: ConfigObject
+    next*: Opt[ConfigObject]
+    last*: Opt[ConfigObject]
+
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)
 

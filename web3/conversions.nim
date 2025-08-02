@@ -62,6 +62,9 @@ BlockHeader.useDefaultSerializationIn JrpcConv
 BlockObject.useDefaultSerializationIn JrpcConv
 TransactionObject.useDefaultSerializationIn JrpcConv
 ReceiptObject.useDefaultSerializationIn JrpcConv
+BlobScheduleObject.useDefaultSerializationIn JrpcConv
+ConfigObject.useDefaultSerializationIn JrpcConv
+EthConfigObject.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # engine_api_types
@@ -313,6 +316,16 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
   wrapValueError:
     val = hexStr.parse(StUint[256], 16)
 
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[PrecompilePair])
+      {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, Address, string):
+    val.add PrecompilePair(address: k, name: v)
+
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemContractPair])
+      {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, string, Address):
+    val.add SystemContractPair(name: k, address: v)
+
 #------------------------------------------------------------------------------
 # Exclusive to JrpcConv
 #------------------------------------------------------------------------------
@@ -434,6 +447,20 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
     w.writeValue v.get
   else:
     w.writeValue JsonString("null")
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[PrecompilePair])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for x in v:
+    w.writeMember(x.address.to0xHex, x.name)
+  w.endObject()
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[SystemContractPair])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for x in v:
+    w.writeMember(x.name, x.address)
+  w.endObject()
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
       {.gcsafe, raises: [IOError].} =

@@ -222,6 +222,8 @@ suite "JSON-RPC Quantity":
     checkRandomObject(PayloadAttributes)
     checkRandomObject(GetPayloadResponse)
 
+    checkRandomObject(EthConfigObject)
+
   test "check blockId":
     let a = RtBlockIdentifier(kind: bidNumber, number: 77.Quantity)
     let x = JrpcConv.encode(a)
