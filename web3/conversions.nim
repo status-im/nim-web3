@@ -36,6 +36,7 @@ export eth_types_json_serialization except Topic
 
 JrpcConv.automaticSerialization(string, true)
 JrpcConv.automaticSerialization(JsonString, true)
+JrpcConv.automaticSerialization(JsonNumber, true)
 JrpcConv.automaticSerialization(ref, true)
 JrpcConv.automaticSerialization(seq, true)
 JrpcConv.automaticSerialization(bool, true)
@@ -62,7 +63,6 @@ BlockHeader.useDefaultSerializationIn JrpcConv
 BlockObject.useDefaultSerializationIn JrpcConv
 TransactionObject.useDefaultSerializationIn JrpcConv
 ReceiptObject.useDefaultSerializationIn JrpcConv
-BlobScheduleObject.useDefaultSerializationIn JrpcConv
 ConfigObject.useDefaultSerializationIn JrpcConv
 EthConfigObject.useDefaultSerializationIn JrpcConv
 
@@ -326,6 +326,15 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemC
   for k,v in readObject(r, string, Address):
     val.add SystemContractPair(name: k, address: v)
 
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var BlobScheduleObject)
+      {.gcsafe, raises: [IOError, SerializationError].} =
+  # BlobScheduleObject is a map of string to uint64
+  for k,v in readObject(r, string, JsonNumber[uint64]):
+    case k:
+    of "baseFeeUpdateFraction": val.baseFeeUpdateFraction = Quantity v.integer
+    of "max": val.max = Quantity v.integer
+    of "target": val.target = Quantity v.integer
+
 #------------------------------------------------------------------------------
 # Exclusive to JrpcConv
 #------------------------------------------------------------------------------
@@ -460,6 +469,13 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[SystemContractPair])
   w.beginObject()
   for x in v:
     w.writeMember(x.name, x.address)
+  w.endObject()
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: BlobScheduleObject)
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for k, val in fieldPairs(v):
+    w.writeMember(k, JsonNumber[uint64](integer: val.uint64))
   w.endObject()
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
