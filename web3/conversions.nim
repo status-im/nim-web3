@@ -41,6 +41,7 @@ JrpcConv.automaticSerialization(ref, true)
 JrpcConv.automaticSerialization(seq, true)
 JrpcConv.automaticSerialization(bool, true)
 JrpcConv.automaticSerialization(float64, true)
+JrpcConv.automaticSerialization(uint64, true)
 JrpcConv.automaticSerialization(array, true)
 
 #------------------------------------------------------------------------------
@@ -255,6 +256,19 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var Hash32)
   wrapValueError:
     val = fromHex(Hash32, r.parseString())
 
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Timestamp)
+      {.gcsafe, raises: [IOError].} =
+  w.writeValue(v.uint64)
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var Timestamp)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  try:
+    var num: uint64
+    r.readValue(num)
+    val = Timestamp(num)
+  except SerializationError as exc:
+    r.raiseUnexpectedValue(exc.msg)
+  
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var TypedTransaction)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
@@ -318,8 +332,8 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[PrecompilePair])
       {.gcsafe, raises: [IOError, SerializationError].} =
-  for k,v in readObject(r, Address, string):
-    val.add PrecompilePair(address: k, name: v)
+  for k,v in readObject(r, string, Address):
+    val.add PrecompilePair(name: k, address: v)
 
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemContractPair])
       {.gcsafe, raises: [IOError, SerializationError].} =
@@ -461,7 +475,7 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[PrecompilePair])
       {.gcsafe, raises: [IOError].} =
   w.beginObject()
   for x in v:
-    w.writeMember(x.address.to0xHex, x.name)
+    w.writeMember(x.name, x.address)
   w.endObject()
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[SystemContractPair])

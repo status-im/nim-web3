@@ -276,7 +276,7 @@ type
     address*: Address
 
   ConfigObject* = object
-    activationTime*: Quantity
+    activationTime*: Timestamp
     blobSchedule*: BlobScheduleObject
     chainId*: UInt256
     forkId*: Bytes4
