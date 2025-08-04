@@ -40,7 +40,7 @@ proc rand[T: Quantity](_: type T): T =
   discard randomBytes(res)
   T(distinctBase(T).fromBytesBE(res))
 
-proc rand[T: Timestamp](_: type T): T =
+proc rand[T: Number](_: type T): T =
   var res: array[sizeof(T), byte]
   discard randomBytes(res)
   T(distinctBase(T).fromBytesBE(res))

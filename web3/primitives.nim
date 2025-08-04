@@ -43,8 +43,8 @@ type
     # Quantity is use in lieu of an ordinary `uint64` to avoid the default
     # format that comes with json_serialization
 
-  Timestamp* = distinct uint64
-    # Timestamp is use in lieu of an ordinary `uint64` to avoid the default
+  Number* = distinct uint64
+    # Number is use in lieu of an ordinary `uint64` to avoid the default
     # format that comes with json_serialization
 
   Blob* = FixedBytes[FIELD_ELEMENTS_PER_BLOB * 32]

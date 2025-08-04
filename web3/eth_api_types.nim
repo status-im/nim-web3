@@ -263,9 +263,9 @@ type
     reward*: Opt[seq[FeeHistoryReward]]
 
   BlobScheduleObject* = object
-    baseFeeUpdateFraction*: Quantity
-    max*: Quantity
-    target*: Quantity
+    baseFeeUpdateFraction*: Number
+    max*: Number
+    target*: Number
 
   PrecompilePair* = object
     address*: Address
@@ -276,7 +276,7 @@ type
     address*: Address
 
   ConfigObject* = object
-    activationTime*: Timestamp
+    activationTime*: Number
     blobSchedule*: BlobScheduleObject
     chainId*: UInt256
     forkId*: Bytes4
