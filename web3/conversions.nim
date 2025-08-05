@@ -36,12 +36,10 @@ export eth_types_json_serialization except Topic
 
 JrpcConv.automaticSerialization(string, true)
 JrpcConv.automaticSerialization(JsonString, true)
-JrpcConv.automaticSerialization(JsonNumber, true)
 JrpcConv.automaticSerialization(ref, true)
 JrpcConv.automaticSerialization(seq, true)
 JrpcConv.automaticSerialization(bool, true)
 JrpcConv.automaticSerialization(float64, true)
-JrpcConv.automaticSerialization(uint64, true)
 JrpcConv.automaticSerialization(array, true)
 
 #------------------------------------------------------------------------------
@@ -259,16 +257,13 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var Hash32)
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: Number)
       {.gcsafe, raises: [IOError].} =
-  w.writeValue(v.uint64)
+  w.streamElement(s):
+    s.writeText distinctBase(v)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var Number)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
-  try:
-    var num: uint64
-    r.readValue(num)
-    val = Number(num)
-  except SerializationError as exc:
-    r.raiseUnexpectedValue(exc.msg)
+  wrapValueError:
+    val = r.parseInt(uint64).Number
   
 proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var TypedTransaction)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
