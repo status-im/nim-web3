@@ -1,6 +1,5 @@
 import
     std/typetraits,
-    sequtils,
     stint,
     faststreams/inputs,
     stew/[byteutils, endians2, assign2],
@@ -307,6 +306,7 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   # Avoid compiler hint message about unused variable
   # when tuple has no dynamic fields
   discard offsets
+  discard buf
 
   return res
 
@@ -335,7 +335,7 @@ proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [Serialization
 
     # Decode static fields first and get the offsets for dynamic fields.
     var i = 0
-    resultObj.enumInstanceSerializedFields(fieldName, fieldValue):
+    resultObj.enumInstanceSerializedFields(_, fieldValue):
       when isDynamic(typeof(fieldValue)):
         offsets[i] = decodeUInt(buf, i)
       else:
@@ -344,7 +344,7 @@ proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [Serialization
 
     # Decode dynamic fields using the offsets.
     i = 0
-    resultObj.enumInstanceSerializedFields(fieldName, fieldValue):
+    resultObj.enumInstanceSerializedFields(_, fieldValue):
       when isDynamic(typeof(fieldValue)):
         fieldValue = decodeDynamicField(buf, offsets, i, typeof(fieldValue))
       inc i

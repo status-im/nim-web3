@@ -203,7 +203,7 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
     # Each item here will occupy a slot of 32 bytes.
     var offset = totalSerializedFields(T) * abiSlotSize
 
-    value.enumInstanceSerializedFields(fieldName, fieldValue):
+    value.enumInstanceSerializedFields(_, fieldValue):
       when isDynamic(typeof(fieldValue)):
         # Store the encoded element in order
         # to add the data after the offsets
