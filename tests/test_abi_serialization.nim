@@ -4,8 +4,7 @@ import
     ../web3/encoding,
     ../web3/decoding,
     ../web3/eth_api_types,
-    ../web3/abi_serialization,
-    ./helpers/primitives_utils
+    ../web3/abi_serialization
 
 type Contract = object
   a: uint64
