@@ -40,6 +40,11 @@ proc rand[T: Quantity](_: type T): T =
   discard randomBytes(res)
   T(distinctBase(T).fromBytesBE(res))
 
+proc rand[T: Number](_: type T): T =
+  var res: array[sizeof(T), byte]
+  discard randomBytes(res)
+  T(distinctBase(T).fromBytesBE(res))
+
 proc rand[T: ChainId](_: type T): T =
   var res: array[8, byte]
   discard randomBytes(res)
@@ -221,6 +226,8 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ExecutionPayload)
     checkRandomObject(PayloadAttributes)
     checkRandomObject(GetPayloadResponse)
+
+    checkRandomObject(EthConfigObject)
 
   test "check blockId":
     let a = RtBlockIdentifier(kind: bidNumber, number: 77.Quantity)
