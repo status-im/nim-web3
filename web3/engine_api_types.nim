@@ -21,6 +21,8 @@ export
 type
   TypedTransaction* = distinct seq[byte]
 
+  InclusionList* = distinct seq[TypedTransaction]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
@@ -190,11 +192,29 @@ type
     invalid = "INVALID"
     accepted = "ACCEPTED"
     invalid_block_hash = "INVALID_BLOCK_HASH"
+    #FOCIL related- not yet decided to add in V1 V2
+    invalid_inclusion_list = "INVALID_INCLUSION_LIST"
+
+  # PayloadExecutionStatusV2* {.pure.} = enum
+  #   syncing = "SYNCING"
+  #   valid = "VALID"
+  #   invalid = "INVALID"
+  #   accepted = "ACCEPTED"
+  #   invalid_block_hash = "INVALID_BLOCK_HASH"
+  #   invalid_inclusion_list = "INVALID_INCLUSION_LIST"
 
   PayloadStatusV1* = object
     status*: PayloadExecutionStatus
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
+    
+  # In the future there will be a PayloadStatusV2 with the seperate  invalid_inclusion_list Error
+  # However for now we are using v1 as most client arnt compatible with v2
+  # PayloadStatusV2* = object
+  #   status*: PayloadExecutionStatus
+  #   latestValidHash*: Opt[Hash32]
+  #   validationError*: Opt[string]
+
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
