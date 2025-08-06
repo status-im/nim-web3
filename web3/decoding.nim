@@ -1,5 +1,6 @@
 import
     std/typetraits,
+    sequtils,
     stint,
     faststreams/inputs,
     stew/[byteutils, endians2, assign2],
@@ -7,15 +8,16 @@ import
     ./eth_api_types,
     ./abi_utils
 
-from ./abi_serialization import AbiReader
+from ./abi_serialization import AbiReader, Abi
 
 {.push raises: [].}
 
-export abi_serialization
+export abi_serialization, abi_utils
 
 type
   AbiDecoder* = object
     input: InputStream
+
   UInt = SomeUnsignedInt | StUint
 
 template basetype(Range: type range): untyped =
@@ -137,6 +139,10 @@ proc decode[I](decoder: var AbiDecoder, T: type array[I, byte]): T {.raises: [Se
 
 proc decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [SerializationError].} =
   let len = decoder.decode(uint64)
+
+  if len == 0:
+    return T.default
+
   let bytes = ((len + 31) div 32 * 32).int
   let buf = decoder.read(bytes)
 
@@ -147,8 +153,35 @@ proc decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [Serializat
 proc decode(decoder: var AbiDecoder, T: type string): T {.raises: [SerializationError].} =
   string.fromBytes(decoder.decode(seq[byte]))
 
+proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [SerializationError].}
+
 proc decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [SerializationError].} =
   T(decoder.decode(distinctBase T))
+
+proc decodeStaticField[T](buf: seq[byte], position: int, _: typedesc[T]): T {.raises: [SerializationError].} =
+  let start = abiSlotSize * position
+  let data = buf[start ..< start + abiSlotSize]
+  var decoder = AbiDecoder(input: memoryInput(data))
+
+  result = decoder.decode(T)
+
+  decoder.finish()
+
+proc decodeUInt(buf: seq[byte], position: int): uint64 {.raises: [SerializationError].} =
+  return decodeStaticField(buf, position, uint64)
+
+proc decodeDynamicField[T](buf: seq[byte], offsets: seq[uint64], position: int, _: typedesc[T]): T {.raises: [SerializationError].} = 
+  let start = offsets[position].int
+
+  var stop = buf.len
+  for j in position+1 ..< offsets.len:
+    if offsets[j] > 0:
+      stop = offsets[j].int
+      break
+
+  let data = buf[start ..< stop]
+
+  result = Abi.decode(data, T)
 
 ## When T is dynamic, ABI layout looks like:
 ## +----------------------------+
@@ -194,29 +227,20 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
       # Get the length of the dynamic array from the first slot.
       # Add assign one slot to the offset,
       # so that the first element starts at the second slot.
-      var decoder = AbiDecoder(input: memoryInput(buf[0 ..< abiSlotSize]))
-      len = decoder.decode(uint64)
-      decoder.finish()
+      var position = 0
+      len = decodeUInt(buf, position)
       offset = 1
     else:
       len = size.get()
 
     var offsets = newSeq[uint64](len)
     for i in 0..<len:
-      let start = abiSlotSize * (i + offset)
-      var decoder = AbiDecoder(input: memoryInput(buf[start ..< start + abiSlotSize]))
-      let value = decoder.decode(uint64)
-      decoder.finish()
+      let value = decodeUInt(buf, (i + offset).int)
       offsets[i] = value + (abiSlotSize * offset).uint64
 
     result = newSeq[T](len)
     for i in 0..<len:
-      let start = offsets[i].int
-      # Here we need to take only the data that is between the offsets.
-      let stop = if i+1 < result.len.uint64: offsets[i+1].int else: buf.len
-      let data = buf[start ..< stop]
-      var decoder = AbiDecoder(input: memoryInput(data))
-      result[i] = decoder.decode(T)
+      result[i] = decodeDynamicField(buf, offsets, i.int, T)
 
     return result
   else:
@@ -268,30 +292,16 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
     if buf.len == 0:
       discard
     else:
-      let start = abiSlotSize * i
-      let data = buf[start ..< start + abiSlotSize]
-      var decoder = AbiDecoder(input: memoryInput(data))
       when isDynamic(typeof(field)):
-        offsets[i] = decoder.decode(uint64)
+        offsets[i] = decodeUInt(buf, i)
       else:
-        field = decoder.decode(typeof(field))
-      decoder.finish()
+        field = decodeStaticField(buf, i, typeof(field))
     inc i
 
   i = 0
   for field in res.fields:
     if offsets[i] > 0:
-      let start = offsets[i].int
-
-      var stop = buf.len
-      for j in i+1 ..< arity:
-        if offsets[j] > 0:
-          stop = offsets[j].int
-          break
-
-      let data = buf[start ..< stop]
-      var decoder = AbiDecoder(input: memoryInput(data))
-      field = decoder.decode(typeof(field))
+      field = decodeDynamicField(buf, offsets, i, typeof(field))
     inc i
 
   # Avoid compiler hint message about unused variable
@@ -299,6 +309,11 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   discard offsets
 
   return res
+
+proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]} =
+  let value = decoder.decode(T)
+  decoder.finish()
+  return value
 
 proc readValue*[T](r: var AbiReader, value: T): T {.raises: [SerializationError]} =
   try:
@@ -312,13 +327,31 @@ proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [Serialization
   type StInts = StInt | StUint
 
   when T is object and T is not StInts:
+    var offsets = newSeq[uint64](totalSerializedFields(T))
+
+    # Since we cannot seek the position in the input stream,
+    # we need to read the whole buffer first.
+    var buf = decoder.readAll()
+
+    # Decode static fields first and get the offsets for dynamic fields.
+    var i = 0
     resultObj.enumInstanceSerializedFields(fieldName, fieldValue):
-      fieldValue = decoder.decode(typeof(fieldValue))
+      when isDynamic(typeof(fieldValue)):
+        offsets[i] = decodeUInt(buf, i)
+      else:
+        fieldValue = decodeStaticField(buf, i, typeof(fieldValue))
+      inc i
+
+    # Decode dynamic fields using the offsets.
+    i = 0
+    resultObj.enumInstanceSerializedFields(fieldName, fieldValue):
+      when isDynamic(typeof(fieldValue)):
+        fieldValue = decodeDynamicField(buf, offsets, i, typeof(fieldValue))
+      inc i
   else:
     resultObj = decoder.decode(T)
 
   decoder.finish()
-
   result = resultObj
 
 # Keep the old encode functions for compatibility
