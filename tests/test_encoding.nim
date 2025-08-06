@@ -284,7 +284,11 @@ suite "ABI encoding":
 
   test "encodes strings as UTF-8 byte sequence":
     check Abi.encode("hello!☺") == Abi.encode("hello!☺".toBytes)
-    check encode("hello!☺") == encode("hello!☺".toBytes)
+
+  test "encodes empty strings":
+    let encoded = Abi.encode("")
+    check encoded == Abi.encode(0'u64)
+    check encoded == 32.zeroes
 
   test "encodes distinct types as their base type":
     type SomeDistinctType = distinct uint16
