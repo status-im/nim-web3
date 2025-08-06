@@ -8,10 +8,10 @@ serializationFormat Abi,
                    mimeType = "application/ethereum‑abi"
 
 type
-  AbiReader* = ref object
+  AbiReader* = object
     stream: InputStream
 
-  AbiWriter* = ref object
+  AbiWriter* = object
     stream: OutputStream
 
 proc new*(T: type AbiReader, stream: InputStream): T =
