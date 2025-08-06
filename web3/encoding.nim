@@ -19,7 +19,7 @@ import
 
 {.push raises: [].}
 
-export abi_serialization
+export abi_serialization, abi_utils
 
 type
   AbiEncoder* = object
@@ -92,6 +92,7 @@ proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationEr
   encoder.encode(Base(value))
 
 proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
+proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
 
   ## When T is dynamic, ABI layout looks like:
   ##
@@ -177,9 +178,7 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
     when isDynamic(typeof(field)):
       # Store the encoded element in order
       # to add the data after the offsets
-      var e = AbiEncoder(output: memoryOutput())
-      e.encode(field)
-      let bytes = e.finish()
+      let bytes = Abi.encode(field)
       data.add(bytes)
 
       # Encode the offset of the dynamic data
@@ -195,23 +194,45 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
   for data in data:
     encoder.write(data)
 
-proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [CatchableError]} =
+proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} =
   var encoder = AbiEncoder(output: memoryOutput())
   type StInts = StInt | StUint
 
   when T is object and T is not StInts:
+    var data: seq[seq[byte]] = @[]
+    # Each item here will occupy a slot of 32 bytes.
+    var offset = totalSerializedFields(T) * abiSlotSize
+
     value.enumInstanceSerializedFields(fieldName, fieldValue):
-      try:
+      when isDynamic(typeof(fieldValue)):
+        # Store the encoded element in order
+        # to add the data after the offsets
+        let bytes = Abi.encode(fieldValue)
+        data.add(bytes)
+
+        # Encode the offset of the dynamic data
+        encoder.encode(offset.uint64)
+        offset += bytes.len
+      else:
         encoder.encode(fieldValue)
-        w.write encoder.finish()
-      except IOError as e:
-        raise newException(CatchableError, "Failed to write value: " & e.msg)
+
+    # Avoid compiler hint message about unused variable
+    # when tuple has no dynamic fields
+    discard offset
+
+    for data in data:
+      encoder.write(data)
+
+    try:
+      w.write encoder.finish()
+    except IOError as e:
+      raise newException(SerializationError, "Failed to write value: " & e.msg)
   else:
     try:
         encoder.encode(value)
         w.write encoder.finish()
     except IOError as e:
-      raise newException(CatchableError, "Failed to write value: " & e.msg)
+      raise newException(SerializationError, "Failed to write value: " & e.msg)
 
 # Keep the old encode functions for compatibility
 func encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.deprecated: "use Abi.encode instead" .} =
