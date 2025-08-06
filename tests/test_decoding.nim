@@ -229,3 +229,13 @@ suite "ABI decoding":
 
   test "reads empty tuple":
     checkDecode( (), )
+
+  test "encodes strings":
+    let encoded = Abi.encode("hello")
+    check Abi.decode(encoded, string) == "hello"
+
+  test "encodes empty strings":
+    let encoded = Abi.encode("")
+    let decoded = Abi.decode(encoded, string)
+    check decoded == ""
+    check len(decoded) == 0
