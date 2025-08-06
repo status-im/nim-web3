@@ -1,6 +1,7 @@
 import
   pkg/unittest2,
   stew/byteutils,
+  serialization,
   ../web3/decoding,
   ../web3/primitives
 
@@ -25,12 +26,16 @@ suite "String decoders":
       signature = init SignatureBytes
       index = init Int64LeBytes
 
-    var offset = 0
-    offset += decode(logData, 0, offset, pubkey)
-    offset += decode(logData, 0, offset, withdrawalCredentials)
-    offset += decode(logData, 0, offset, amount)
-    offset += decode(logData, 0, offset, signature)
-    offset += decode(logData, 0, offset, index)
+    type Tuple = tuple[
+      pubkey: PubKeyBytes,
+      withdrawalCredentials: WithdrawalCredentialsBytes,
+      amount: Int64LeBytes,
+      signature: SignatureBytes,
+      index: Int64LeBytes
+    ]
+
+    (pubkey, withdrawalCredentials, amount, signature, index) =
+      Abi.decode(logData, Tuple)
 
     assert($pubkey == "0xb2f5263a3454de3a9116b0edaa3cfbb2795a99482ee268b7aed5b15b532d9b20c34b67c82877ba1326326f3ae6cc5ad3")
     assert($withdrawalCredentials == "0x010000000000000000000000a3f7076718fa4fed91b5830a45489053eb367afb")

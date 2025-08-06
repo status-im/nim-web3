@@ -375,7 +375,7 @@ proc call*[T](
   let response = await callAux(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
   if response.len > 0:
-    discard decode(response, 0, 0, result)
+    result = Abi.decode(response, T)
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
 
@@ -456,7 +456,9 @@ proc createImmutableContractInvocation*(
     sender.web3, sender.contractAddress, sender.defaultAccount, data,
     sender.value, sender.gas, sender.blockNumber)
   if response.len > 0:
-    discard decode(response, 0, 0, result)
+    # All data are encoded as tuple
+    let (value) = Abi.decode(response, (ReturnType,))
+    return value
   else:
     raise newException(CatchableError, "No response from the Web3 provider")
 

@@ -197,13 +197,13 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
       mixin createImmutableContractInvocation
       return createImmutableContractInvocation(
           `senderName`.sender, `output`,
-          static(keccak256(`signature`).data[0..<4]) & encode(`funcParamsTuple`))
+          static(keccak256(`signature`).data[0..<4]) & Abi.encode(`funcParamsTuple`))
   else:
     result[6] = quote do:
       mixin createMutableContractInvocation
       return createMutableContractInvocation(
           `senderName`.sender, `output`,
-          static(keccak256(`signature`).data[0..<4]) & encode(`funcParamsTuple`))
+          static(keccak256(`signature`).data[0..<4]) & Abi.encode(`funcParamsTuple`))
 
 proc `&`(a, b: openArray[byte]): seq[byte] =
   let sza = a.len
@@ -234,7 +234,7 @@ proc genConstructor(cname: NimNode, constructorObject: ConstructorObject): NimNo
     )
   result[6] = quote do:
     mixin createContractDeployment
-    return createContractDeployment(`sender`, `cname`, `contractCode` & encode(`funcParamsTuple`))
+    return createContractDeployment(`sender`, `cname`, `contractCode` & Abi.encode(`funcParamsTuple`))
 
 proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
   if not eventObject.anonymous:
@@ -255,6 +255,7 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
       let `eventData` = JrpcConv.decode(`jsonIdent`.string, EventData)
 
     var offsetInited = false
+    let tupleType = nnkTupleTy.newTree()
 
     for input in eventObject.inputs:
       let param = nnkIdentDefs.newTree(
@@ -267,23 +268,31 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
       let
         argument = genSym(nskVar)
         kind = input.typ
+
       if input.indexed:
         argParseBody.add quote do:
-          var `argument`: `kind`
-          discard decode(`eventData`.topics[`i`].data, 0, 0, `argument`)
+          var `argument`: `kind` = Abi.decode(`eventData`.topics[`i`].data, `kind`)
         i += 1
+
+        call.add argument
+        callWithRawData.add argument
       else:
-        if not offsetInited:
-          argParseBody.add quote do:
-            var `offset` = 0
+        # Generate the tuple type based on the non indexed inputs
+        tupleType.add nnkIdentDefs.newTree(ident(input.name), input.typ, newEmptyNode())
 
-          offsetInited = true
+    # Decode the tuple in on shot
+    let decodedIdent = genSym(nskLet, "decoded")
+    argParseBody.add quote do:
+      let `decodedIdent` = Abi.decode(`eventData`.data, `tupleType`)
 
-        argParseBody.add quote do:
-          var `argument`: `kind`
-          `offset` += decode(`eventData`.data, 0, `offset`, `argument`)
-      call.add argument
-      callWithRawData.add argument
+    # Loop on the inputs again to add the arguments to the calls
+    for input in eventObject.inputs:
+      if not input.indexed:
+        let fieldName = ident(input.name)
+        let argument = nnkDotExpr.newTree(decodedIdent, fieldName)
+        call.add argument
+        callWithRawData.add argument
+
     let
       eventName = eventObject.name
       cbident = ident eventName
