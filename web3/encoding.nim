@@ -47,6 +47,7 @@ proc padleft(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'
 proc padright(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [SerializationError]} =
   encoder.write(bytes)
   let padSize = (abiSlotSize - (bytes.len mod abiSlotSize)) mod abiSlotSize
+
   if padSize > 0:
     encoder.write(repeat(padding, padSize))
 
@@ -171,8 +172,7 @@ proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationE
 ## +------------------------------+
 proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]} =
   var data: seq[seq[byte]] = @[]
-  # Each item here will occupy a slot of 32 bytes.
-  var offset = type(tupl).arity * abiSlotSize
+  var offset = T.arity * abiSlotSize
 
   for field in tupl.fields:
     when isDynamic(typeof(field)):
@@ -183,6 +183,7 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
 
       # Encode the offset of the dynamic data
       encoder.encode(offset.uint64)
+
       offset += bytes.len
     else:
       encoder.encode(field)
@@ -200,7 +201,6 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
 
   when T is object and T is not StInts:
     var data: seq[seq[byte]] = @[]
-    # Each item here will occupy a slot of 32 bytes.
     var offset = totalSerializedFields(T) * abiSlotSize
 
     value.enumInstanceSerializedFields(_, fieldValue):
