@@ -145,6 +145,7 @@ suite "ABI decoding":
     checkDecode([1'u8, 2'u8, 3'u8])
     checkDecode(randomBytes[32]())
     checkDecode(randomBytes[33]())
+    checkDecode(randomBytes[65]())
 
   test "fails to decode array when padding does not consist of zeroes":
     var arr = randomBytes[33]()
