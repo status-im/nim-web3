@@ -249,12 +249,10 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
       i = 1
       call = nnkCall.newTree(callbackIdent)
       callWithRawData = nnkCall.newTree(callbackIdent)
-      offset = ident "offset"
 
     argParseBody.add quote do:
       let `eventData` = JrpcConv.decode(`jsonIdent`.string, EventData)
 
-    var offsetInited = false
     let tupleType = nnkTupleTy.newTree()
 
     for input in eventObject.inputs:
