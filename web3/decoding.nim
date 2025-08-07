@@ -4,10 +4,9 @@ import
     faststreams/inputs,
     stew/[byteutils, endians2, assign2],
     serialization,
+    ./abi_serialization,
     ./eth_api_types,
     ./abi_utils
-
-from ./abi_serialization import AbiReader, Abi
 
 {.push raises: [].}
 
@@ -45,14 +44,6 @@ proc read(decoder: var AbiDecoder, size = abiSlotSize): seq[byte] {.raises: [Ser
     raise newException(SerializationError, "Failed to read bytes: " & e.msg)
 
   return buf
-
-proc readAll(decoder: var AbiDecoder) : seq[byte] {.raises: [SerializationError].} =
-  try:
-    while decoder.input.readable:
-      result.add decoder.input.read
-    return result
-  except IOError as e:
-    raise newException(SerializationError, "Failed to read bytes: " & e.msg)
 
 template checkLeftPadding(buf: openArray[byte], padding: int, expected: uint8) =
   for i in 0 ..< padding:
@@ -128,10 +119,10 @@ proc decode(decoder: var AbiDecoder, T: type Address): T {.raises: [Serializatio
 
 proc decode[I](decoder: var AbiDecoder, T: type array[I, byte]): T {.raises: [SerializationError].} =
   var arr: T
+
   let bytes = (arr.len + 31) div 32 * 32
   let buf = decoder.read(bytes)
   arr[0..<arr.len] = buf[0..<arr.len]
-
   checkRightPadding(buf, arr.len, bytes)
 
   return arr
@@ -156,31 +147,6 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
 
 proc decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [SerializationError].} =
   T(decoder.decode(distinctBase T))
-
-proc decodeStaticField[T](buf: seq[byte], position: int, _: typedesc[T]): T {.raises: [SerializationError].} =
-  let start = abiSlotSize * position
-  let data = buf[start ..< start + abiSlotSize]
-  var decoder = AbiDecoder(input: memoryInput(data))
-
-  result = decoder.decode(T)
-
-  decoder.finish()
-
-proc decodeUInt(buf: seq[byte], position: int): uint64 {.raises: [SerializationError].} =
-  return decodeStaticField(buf, position, uint64)
-
-proc decodeDynamicField[T](buf: seq[byte], offsets: seq[uint64], position: int, _: typedesc[T]): T {.raises: [SerializationError].} = 
-  let start = offsets[position].int
-
-  var stop = buf.len
-  for j in position+1 ..< offsets.len:
-    if offsets[j] > 0:
-      stop = offsets[j].int
-      break
-
-  let data = buf[start ..< stop]
-
-  result = Abi.decode(data, T)
 
 ## When T is dynamic, ABI layout looks like:
 ## +----------------------------+
@@ -217,29 +183,25 @@ proc decodeDynamicField[T](buf: seq[byte], offsets: seq[uint64], position: int, 
 ## and the decoder will read the size from the input stream.
 proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.raises: [SerializationError].} =
   if isDynamic(T):
-    # Since we cannot seek the position in the input stream,
-    # we need to read the whole buffer first.
-    var buf = decoder.readAll()
-    var offset = 0.uint64
     var len = 0.uint64
     if size.isNone:
       # Get the length of the dynamic array from the first slot.
       # Add assign one slot to the offset,
       # so that the first element starts at the second slot.
-      var position = 0
-      len = decodeUInt(buf, position)
-      offset = 1
+      len = decoder.decode(uint64)
     else:
       len = size.get()
 
     var offsets = newSeq[uint64](len)
     for i in 0..<len:
-      let value = decodeUInt(buf, (i + offset).int)
-      offsets[i] = value + (abiSlotSize * offset).uint64
+      offsets[i] = decoder.decode(uint64)
 
     result = newSeq[T](len)
     for i in 0..<len:
-      result[i] = decodeDynamicField(buf, offsets, i.int, T)
+      let pos = decoder.input.pos()
+      if offsets[i].int > pos:
+        decoder.input.advance(offsets[i].int - pos)
+      result[i] = decoder.decode(T)
 
     return result
   else:
@@ -280,40 +242,67 @@ proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.rais
 proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [SerializationError].} =
   var res: T
   let arity = type(res).arity
-  var offsets = newSeq[uint64](arity)
-
-  # Since we cannot seek the position in the input stream,
-  # we need to read the whole buffer first.
-  var buf = decoder.readAll()
-
+  var offsets = newSeq[uint64](arity + 1)
   var i = 0
+
   for field in res.fields:
-    if buf.len == 0:
-      discard
+    when isDynamic(typeof(field)):
+      offsets[i] = decoder.decode(uint64)
     else:
-      when isDynamic(typeof(field)):
-        offsets[i] = decodeUInt(buf, i)
-      else:
-        field = decodeStaticField(buf, i, typeof(field))
-    inc i
-
-  i = 0
+      field = decoder.decode(typeof(field))
+    inc i 
+  
+  i = 0 
   for field in res.fields:
-    if offsets[i] > 0:
-      field = decodeDynamicField(buf, offsets, i, typeof(field))
+    when isDynamic(typeof(field)):
+      let pos = decoder.input.pos()
+      if offsets[i].int > pos:
+        decoder.input.advance(offsets[i].int - pos)
+      field = decoder.decode(typeof(field))
+
     inc i
 
-  # Avoid compiler hint message about unused variable
-  # when tuple has no dynamic fields
   discard offsets
-  discard buf
 
   return res
 
+proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError].} =
+  var resultObj: T
+  var offsets = newSeq[uint64](totalSerializedFields(T))
+
+  # Decode static fields first and get the offsets for dynamic fields.
+  var i = 0
+  resultObj.enumInstanceSerializedFields(_, fieldValue):
+    when isDynamic(typeof(fieldValue)):
+      offsets[i] = decoder.decode(uint64)
+    else:
+      fieldValue = decoder.decode(typeof(fieldValue))
+    inc i
+
+  # Decode dynamic fields using the offsets.
+  i = 0
+  resultObj.enumInstanceSerializedFields(_, fieldValue):
+    when isDynamic(typeof(fieldValue)):
+      let pos = decoder.input.pos()
+      if offsets[i].int > pos:
+        decoder.input.advance(offsets[i].int - pos)
+      fieldValue = decoder.decode(typeof(fieldValue))
+    inc i
+
+  resultObj
+
+# This method should not be used directly. 
+# It is needed because `genFunction` create tuple  
+# with object instead of creating a flat tuple with 
+# object fields.
 proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]} =
-  let value = decoder.decode(T)
-  decoder.finish()
-  return value
+  when T is object: 
+    let value = decoder.decodeObject(T)
+    return value
+  else: 
+    let value = decoder.decode(T)
+    decoder.finish()
+    return value
 
 proc readValue*[T](r: var AbiReader, value: T): T {.raises: [SerializationError]} =
   try:
@@ -327,27 +316,7 @@ proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [Serialization
   type StInts = StInt | StUint
 
   when T is object and T is not StInts:
-    var offsets = newSeq[uint64](totalSerializedFields(T))
-
-    # Since we cannot seek the position in the input stream,
-    # we need to read the whole buffer first.
-    var buf = decoder.readAll()
-
-    # Decode static fields first and get the offsets for dynamic fields.
-    var i = 0
-    resultObj.enumInstanceSerializedFields(_, fieldValue):
-      when isDynamic(typeof(fieldValue)):
-        offsets[i] = decodeUInt(buf, i)
-      else:
-        fieldValue = decodeStaticField(buf, i, typeof(fieldValue))
-      inc i
-
-    # Decode dynamic fields using the offsets.
-    i = 0
-    resultObj.enumInstanceSerializedFields(_, fieldValue):
-      when isDynamic(typeof(fieldValue)):
-        fieldValue = decodeDynamicField(buf, offsets, i, typeof(fieldValue))
-      inc i
+    resultObj = decodeObject(decoder, T)
   else:
     resultObj = decoder.decode(T)
 
