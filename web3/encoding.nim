@@ -154,6 +154,11 @@ proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationE
 
   encodeCollection(encoder, value)
 
+proc encodeField(field: auto): seq[byte] {.raises: [SerializationError].} =
+  var e = AbiEncoder(output: memoryOutput())
+  e.encode(field)
+  return e.finish()
+
 ## Tuple can contain both static and dynamic elements.
 ## When the data is dynamic, the offset to the data is encoded first.
 ##
@@ -178,7 +183,7 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
     when isDynamic(typeof(field)):
       # Store the encoded element in order
       # to add the data after the offsets
-      let bytes = Abi.encode(field)
+      let bytes = encodeField(field)
       data.add(bytes)
 
       # Encode the offset of the dynamic data
@@ -207,7 +212,7 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
       when isDynamic(typeof(fieldValue)):
         # Store the encoded element in order
         # to add the data after the offsets
-        let bytes = Abi.encode(fieldValue)
+        let bytes = encodeField(fieldValue)
         data.add(bytes)
 
         # Encode the offset of the dynamic data
