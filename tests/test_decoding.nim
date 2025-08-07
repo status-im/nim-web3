@@ -99,9 +99,7 @@ suite "ABI decoding":
 
   test "decodes ranges":
     type SomeRange = range[0x0000'u16..0xAAAA'u16]
-    checkDecode(SomeRange(42))
-    checkDecode(SomeRange.low)
-    checkDecode(SomeRange.high)
+    checkDecode(SomeRange)
 
   test "fails to decode when value not in range":
     type SomeRange = range[0x0000'u16..0xAAAA'u16]
