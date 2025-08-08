@@ -35,7 +35,12 @@ proc finish(decoder: var AbiDecoder) {.raises: [SerializationError].} =
     raise newException(SerializationError, "Failed to finish decoding: " & e.msg)
 
 proc read(decoder: var AbiDecoder, size = abiSlotSize): seq[byte] {.raises: [SerializationError].} =
-  var buf = newSeq[byte]((size + 31) div 32 * 32)
+  # Here we want to make sure that even if the data is smaller than the ABI slot size,
+  # it will occupy at least one slot size. That's why we have:
+  # size + abiSlotSize - 1
+  # Then we divide it by abiSlotSize to get the number of slots needed.
+  # And finally, we multiply it by abiSlotSize to get the total size in bytes.
+  var buf = newSeq[byte]((size + abiSlotSize - 1) div abiSlotSize * abiSlotSize)
 
   try:
     if not decoder.input.readInto(buf):
@@ -78,11 +83,15 @@ proc decode(decoder: var AbiDecoder, T: type SomeSignedInt): T {.raises: [Serial
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
-  let unsigned = T.toUnsigned.fromBytesBE(buf[padding ..< abiSlotSize])
-  let value = cast[T](unsigned)
+  let unsigned = StUint[sizeof(T) * 8].fromBytesBE(buf[padding ..< abiSlotSize])
+  let max = high(T).stuint(sizeof(T) * 8)
 
-  let b = if value < 0: 0xFF'u8 else: 0x00'u8
-  checkLeftPadding(buf, padding, b)
+  if unsigned.truncate(T) > 0 and unsigned > max:
+    raise newException(SerializationError, "overflow when decoding trying to decode " & $unsigned & " into " & $(sizeof(T) * 8) & " bits")
+
+  let value = cast[T](unsigned)
+  let expectedPadding = if value < 0: 0xFF'u8 else: 0x00'u8
+  checkLeftPadding(buf, padding, expectedPadding)
 
   return value
 
@@ -120,10 +129,9 @@ proc decode(decoder: var AbiDecoder, T: type Address): T {.raises: [Serializatio
 proc decode[I](decoder: var AbiDecoder, T: type array[I, byte]): T {.raises: [SerializationError].} =
   var arr: T
 
-  let bytes = (arr.len + 31) div 32 * 32
-  let buf = decoder.read(bytes)
+  let buf = decoder.read(arr.len)
   arr[0..<arr.len] = buf[0..<arr.len]
-  checkRightPadding(buf, arr.len, bytes)
+  checkRightPadding(buf, arr.len, buf.len)
 
   return arr
 
@@ -133,10 +141,8 @@ proc decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [Serializat
   if len == 0:
     return T.default
 
-  let bytes = ((len + 31) div 32 * 32).int
-  let buf = decoder.read(bytes)
-
-  checkRightPadding(buf, len.int, bytes)
+  let buf = decoder.read(len.int)
+  checkRightPadding(buf, len.int, buf.len)
 
   return buf[0 ..< len]
 
@@ -250,9 +256,9 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
       offsets[i] = decoder.decode(uint64)
     else:
       field = decoder.decode(typeof(field))
-    inc i 
-  
-  i = 0 
+    inc i
+
+  i = 0
   for field in res.fields:
     when isDynamic(typeof(field)):
       let pos = decoder.input.pos()
@@ -291,15 +297,15 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
 
   resultObj
 
-# This method should not be used directly. 
-# It is needed because `genFunction` create tuple  
-# with object instead of creating a flat tuple with 
+# This method should not be used directly.
+# It is needed because `genFunction` create tuple
+# with object instead of creating a flat tuple with
 # object fields.
 proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]} =
-  when T is object: 
+  when T is object:
     let value = decoder.decodeObject(T)
     return value
-  else: 
+  else:
     let value = decoder.decode(T)
     decoder.finish()
     return value
