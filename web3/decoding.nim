@@ -35,11 +35,11 @@ proc finish(decoder: var AbiDecoder) {.raises: [SerializationError].} =
     raise newException(SerializationError, "Failed to finish decoding: " & e.msg)
 
 proc read(decoder: var AbiDecoder, size = abiSlotSize): seq[byte] {.raises: [SerializationError].} =
-  # Here we want to make sure that even if the data is smaller than the ABI slot size,
-  # it will occupy at least one slot size. That's why we have:
-  # size + abiSlotSize - 1
-  # Then we divide it by abiSlotSize to get the number of slots needed.
-  # And finally, we multiply it by abiSlotSize to get the total size in bytes.
+  ## We want to make sure that even if the data is smaller than the ABI slot size,
+  ## it will occupy at least one slot size. That's why we have:
+  ## size + abiSlotSize - 1
+  ## Then we divide it by abiSlotSize to get the number of slots needed.
+  ## And finally, we multiply it by abiSlotSize to get the total size in bytes.
   var buf = newSeq[byte]((size + abiSlotSize - 1) div abiSlotSize * abiSlotSize)
 
   try:
@@ -154,49 +154,29 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
 proc decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [SerializationError].} =
   T(decoder.decode(distinctBase T))
 
-## When T is dynamic, ABI layout looks like:
-## +----------------------------+
-## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
-## +----------------------------+
-## | offset to element 0       |  <-- 32
-## +----------------------------+
-## | offset to element 1       |  <-- 32 + size of encoded element 0
-## +----------------------------+
-## | ...                        |
-## +----------------------------+
-## | encoded element 0         |  <-- item at offset 0
-## +----------------------------+
-## | encoded element 1         |  <-- item at offset 1
-## +----------------------------+
-## | ...                        |
-## +----------------------------+
-##
-## When T is static, ABI layout looks like:
-## +----------------------------+
-## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
-## +----------------------------+
-## | element 0                 |  <-- 32
-## +----------------------------+
-## | element 1                 |  <-- 32
-## +----------------------------+
-## | ...                        |
-## +----------------------------+
-## | element N-1               |
-## +----------------------------+
-##
-## The size of the static array is passed as an argument to the decoder.
-## For the dynamic array, the size is should be None,
-## and the decoder will read the size from the input stream.
+
 proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.raises: [SerializationError].} =
+  ## When T is dynamic, ABI layout looks like:
+  ## +----------------------------+
+  ## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
+  ## +----------------------------+
+  ## | offset to element 0       |  <-- 32
+  ## +----------------------------+
+  ## | offset to element 1       |  <-- 32 + size of encoded element 0
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | encoded element 0         |  <-- item at offset 0
+  ## +----------------------------+
+  ## | encoded element 1         |  <-- item at offset 1
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
   if isDynamic(T):
-    var len = 0.uint64
-    if size.isNone:
-      # Get the length of the dynamic array from the first slot.
-      # Add assign one slot to the offset,
-      # so that the first element starts at the second slot.
-      len = decoder.decode(uint64)
-    else:
-      len = size.get()
+    # The size of the static array is passed as an argument to the decoder.
+    # For the dynamic array, the size is should be None,
+    # and the decoder will read the size from the input stream.
+    var len = if size.isNone: decoder.decode(uint64) else: size.get()
 
     var offsets = newSeq[uint64](len)
     for i in 0..<len:
@@ -210,6 +190,18 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
       result[i] = decoder.decode(T)
 
     return result
+  ## When T is static, ABI layout looks like:
+  ## +----------------------------+
+  ## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
+  ## +----------------------------+
+  ## | element 0                 |  <-- 32
+  ## +----------------------------+
+  ## | element 1                 |  <-- 32
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | element N-1               |
+  ## +----------------------------+
   else:
     let len = if size.isNone: decoder.decode(uint64) else: size.get()
     result = newSeq[T](len)
@@ -229,28 +221,29 @@ proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.rais
 
   return res
 
-## When T is a tuple, ABI layout looks like:
-## +----------------------------+
-## | static field 0 or offset   |  <-- 32
-## +----------------------------+
-## | static field 1 or offset   |  <-- 32
-## +----------------------------+
-## | ...                        |
-## +----------------------------+
-## | static field N-1 or offset |  <-- 32
-## +----------------------------+
-## | dynamic field 0 data       |  <-- at offset
-## +----------------------------+
-## | dynamic field 1 data       |  <-- at offset
-## +----------------------------+
-## | ...                        |
-## +----------------------------+
 proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [SerializationError].} =
+  ## When T is a tuple, ABI layout looks like:
+  ## +----------------------------+
+  ## | static field 0 or offset   |  <-- 32
+  ## +----------------------------+
+  ## | static field 1 or offset   |  <-- 32
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | static field N-1 or offset |  <-- 32
+  ## +----------------------------+
+  ## | dynamic field 0 data       |  <-- at offset
+  ## +----------------------------+
+  ## | dynamic field 1 data       |  <-- at offset
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
   var res: T
   let arity = type(res).arity
   var offsets = newSeq[uint64](arity + 1)
   var i = 0
 
+  # Decode static fields first and get the offsets for dynamic fields.
   for field in res.fields:
     when isDynamic(typeof(field)):
       offsets[i] = decoder.decode(uint64)
@@ -259,6 +252,7 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
     inc i
 
   i = 0
+  # Decode dynamic fields using the offsets.
   for field in res.fields:
     when isDynamic(typeof(field)):
       let pos = decoder.input.pos()
@@ -273,6 +267,22 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   return res
 
 proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError].} =
+  ## When T is a object, ABI layout looks like the typle:
+  ## +----------------------------+
+  ## | static field 0 or offset   |  <-- 32
+  ## +----------------------------+
+  ## | static field 1 or offset   |  <-- 32
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | static field N-1 or offset |  <-- 32
+  ## +----------------------------+
+  ## | dynamic field 0 data       |  <-- at offset
+  ## +----------------------------+
+  ## | dynamic field 1 data       |  <-- at offset
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
   var resultObj: T
   var offsets = newSeq[uint64](totalSerializedFields(T))
 
@@ -297,11 +307,11 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
 
   resultObj
 
-# This method should not be used directly.
-# It is needed because `genFunction` create tuple
-# with object instead of creating a flat tuple with
-# object fields.
 proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]} =
+  ## This method should not be used directly.
+  ## It is needed because `genFunction` create tuple
+  ## with object instead of creating a flat tuple with
+  ## object fields.
   when T is object:
     let value = decoder.decodeObject(T)
     return value

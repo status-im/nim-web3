@@ -40,11 +40,11 @@ proc padleft(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'
     encoder.write(repeat(padding, padSize))
   encoder.write(bytes)
 
-# When padding right, the byte length may exceed abiSlotSize.
-# So we first apply a modulo operation to compute the remainder.
-# If the result is 0, we apply a second modulo  to avoid adding
-# a full slot of padding.
 proc padright(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [SerializationError]} =
+  ## When padding right, the byte length may exceed abiSlotSize.
+  ## So we first apply a modulo operation to compute the remainder.
+  ## If the result is 0, we apply a second modulo  to avoid adding
+  ## a full slot of padding.
   encoder.write(bytes)
   let padSize = (abiSlotSize - (bytes.len mod abiSlotSize)) mod abiSlotSize
 
@@ -95,6 +95,8 @@ proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationEr
 proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
 proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
 
+
+template encodeCollection(encoder: var AbiEncoder, value: untyped) =
   ## When T is dynamic, ABI layout looks like:
   ##
   ## +----------------------------+
@@ -110,19 +112,6 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
   ## +----------------------------+
   ## | ...                        |
   ## +----------------------------+
-  ##
-  ## When T is static, ABI layout looks like:
-  ##
-  ## +----------------------------+
-  ## | element 0                 |  <-- 32
-  ## +----------------------------+
-  ## | element 1                 |  <-- 32
-  ## +----------------------------+
-  ## | ...                        |
-  ## +----------------------------+
-  ## | element N-1               |
-  ## +----------------------------+
-template encodeCollection(encoder: var AbiEncoder, value: untyped) =
   if isDynamic(typeof(value[0])):
     var blocks: seq[seq[byte]] = @[]
     var offset = value.len * abiSlotSize
@@ -140,16 +129,27 @@ template encodeCollection(encoder: var AbiEncoder, value: untyped) =
     # Then encode the data
     for data in blocks:
       encoder.write(data)
+  ## When T is static, ABI layout looks like:
+  ##
+  ## +----------------------------+
+  ## | element 0                 |  <-- 32
+  ## +----------------------------+
+  ## | element 1                 |  <-- 32
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | element N-1               |
+  ## +----------------------------+
   else:
     for element in value:
       encoder.encode(element)
 
-# Fixed array does not include the length in the ABI encoding.
 proc encode[T, I](encoder: var AbiEncoder, value: array[I, T]) {.raises: [SerializationError].} =
+  ## Fixed array does not include the length in the ABI encoding.
   encodeCollection(encoder, value)
 
-# Sequences are dynamic by definition, so we always encode their length first.
 proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].} =
+  ## Sequences are dynamic by definition, so we always encode their length first.
   encoder.encode(value.len.uint64)
 
   encodeCollection(encoder, value)
@@ -159,23 +159,23 @@ proc encodeField(field: auto): seq[byte] {.raises: [SerializationError].} =
   e.encode(field)
   return e.finish()
 
-## Tuple can contain both static and dynamic elements.
-## When the data is dynamic, the offset to the data is encoded first.
-##
-## Example: (static, dynamic, dynamic)
-##
-## +------------------------------+
-## | element 1                   |
-## +------------------------------+
-## | offset to element 2         |
-## +------------------------------+
-## | offset to element 3         |
-## +------------------------------+
-## | element 2                   |
-## +------------------------------+
-## | element 3                   |
-## +------------------------------+
-proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]} =
+  proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]} =
+  ## Tuple can contain both static and dynamic elements.
+  ## When the data is dynamic, the offset to the data is encoded first.
+  ##
+  ## Example: (static, dynamic, dynamic)
+  ##
+  ## +------------------------------+
+  ## | element 1                   |
+  ## +------------------------------+
+  ## | offset to element 2         |
+  ## +------------------------------+
+  ## | offset to element 3         |
+  ## +------------------------------+
+  ## | element 2                   |
+  ## +------------------------------+
+  ## | element 3                   |
+  ## +------------------------------+
   var data: seq[seq[byte]] = @[]
   var offset = T.arity * abiSlotSize
 
