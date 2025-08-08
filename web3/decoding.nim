@@ -190,19 +190,19 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
       result[i] = decoder.decode(T)
 
     return result
-  ## When T is static, ABI layout looks like:
-  ## +----------------------------+
-  ## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
-  ## +----------------------------+
-  ## | element 0                 |  <-- 32
-  ## +----------------------------+
-  ## | element 1                 |  <-- 32
-  ## +----------------------------+
-  ## | ...                        |
-  ## +----------------------------+
-  ## | element N-1               |
-  ## +----------------------------+
   else:
+    ## When T is static, ABI layout looks like:
+    ## +----------------------------+
+    ## | size of the dynamic array |  <-- 32 (optional ONLY for dynamic arrays)
+    ## +----------------------------+
+    ## | element 0                 |  <-- 32
+    ## +----------------------------+
+    ## | element 1                 |  <-- 32
+    ## +----------------------------+
+    ## | ...                        |
+    ## +----------------------------+
+    ## | element N-1               |
+    ## +----------------------------+
     let len = if size.isNone: decoder.decode(uint64) else: size.get()
     result = newSeq[T](len)
     for i in 0..<len:

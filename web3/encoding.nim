@@ -129,18 +129,18 @@ template encodeCollection(encoder: var AbiEncoder, value: untyped) =
     # Then encode the data
     for data in blocks:
       encoder.write(data)
-  ## When T is static, ABI layout looks like:
-  ##
-  ## +----------------------------+
-  ## | element 0                 |  <-- 32
-  ## +----------------------------+
-  ## | element 1                 |  <-- 32
-  ## +----------------------------+
-  ## | ...                        |
-  ## +----------------------------+
-  ## | element N-1               |
-  ## +----------------------------+
   else:
+    ## When T is static, ABI layout looks like:
+    ##
+    ## +----------------------------+
+    ## | element 0                 |  <-- 32
+    ## +----------------------------+
+    ## | element 1                 |  <-- 32
+    ## +----------------------------+
+    ## | ...                        |
+    ## +----------------------------+
+    ## | element N-1               |
+    ## +----------------------------+
     for element in value:
       encoder.encode(element)
 
@@ -159,7 +159,7 @@ proc encodeField(field: auto): seq[byte] {.raises: [SerializationError].} =
   e.encode(field)
   return e.finish()
 
-  proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]} =
+proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]} =
   ## Tuple can contain both static and dynamic elements.
   ## When the data is dynamic, the offset to the data is encoded first.
   ##
