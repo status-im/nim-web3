@@ -184,7 +184,7 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
     funcParamsTuple.add(ident input.name)
 
   result = quote do:
-    proc `procName`*[TSender](`senderName`: ContractInstance[`cname`, TSender]): auto =
+    proc `procName`*[TSender](`senderName`: ContractInstance[`cname`, TSender]): auto {.raises: [SerializationError].} =
       discard
   for input in functionObject.inputs:
     result[3].add nnkIdentDefs.newTree(
