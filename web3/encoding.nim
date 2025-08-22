@@ -177,7 +177,7 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
   ## | element 3                   |
   ## +------------------------------+
   var data: seq[seq[byte]] = @[]
-  var offset = T.arity * abiSlotSize
+  var offset {.used.} = T.arity * abiSlotSize
 
   for field in tupl.fields:
     when isDynamic(typeof(field)):
@@ -193,10 +193,6 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
     else:
       encoder.encode(field)
 
-  # Avoid compiler hint message about unused variable
-  # when tuple has no dynamic fields
-  discard offset
-
   for data in data:
     encoder.write(data)
 
@@ -206,7 +202,7 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
 
   when T is object and T is not StInts:
     var data: seq[seq[byte]] = @[]
-    var offset = totalSerializedFields(T) * abiSlotSize
+    var offset {.used.} = totalSerializedFields(T) * abiSlotSize
 
     value.enumInstanceSerializedFields(_, fieldValue):
       when isDynamic(typeof(fieldValue)):
@@ -220,10 +216,6 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
         offset += bytes.len
       else:
         encoder.encode(fieldValue)
-
-    # Avoid compiler hint message about unused variable
-    # when tuple has no dynamic fields
-    discard offset
 
     for data in data:
       encoder.write(data)
