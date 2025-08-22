@@ -123,7 +123,7 @@ proc decode(decoder: var AbiDecoder, T: type Address): T {.raises: [Serializatio
   let padding = abiSlotSize - sizeof(T)
 
   try:
-    bytes[0..<sizeof(T)] =(decoder.read(sizeof(T)))[padding ..< abiSlotSize]
+    bytes[0..<sizeof(T)] =(decoder.read(sizeof(T))).toOpenArray(padding, abiSlotSize-1)
   except IOError as e:
     raise newException(SerializationError, "Failed to read address: " & e.msg)
 
