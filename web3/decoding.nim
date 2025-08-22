@@ -72,13 +72,13 @@ proc decode(decoder: var AbiDecoder, T: type UInt): T {.raises: [SerializationEr
   let padding = abiSlotSize - sizeof(T)
   checkLeftPadding(buf, padding, 0x00'u8)
 
-  return T.fromBytesBE(buf[padding ..< abiSlotSize])
+  return T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
 
 proc decode(decoder: var AbiDecoder, T: type StInt): T {.raises: [SerializationError].} =
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
-  let value = T.fromBytesBE(buf[padding ..< abiSlotSize])
+  let value = T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
 
   let b = if value.isNegative: 0xFF'u8 else: 0x00'u8
   checkLeftPadding(buf, padding, b)
@@ -89,13 +89,10 @@ proc decode(decoder: var AbiDecoder, T: type AbiSignedInt): T {.raises: [Seriali
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
-  let unsigned = StUint[sizeof(T) * 8].fromBytesBE(buf[padding ..< abiSlotSize])
-  let max = high(T).stuint(sizeof(T) * 8)
 
-  if unsigned.truncate(T) > 0 and unsigned > max:
-    raise newException(SerializationError, "overflow when decoding trying to decode " & $unsigned & " into " & $(sizeof(T) * 8) & " bits")
-
+  let unsigned =  T.toUnsigned.fromBytesBE(buf.toOpenArray(padding, abiSlotSize - 1))
   let value = cast[T](unsigned)
+
   let expectedPadding = if value < 0: 0xFF'u8 else: 0x00'u8
   checkLeftPadding(buf, padding, expectedPadding)
 
