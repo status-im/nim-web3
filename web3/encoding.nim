@@ -200,6 +200,10 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
   var encoder = AbiEncoder(output: memoryOutput())
   type StInts = StInt | StUint
 
+  when T is range:
+    when T.low is int or T.low is uint:
+      {.error: "Ranges with int or uint bounds are not supported. Use explicit types like int8, int16, uint8, etc.".}
+
   when T is object and T is not StInts:
     var data: seq[seq[byte]] = @[]
     var offset {.used.} = totalSerializedFields(T) * abiSlotSize
