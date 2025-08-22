@@ -51,10 +51,10 @@ proc padright(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0
   if padSize > 0:
     encoder.write(repeat(padding, padSize))
 
-proc encode(encoder: var AbiEncoder, value: SomeUnsignedInt | StUint) {.raises: [SerializationError]} =
+proc encode(encoder: var AbiEncoder, value: AbiUnsignedInt | StUint) {.raises: [SerializationError]} =
   encoder.padleft(value.toBytesBE)
 
-proc encode(encoder: var AbiEncoder, value: SomeSignedInt | StInt) {.raises: [SerializationError]} =
+proc encode(encoder: var AbiEncoder, value: AbiSignedInt | StInt) {.raises: [SerializationError]} =
   when typeof(value) is StInt:
     let unsignedValue = cast[StInt[(type value).bits]](value)
     let isNegative = value.isNegative

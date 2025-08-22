@@ -5,6 +5,10 @@ from ./primitives import DynamicBytes
 
 const abiSlotSize* = 32
 
+type
+  AbiSignedInt* = int8|int16|int32|int64
+  AbiUnsignedInt* = uint8|uint16|uint32|uint64
+
 func isDynamicObject*(T: typedesc): bool
 
 func isDynamic*(T: type): bool =

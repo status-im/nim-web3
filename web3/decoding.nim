@@ -16,10 +16,10 @@ type
   AbiDecoder* = object
     input: InputStream
 
-  UInt = SomeUnsignedInt | StUint
+  UInt = AbiUnsignedInt | StUint
 
 template basetype(Range: type range): untyped =
-  when Range isnot SomeUnsignedInt: {.error: "only uint ranges supported".}
+  when Range isnot AbiUnsignedInt: {.error: "only uint ranges supported".}
   elif sizeof(Range) == sizeof(uint8): uint8
   elif sizeof(Range) == sizeof(uint16): uint16
   elif sizeof(Range) == sizeof(uint32): uint32
@@ -60,6 +60,12 @@ template checkRightPadding(buf: openArray[byte], paddingStart: int, paddingEnd: 
     if buf[i] != 0x00'u8:
       raise newException(SerializationError, "invalid padding found")
 
+proc decode(_: var AbiDecoder, _: type int): int {.error:
+  "ABI: plain 'int' is forbidden. Use int8/16/32/64 or Int256."}
+
+proc decode(_: var AbiDecoder, _: type uint): uint {.error:
+  "ABI: plain 'uint' is forbidden. Use uint8/16/32/64 or UInt256."}
+
 proc decode(decoder: var AbiDecoder, T: type UInt): T {.raises: [SerializationError].} =
   var buf = decoder.read(sizeof(T))
 
@@ -79,7 +85,7 @@ proc decode(decoder: var AbiDecoder, T: type StInt): T {.raises: [SerializationE
 
   return value
 
-proc decode(decoder: var AbiDecoder, T: type SomeSignedInt): T {.raises: [SerializationError].} =
+proc decode(decoder: var AbiDecoder, T: type AbiSignedInt): T {.raises: [SerializationError].} =
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
