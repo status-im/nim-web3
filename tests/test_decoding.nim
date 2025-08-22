@@ -49,7 +49,7 @@ suite "ABI decoding":
       let encoded = Abi.encode(int16.high)
       discard Abi.decode(encoded, int8)
       fail()
-    except SerializationError as decoded:
+    except SerializationError:
       discard
 
   test "fails to decode when reading past end":
