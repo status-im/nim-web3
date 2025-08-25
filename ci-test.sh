@@ -3,6 +3,7 @@
 set -ex
 npm install hardhat
 touch hardhat.config.js
+npx hardhat --version
 nohup npx hardhat node &
 nimble install -y --depsOnly
 
