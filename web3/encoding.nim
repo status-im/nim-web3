@@ -213,7 +213,6 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
         encoder.write(bytes)
 
         # Encode the offset of the dynamic data
-        # encoder.encode(offset.uint64)
         cursor.write(encodeField(offset.uint64))
         offset += bytes.len
       else:
