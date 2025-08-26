@@ -95,7 +95,6 @@ proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationEr
 proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
 proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
 
-
 template encodeCollection(encoder: var AbiEncoder, value: untyped) =
   ## When T is dynamic, ABI layout looks like:
   ##
@@ -176,25 +175,26 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
   ## +------------------------------+
   ## | element 3                   |
   ## +------------------------------+
-  var data: seq[seq[byte]] = @[]
-  var offset {.used.} = T.arity * abiSlotSize
-
-  for field in tupl.fields:
-    when isDynamic(typeof(field)):
-      # Store the encoded element in order
-      # to add the data after the offsets
-      let bytes = encodeField(field)
-      data.add(bytes)
-
-      # Encode the offset of the dynamic data
-      encoder.encode(offset.uint64)
-
-      offset += bytes.len
-    else:
+  when isStatic(T):
+    for field in tupl.fields:
       encoder.encode(field)
+  else:
+    var offset {.used.} = T.arity * abiSlotSize
+    var cursor = encoder.output.delayFixedSizeWrite(offset)
 
-  for data in data:
-    encoder.write(data)
+    for field in tupl.fields:
+      when isDynamic(typeof(field)):
+        let bytes = encodeField(field)
+        encoder.write(bytes)
+
+        # Encode the offset of the dynamic data
+        # encoder.encode(offset.uint64)
+        cursor.write(encodeField(offset.uint64))
+        offset += bytes.len
+      else:
+        cursor.write(encodeField(field))
+
+    cursor.finalize()
 
 proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} =
   var encoder = AbiEncoder(output: memoryOutput())
@@ -205,24 +205,22 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
       {.error: "Ranges with int or uint bounds are not supported. Use explicit types like int8, int16, uint8, etc.".}
 
   when T is object and T is not StInts:
-    var data: seq[seq[byte]] = @[]
     var offset {.used.} = totalSerializedFields(T) * abiSlotSize
+    var cursor = encoder.output.delayFixedSizeWrite(offset)
 
     value.enumInstanceSerializedFields(_, fieldValue):
       when isDynamic(typeof(fieldValue)):
-        # Store the encoded element in order
-        # to add the data after the offsets
         let bytes = encodeField(fieldValue)
-        data.add(bytes)
+        encoder.write(bytes)
 
         # Encode the offset of the dynamic data
-        encoder.encode(offset.uint64)
+        # encoder.encode(offset.uint64)
+        cursor.write(encodeField(offset.uint64))
         offset += bytes.len
       else:
-        encoder.encode(fieldValue)
+        cursor.write(encodeField(fieldValue))
 
-    for data in data:
-      encoder.write(data)
+    cursor.finalize()
 
     try:
       w.write encoder.finish()
