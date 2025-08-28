@@ -175,6 +175,8 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
   ## +----------------------------+
   ## | ...                        |
   ## +----------------------------+
+  var res: seq[T]
+
   if isDynamic(T):
     # The size of the static array is passed as an argument to the decoder.
     # For the dynamic array, the size is should be None,
@@ -185,14 +187,14 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
     for i in 0..<len:
       offsets[i] = decoder.decode(uint64)
 
-    result = newSeq[T](len)
+    res = newSeq[T](len)
     for i in 0..<len:
       let pos = decoder.input.pos()
       if offsets[i].int > pos:
         decoder.input.advance(offsets[i].int - pos)
-      result[i] = decoder.decode(T)
+      res[i] = decoder.decode(T)
 
-    return result
+    return res
   else:
     ## When T is static, ABI layout looks like:
     ## +----------------------------+
@@ -308,7 +310,7 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
       fieldValue = decoder.decode(typeof(fieldValue))
     inc i
 
-  resultObj
+  return resultObj
 
 proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]} =
   ## This method should not be used directly.
