@@ -326,23 +326,15 @@ proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]
     return value
 
 proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError]} =
-  try:
-    value = readValue[T](r, typedesc[T])
-  except SerializationError as e:
-    raise newException(SerializationError, e.msg)
-
-proc readValue*[T](r: var AbiReader, _: typedesc[T]): T {.raises: [SerializationError]} =
-  var resultObj: T
   var decoder = AbiDecoder(input: r.getStream)
   type StInts = StInt | StUint
 
   when T is object and T is not StInts:
-    resultObj = decodeObject(decoder, T)
+    value = decodeObject(decoder, T)
   else:
-    resultObj = decoder.decode(T)
+    value = decoder.decode(T)
 
   decoder.finish()
-  result = resultObj
 
 # Keep the old encode functions for compatibility
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use Abi.decode instead"} =

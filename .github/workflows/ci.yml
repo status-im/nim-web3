@@ -148,6 +148,12 @@ jobs:
           echo "ncpu=$ncpu" >> $GITHUB_ENV
           echo "MAKE_CMD=${MAKE_CMD}" >> $GITHUB_ENV
 
+      - name: Configure ARM64 build environment (macOS)
+        if: runner.os == 'macOS' && matrix.target.cpu == 'arm64'
+        run: |
+          # clang thinks we are in a x86_64 env
+          echo "NIMFLAGS=-d:disableMarcNative" >> $GITHUB_ENV                                                                                            
+
       - name: Build Nim and Nimble
         run: |
           curl -O -L -s -S https://raw.githubusercontent.com/status-im/nimbus-build-system/master/scripts/build_nim.sh
