@@ -325,9 +325,9 @@ proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]
     decoder.finish()
     return value
 
-proc readValue*[T](r: var AbiReader, value: T): T {.raises: [SerializationError]} =
+proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError]} =
   try:
-    readValue[T](r, T)
+    value = readValue[T](r, typedesc[T])
   except SerializationError as e:
     raise newException(SerializationError, e.msg)
 
