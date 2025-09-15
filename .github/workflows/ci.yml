@@ -151,8 +151,8 @@ jobs:
       - name: Configure ARM64 build environment (macOS)
         if: runner.os == 'macOS' && matrix.target.cpu == 'arm64'
         run: |
-          # clang thinks we are in a x86_64 env
-          echo "NIMFLAGS=-d:disableMarcNative" >> $GITHUB_ENV                                                                                            
+          # Force ARM64 architecture for Nim compilation with proper flags passed to clang
+          echo "NIMFLAGS=--cpu:arm64 --cc:clang --passC:\"-target arm64-apple-macos11\" --passL:\"-target arm64-apple-macos11\"" >> $GITHUB_ENV                                                                                            
 
       - name: Build Nim and Nimble
         run: |
