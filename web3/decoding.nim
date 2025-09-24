@@ -325,7 +325,6 @@ proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]
     decoder.finish()
     return value
 
-# ignore; this is already fixed https://github.com/status-im/nim-web3/pull/224
 proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError]} =
   var decoder = AbiDecoder(input: r.getStream)
   type StInts = StInt | StUint
