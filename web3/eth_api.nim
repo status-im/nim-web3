@@ -9,8 +9,8 @@
 # according to those terms.
 
 import
-  std/json,
-  json_rpc/[client, jsonmarshal],
+  #std/json,
+  json_rpc/[client],
   stint,
   ./conversions,
   ./eth_api_types
@@ -66,8 +66,8 @@ createRpcSigsFromNim(RpcClient):
   proc eth_newBlockFilter(): string
   proc eth_newPendingTransactionFilter(): string
   proc eth_uninstallFilter(filterId: string): bool
-  proc eth_getFilterChanges(filterId: string): JsonNode
-  proc eth_getFilterLogs(filterId: string): JsonNode
+  #proc eth_getFilterChanges(filterId: string): JsonNode
+  #proc eth_getFilterLogs(filterId: string): JsonNode
   proc eth_getLogs(filterOptions: FilterOptions): seq[LogObject]
   proc eth_chainId(): UInt256
   proc eth_config(): EthConfigObject
@@ -95,4 +95,4 @@ createRpcSigsFromNim(RpcClient):
   proc debug_getRawTransaction(data: Hash32): RlpEncodedBytes
 
 createSingleRpcSig(RpcClient, "eth_getJsonLogs"):
-  proc eth_getLogs(filterOptions: FilterOptions): seq[JsonString]
+  proc eth_getLogs(filterOptions: FilterOptions): seq[CborBytes]

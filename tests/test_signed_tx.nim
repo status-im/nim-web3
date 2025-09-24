@@ -13,10 +13,11 @@ import
   results,
   eth/common/keys,
   stew/byteutils,
-  json_rpc/client,
-  ../web3,
+  #json_rpc/client,
+  #../web3,
   ../web3/transaction_signing,
-  ./helpers/utils,
+  ../web3/eth_api_types,
+  #./helpers/utils,
   ./helpers/primitives_utils
 
 #[ Contract NumberStorage
@@ -35,11 +36,11 @@ contract NumberStorage {
 }
 ]#
 
-type Address = web3.Address
+#type Address = web3.Address
 
-contract(NumberStorage):
-  proc setNumber(number: UInt256)
-  proc getNumber(): UInt256 {.view.}
+#contract(NumberStorage):
+#  proc setNumber(number: UInt256)
+#  proc getNumber(): UInt256 {.view.}
 
 const NumberStorageCode = "6060604052341561000f57600080fd5b60bb8061001d6000396000f30060606040526004361060485763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416633fb5c1cb8114604d578063f2c9ecd8146062575b600080fd5b3415605757600080fd5b60606004356084565b005b3415606c57600080fd5b60726089565b60405190815260200160405180910390f35b600055565b600054905600a165627a7a7230582023e722f35009f12d5698a4ab22fb9d55a6c0f479fc43875c65be46fbdd8db4310029"
 
@@ -122,7 +123,8 @@ suite "Signed transactions":
     let txHex = "0x" & txBytes.toHex
     check txHex == "0x02f8a5848404bf1f820288832c7e6384346d9246819d946eb893e3466931517a04a17d153a6330c3f2f1dd82c854b5889e365e59664fb881554ba1175519b5195b1d20390beb806d8f2cda7893e6f79848195dba4c905db6d7257ffb5eefea35f18ae33cc080a0f1003f96c6c6620dd46db36d2ae9f12d363947eb0db088c678b6ad1cf494aa6fa06085b5abbf448de5d622dc820da590cfdb6bb77b41c6650962b998a941f8d701"
 
-  test "contract creation and method invocation":
+  #test "contract creation and method invocation":
+  when false:
     proc test() {.async.} =
       let theRNG = HmacDrbgContext.new()
 

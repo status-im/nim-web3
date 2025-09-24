@@ -13,94 +13,97 @@ import
   std/strutils,
   stew/byteutils,
   faststreams/textio,
-  json_rpc/jsonmarshal,
-  json_serialization/pkg/results,
-  json_serialization,
+  ./cbormarshal,
+  cbor_serialization/pkg/results,
+  cbor_serialization,
   ./primitives,
   ./engine_api_types,
   ./eth_api_types,
   ./execution_types
 
-import eth/common/eth_types_json_serialization
+import ./eth_types_cbor_serialization
 
 export
   results,
-  json_serialization,
-  jsonmarshal
+  cbor_serialization,
+  cbormarshal
 
-export eth_types_json_serialization except Topic
+export eth_types_cbor_serialization except Topic
 
 #------------------------------------------------------------------------------
 # JrpcConv configuration
 #------------------------------------------------------------------------------
 
-JrpcConv.automaticSerialization(string, true)
-JrpcConv.automaticSerialization(JsonString, true)
-JrpcConv.automaticSerialization(ref, true)
-JrpcConv.automaticSerialization(seq, true)
-JrpcConv.automaticSerialization(bool, true)
-JrpcConv.automaticSerialization(float64, true)
-JrpcConv.automaticSerialization(array, true)
+JrpcConv.defaultSerialization(string)
+JrpcConv.defaultSerialization(ref)
+JrpcConv.defaultSerialization(seq)
+JrpcConv.defaultSerialization(bool)
+JrpcConv.defaultSerialization(float64)
+JrpcConv.defaultSerialization(array)
+JrpcConv.defaultSerialization(uint64)
+
+#JrpcConv.defaultSerialization(CborBytes)
+JrpcConv.defaultSerialization(Result)
 
 #------------------------------------------------------------------------------
 # eth_api_types
 #------------------------------------------------------------------------------
 
-SyncObject.useDefaultSerializationIn JrpcConv
-Withdrawal.useDefaultSerializationIn JrpcConv
-AccessPair.useDefaultSerializationIn JrpcConv
-AccessListResult.useDefaultSerializationIn JrpcConv
-LogObject.useDefaultSerializationIn JrpcConv
-StorageProof.useDefaultSerializationIn JrpcConv
-ProofResponse.useDefaultSerializationIn JrpcConv
-FilterOptions.useDefaultSerializationIn JrpcConv
-TransactionArgs.useDefaultReaderIn JrpcConv
-FeeHistoryResult.useDefaultSerializationIn JrpcConv
-Authorization.useDefaultSerializationIn JrpcConv
+JrpcConv.defaultSerialization SyncObject
+JrpcConv.defaultSerialization Withdrawal
+JrpcConv.defaultSerialization AccessPair
+JrpcConv.defaultSerialization AccessListResult
+JrpcConv.defaultSerialization LogObject
+JrpcConv.defaultSerialization StorageProof
+JrpcConv.defaultSerialization ProofResponse
+JrpcConv.defaultSerialization FilterOptions
+JrpcConv.defaultSerialization TransactionArgs
+JrpcConv.defaultSerialization FeeHistoryResult
+JrpcConv.defaultSerialization Authorization
 
-BlockHeader.useDefaultSerializationIn JrpcConv
-BlockObject.useDefaultSerializationIn JrpcConv
-TransactionObject.useDefaultSerializationIn JrpcConv
-ReceiptObject.useDefaultSerializationIn JrpcConv
-BlobScheduleObject.useDefaultSerializationIn JrpcConv
-ConfigObject.useDefaultSerializationIn JrpcConv
-EthConfigObject.useDefaultSerializationIn JrpcConv
+JrpcConv.defaultSerialization BlockHeader
+JrpcConv.defaultSerialization BlockObject
+JrpcConv.defaultSerialization TransactionObject
+JrpcConv.defaultSerialization ReceiptObject
+JrpcConv.defaultSerialization BlobScheduleObject
+JrpcConv.defaultSerialization ConfigObject
+JrpcConv.defaultSerialization EthConfigObject
 
 #------------------------------------------------------------------------------
 # engine_api_types
 #------------------------------------------------------------------------------
 
-WithdrawalV1.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
-BlobsBundleV1.useDefaultSerializationIn JrpcConv
-BlobsBundleV2.useDefaultSerializationIn JrpcConv
-BlobAndProofV1.useDefaultSerializationIn JrpcConv
-BlobAndProofV2.useDefaultSerializationIn JrpcConv
-ExecutionPayloadBodyV1.useDefaultSerializationIn JrpcConv
-PayloadAttributesV1.useDefaultSerializationIn JrpcConv
-PayloadAttributesV2.useDefaultSerializationIn JrpcConv
-PayloadAttributesV3.useDefaultSerializationIn JrpcConv
-PayloadAttributesV1OrV2.useDefaultSerializationIn JrpcConv
-PayloadStatusV1.useDefaultSerializationIn JrpcConv
-ForkchoiceStateV1.useDefaultSerializationIn JrpcConv
-ForkchoiceUpdatedResponse.useDefaultSerializationIn JrpcConv
-GetPayloadV2Response.useDefaultSerializationIn JrpcConv
-GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
-GetPayloadV3Response.useDefaultSerializationIn JrpcConv
-GetPayloadV4Response.useDefaultSerializationIn JrpcConv
-GetPayloadV5Response.useDefaultSerializationIn JrpcConv
-ClientVersionV1.useDefaultSerializationIn JrpcConv
+JrpcConv.defaultSerialization WithdrawalV1
+JrpcConv.defaultSerialization ExecutionPayloadV1
+JrpcConv.defaultSerialization ExecutionPayloadV2
+JrpcConv.defaultSerialization ExecutionPayloadV1OrV2
+JrpcConv.defaultSerialization ExecutionPayloadV3
+JrpcConv.defaultSerialization BlobsBundleV1
+JrpcConv.defaultSerialization BlobsBundleV2
+JrpcConv.defaultSerialization BlobAndProofV1
+JrpcConv.defaultSerialization BlobAndProofV2
+JrpcConv.defaultSerialization ExecutionPayloadBodyV1
+JrpcConv.defaultSerialization PayloadAttributesV1
+JrpcConv.defaultSerialization PayloadAttributesV2
+JrpcConv.defaultSerialization PayloadAttributesV3
+JrpcConv.defaultSerialization PayloadAttributesV1OrV2
+JrpcConv.defaultSerialization PayloadStatusV1
+JrpcConv.defaultSerialization ForkchoiceStateV1
+JrpcConv.defaultSerialization ForkchoiceUpdatedResponse
+JrpcConv.defaultSerialization GetPayloadV2Response
+JrpcConv.defaultSerialization GetPayloadV2ResponseExact
+JrpcConv.defaultSerialization GetPayloadV3Response
+JrpcConv.defaultSerialization GetPayloadV4Response
+JrpcConv.defaultSerialization GetPayloadV5Response
+JrpcConv.defaultSerialization ClientVersionV1
 
 #------------------------------------------------------------------------------
 # execution_types
 #------------------------------------------------------------------------------
 
-ExecutionPayload.useDefaultSerializationIn JrpcConv
-PayloadAttributes.useDefaultSerializationIn JrpcConv
-GetPayloadResponse.useDefaultSerializationIn JrpcConv
+JrpcConv.defaultSerialization ExecutionPayload
+JrpcConv.defaultSerialization PayloadAttributes
+JrpcConv.defaultSerialization GetPayloadResponse
 
 #------------------------------------------------------------------------------
 # Private helpers
@@ -158,6 +161,11 @@ proc toHex(s: OutputStream, x: uint8|uint64) {.gcsafe, raises: [IOError].} =
   toHexImpl(hex, pos)
   write s, hex.toOpenArray(pos, static(hex.len - 1))
 
+proc toHex2(x: uint8|uint64): string =
+  toHexImpl(hex, pos)
+  for i in pos ..< hex.len:
+    result.add hex[i]
+
 func encodeQuantity(x: uint64): string =
   toHexImpl(hex, pos)
   result = "0x"
@@ -185,17 +193,20 @@ func valid(hex: string): bool =
     if x notin HexDigits: return false
   true
 
-when not declared(json_serialization.streamElement): # json_serialization < 0.3.0
-  template streamElement(w: var JsonWriter, s, body: untyped) =
-    template s: untyped = w.stream
-    body
+#when not declared(json_serialization.streamElement): # json_serialization < 0.3.0
+#  template streamElement(w: var CborWriter, s, body: untyped) =
+#    template s: untyped = w.stream
+#    body
 
-proc writeHexValue(w: var JsonWriter, v: openArray[byte])
+proc writeHexValue(w: var CborWriter, v: openArray[byte])
       {.gcsafe, raises: [IOError].} =
-  w.streamElement(s):
-    s.write "\"0x"
-    s.writeHex v
-    s.write "\""
+  # XXX stream cbor string; albeit this should really just w.writeValue(v)
+  const hexChars = "0123456789abcdef"
+  var s = "0x"
+  for b in v:
+    s.add hexChars[int b shr 4 and 0xF]
+    s.add hexChars[int b and 0xF]
+  w.writeValue(s)
 
 #------------------------------------------------------------------------------
 # Well, both rpc and chronicles share the same encoding of these types
@@ -203,78 +214,79 @@ proc writeHexValue(w: var JsonWriter, v: openArray[byte])
 
 type CommonJsonFlavors = JrpcConv | DefaultFlavor
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: DynamicBytes)
+proc writeValue*[F: CommonJsonFlavors](w: var CborWriter[F], v: DynamicBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[N](w: var JsonWriter[JrpcConv], v: FixedBytes[N])
+proc writeValue*[N](w: var CborWriter[JrpcConv], v: FixedBytes[N])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Address)
+proc writeValue*(w: var CborWriter[JrpcConv], v: Address)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Hash32)
+proc writeValue*(w: var CborWriter[JrpcConv], v: Hash32)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: TypedTransaction)
+proc writeValue*[F: CommonJsonFlavors](w: var CborWriter[F], v: TypedTransaction)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: RlpEncodedBytes)
+proc writeValue*[F: CommonJsonFlavors](w: var CborWriter[F], v: RlpEncodedBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
 proc writeValue*[F: CommonJsonFlavors](
-    w: var JsonWriter[F], v: Quantity
+    w: var CborWriter[F], v: Quantity
 ) {.gcsafe, raises: [IOError].} =
-  w.streamElement(s):
-    s.write "\"0x"
-    s.toHex(distinctBase v)
-    s.write "\""
+  # XXX stream cbor string; albeit this should really just w.writeValue(v)
+  w.writeValue(encodeQuantity(distinctBase(v)))
+  #w.streamElement(s):
+  #  s.write "\"0x"
+  #  s.toHex(distinctBase v)
+  #  s.write "\""
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicBytes)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*[F: CommonJsonFlavors](r: var CborReader[F], val: var DynamicBytes)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     val = fromHex(DynamicBytes, r.parseString())
 
-proc readValue*[N](r: var JsonReader[JrpcConv], val: var FixedBytes[N])
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*[N](r: var CborReader[JrpcConv], val: var FixedBytes[N])
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     val = fromHex(FixedBytes[N], r.parseString())
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var Address)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*(r: var CborReader[JrpcConv], val: var Address)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     val = fromHex(Address, r.parseString())
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var Hash32)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*(r: var CborReader[JrpcConv], val: var Hash32)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     val = fromHex(Hash32, r.parseString())
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Number)
+proc writeValue*(w: var CborWriter[JrpcConv], v: Number)
       {.gcsafe, raises: [IOError].} =
-  w.streamElement(s):
-    s.writeText distinctBase(v)
+  w.writeValue distinctBase(v)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var Number)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*(r: var CborReader[JrpcConv], val: var Number)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     val = r.parseInt(uint64).Number
   
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var TypedTransaction)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*[F: CommonJsonFlavors](r: var CborReader[F], val: var TypedTransaction)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     let hexStr = r.parseString()
     if hexStr != "0x":
       # skip empty hex
       val = TypedTransaction hexToSeqByte(hexStr)
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var RlpEncodedBytes)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*[F: CommonJsonFlavors](r: var CborReader[F], val: var RlpEncodedBytes)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     let hexStr = r.parseString()
     if hexStr != "0x":
@@ -282,42 +294,42 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var RlpEncodedB
       val = RlpEncodedBytes hexToSeqByte(hexStr)
 
 proc readValue*[F: CommonJsonFlavors](
-    r: var JsonReader[F], val: var Quantity
-) {.gcsafe, raises: [IOError, JsonReaderError].} =
+    r: var CborReader[F], val: var Quantity
+) {.gcsafe, raises: [IOError, CborReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("Quantity value has invalid leading 0")
   wrapValueError:
     val = typeof(val) strutils.fromHex[typeof(distinctBase(val))](hexStr)
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExecutionStatus)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*[F: CommonJsonFlavors](r: var CborReader[F], val: var PayloadExecutionStatus)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   const enumStrings = static: getEnumStringTable(PayloadExecutionStatus)
 
-  let tok = r.tokKind()
-  if tok != JsonValueKind.String:
-    r.raiseUnexpectedValue("Expect string but got=" & $tok)
+  let kind = r.parser.cborKind()
+  if kind != CborValueKind.String:
+    r.raiseUnexpectedValue("Expect string but got=" & $kind)
 
   try:
     val = enumStrings[r.parseString()]
   except KeyError:
     r.raiseUnexpectedValue("Failed to parse PayloadExecutionStatus")
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: PayloadExecutionStatus)
+proc writeValue*[F: CommonJsonFlavors](w: var CborWriter[F], v: PayloadExecutionStatus)
       {.gcsafe, raises: [IOError].} =
   w.writeValue($v)
 
-proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], val: UInt256)
+proc writeValue*[F: CommonJsonFlavors](w: var CborWriter[F], val: UInt256)
       {.gcsafe, raises: [IOError].} =
   w.writeValue("0x" & val.toHex)
 
 # allows UInt256 to be passed as a json string
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
-      {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*[F: CommonJsonFlavors](r: var CborReader[F], val: var UInt256)
+      {.gcsafe, raises: [IOError, CborReaderError].} =
   # expects base 16 string, starting with "0x"
-  let tok = r.tokKind
-  if tok != JsonValueKind.String:
-    r.raiseUnexpectedValue("Expected string for UInt256, got=" & $tok)
+  let kind = r.parser.cborKind()
+  if kind != CborValueKind.String:
+    r.raiseUnexpectedValue("Expected string for UInt256, got=" & $kind)
   let hexStr = r.parseString()
   if hexStr.len > 64 + 2: # including "0x"
     r.raiseUnexpectedValue("String value too long for UInt256: " & $hexStr.len)
@@ -326,12 +338,12 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var UInt256)
   wrapValueError:
     val = hexStr.parse(StUint[256], 16)
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[PrecompilePair])
+proc readValue*[F: CommonJsonFlavors](r: var CborReader[F], val: var seq[PrecompilePair])
       {.gcsafe, raises: [IOError, SerializationError].} =
   for k,v in readObject(r, string, Address):
     val.add PrecompilePair(name: k, address: v)
 
-proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemContractPair])
+proc readValue*[F: CommonJsonFlavors](r: var CborReader[F], val: var seq[SystemContractPair])
       {.gcsafe, raises: [IOError, SerializationError].} =
   for k,v in readObject(r, string, Address):
     val.add SystemContractPair(name: k, address: v)
@@ -340,35 +352,36 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemC
 # Exclusive to JrpcConv
 #------------------------------------------------------------------------------
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: uint64 | uint8)
+proc writeValue*(w: var CborWriter[JrpcConv], v: uint64 | uint8)
       {.gcsafe, raises: [IOError].} =
-  w.streamElement(s):
-    s.write "\"0x"
-    s.toHex(v)
-    s.write "\""
+  w.writeValue("0x" & v.toHex2)
+  #w.streamElement(s):
+  #  s.write "\"0x"
+  #  s.toHex(v)
+  #  s.write "\""
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var (uint8 | uint64))
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*(r: var CborReader[JrpcConv], val: var (uint8 | uint64))
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
     r.raiseUnexpectedValue("Uint64 value has invalid leading 0")
   wrapValueError:
     val = strutils.fromHex[typeof(val)](hexStr)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[byte])
+proc writeValue*(w: var CborWriter[JrpcConv], v: seq[byte])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, v
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*(r: var CborReader[JrpcConv], val: var seq[byte])
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   wrapValueError:
     let hexStr = r.parseString()
     if hexStr != "0x":
       # skip empty hex
       val = hexToSeqByte(hexStr)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
+proc readValue*(r: var CborReader[JrpcConv], val: var RtBlockIdentifier)
+       {.gcsafe, raises: [IOError, CborReaderError].} =
   let hexStr = r.parseString()
   wrapValueError:
     if valid(hexStr):
@@ -377,61 +390,61 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
     else:
       val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
+proc writeValue*(w: var CborWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of bidNumber: w.writeValue(v.number)
   of bidAlias: w.writeValue(v.alias)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var TxOrHash)
+proc readValue*(r: var CborReader[JrpcConv], val: var TxOrHash)
        {.gcsafe, raises: [IOError, SerializationError].} =
-  if r.tokKind == JsonValueKind.String:
+  if r.parser.cborKind() == CborValueKind.String:
     val = TxOrHash(kind: tohHash, hash: r.readValue(Hash32))
   else:
     val = TxOrHash(kind: tohTx, tx: r.readValue(TransactionObject))
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: TxOrHash)
+proc writeValue*(w: var CborWriter[JrpcConv], v: TxOrHash)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of tohHash: w.writeValue(v.hash)
   of tohTx: w.writeValue(v.tx)
 
-proc readValue*[T](r: var JsonReader[JrpcConv], val: var SingleOrList[T])
+proc readValue*[T](r: var CborReader[JrpcConv], val: var SingleOrList[T])
        {.gcsafe, raises: [IOError, SerializationError].} =
-  let tok = r.tokKind()
+  let tok = r.parser.cborKind()
   case tok
-  of JsonValueKind.String:
+  of CborValueKind.String:
     val = SingleOrList[T](kind: slkSingle)
     r.readValue(val.single)
-  of JsonValueKind.Array:
+  of CborValueKind.Array:
     val = SingleOrList[T](kind: slkList)
     r.readValue(val.list)
-  of JsonValueKind.Null:
+  of CborValueKind.Null:
     val = SingleOrList[T](kind: slkNull)
-    r.parseNull()
+    discard r.readValue(CborSimpleValue)
   else:
     r.raiseUnexpectedValue("TopicOrList unexpected token kind =" & $tok)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: SingleOrList)
+proc writeValue*(w: var CborWriter[JrpcConv], v: SingleOrList)
       {.gcsafe, raises: [IOError].} =
   case v.kind
-  of slkNull: w.writeValue(JsonString("null"))
+  of slkNull: w.writeValue(cborNull)
   of slkSingle: w.writeValue(v.single)
   of slkList: w.writeValue(v.list)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var SyncingStatus)
+proc readValue*(r: var CborReader[JrpcConv], val: var SyncingStatus)
        {.gcsafe, raises: [IOError, SerializationError].} =
-  let tok = r.tokKind()
+  let tok = r.parser.cborKind()
   case tok
-  of JsonValueKind.Bool:
+  of CborValueKind.Bool:
     val = SyncingStatus(syncing: r.parseBool())
-  of JsonValueKind.Object:
+  of CborValueKind.Object:
     val = SyncingStatus(syncing: true)
     r.readValue(val.syncObject)
   else:
     r.raiseUnexpectedValue("SyncingStatus unexpected token kind =" & $tok)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: SyncingStatus)
+proc writeValue*(w: var CborWriter[JrpcConv], v: SyncingStatus)
       {.gcsafe, raises: [IOError].} =
   if not v.syncing:
     w.writeValue(false)
@@ -439,40 +452,40 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: SyncingStatus)
     w.writeValue(v.syncObject)
 
 # Somehow nim2 refuse to generate automatically
-proc readValue*(r: var JsonReader[JrpcConv], val: var Opt[seq[ReceiptObject]])
-       {.gcsafe, raises: [IOError, SerializationError].} =
-  mixin readValue
+#proc readValue*(r: var CborReader[JrpcConv], val: var Opt[seq[ReceiptObject]])
+#       {.gcsafe, raises: [IOError, SerializationError].} =
+#  mixin readValue
+#
+#  if r.tokKind == JsonValueKind.Null:
+#    reset val
+#    r.parseNull()
+#  else:
+#    val.ok r.readValue(seq[ReceiptObject])
 
-  if r.tokKind == JsonValueKind.Null:
-    reset val
-    r.parseNull()
-  else:
-    val.ok r.readValue(seq[ReceiptObject])
+#proc writeValue*(w: var CborWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
+#      {.gcsafe, raises: [IOError].} =
+#  mixin writeValue
+#
+#  if v.isOk:
+#    w.writeValue v.get
+#  else:
+#    w.writeValue JsonString("null")
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
-      {.gcsafe, raises: [IOError].} =
-  mixin writeValue
-
-  if v.isOk:
-    w.writeValue v.get
-  else:
-    w.writeValue JsonString("null")
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[PrecompilePair])
-      {.gcsafe, raises: [IOError].} =
-  w.beginObject()
-  for x in v:
-    w.writeMember(x.name, x.address)
-  w.endObject()
-
-proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[SystemContractPair])
+proc writeValue*(w: var CborWriter[JrpcConv], v: seq[PrecompilePair])
       {.gcsafe, raises: [IOError].} =
   w.beginObject()
   for x in v:
     w.writeMember(x.name, x.address)
   w.endObject()
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
+proc writeValue*(w: var CborWriter[JrpcConv], v: seq[SystemContractPair])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for x in v:
+    w.writeMember(x.name, x.address)
+  w.endObject()
+
+proc writeValue*(w: var CborWriter[JrpcConv], v: TransactionArgs)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
   var

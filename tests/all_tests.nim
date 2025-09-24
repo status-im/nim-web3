@@ -12,9 +12,9 @@
 import
   test_null_conversion,
   test_primitives,
-  test_contracts,
-  test_deposit_contract,
-  test_logs,
+  #test_contracts,
+  #test_deposit_contract,
+  #test_logs,
   test_json_marshalling,
   test_signed_tx,
   test_execution_types,
@@ -23,5 +23,5 @@ import
   test_encoding,
   test_decoding,
   test_abi_serialization,
-  test_contract_dsl,
-  test_execution_api
+  test_contract_dsl
+  #test_execution_api

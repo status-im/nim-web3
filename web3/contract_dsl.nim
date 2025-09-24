@@ -1,6 +1,6 @@
 import
   std/[macros, strutils],
-  json_serialization,
+  cbor_serialization,
   ./[encoding, decoding, eth_api_types],
   ./conversions,
   stint,
@@ -45,7 +45,7 @@ type
     data*: seq[byte]
     topics*: seq[Bytes32]
 
-EventData.useDefaultSerializationIn JrpcConv
+JrpcConv.defaultSerialization EventData
 
 proc joinStrings(s: varargs[string]): string = join(s)
 
@@ -311,7 +311,7 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
     callWithRawData.add jsonIdent
     paramsWithRawData.add nnkIdentDefs.newTree(
       jsonIdent,
-      bindSym "JsonString",
+      bindSym "CborBytes",
       newEmptyNode()
     )
 
@@ -331,7 +331,7 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
                       `callbackIdent`: `procTy`,
                       errorHandler: SubscriptionErrorHandler,
                       withHistoricEvents = true): Future[Subscription] {.used.} =
-        proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
+        proc eventHandler(`jsonIdent`: CborBytes) {.gcsafe, raises: [].} =
           try:
             `argParseBody`
             `call`
@@ -346,7 +346,7 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
                       `callbackIdent`: `procTyWithRawData`,
                       errorHandler: SubscriptionErrorHandler,
                       withHistoricEvents = true): Future[Subscription] {.used.} =
-        proc eventHandler(`jsonIdent`: JsonString) {.gcsafe, raises: [].} =
+        proc eventHandler(`jsonIdent`: CborBytes) {.gcsafe, raises: [].} =
           try:
             `argParseBody`
             `callWithRawData`
