@@ -28,7 +28,12 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32): PayloadStatusV1
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
+<<<<<<< HEAD
   proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
+=======
+   # https://github.com/jihoonsong/execution-apis/blob/focil/src/engine/experimental/eip7805.md#engine_newpayloadv5
+  proc engine_newPayloadV5(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]], inclusionList:InclusionList ): PayloadStatusV1
+>>>>>>> 7d85d5b (add focil related engine changes)
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponse
@@ -46,7 +51,14 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getPayloadBodiesByRangeV2(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV2]]
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
+<<<<<<< HEAD
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
+=======
+  # https://github.com/jihoonsong/execution-apis/blob/focil/src/engine/experimental/eip7805.md#engine_getinclusionlistv1
+  proc engine_getInclusionListV1(parentHash: Hash32): InclusionList
+  # https://github.com/jihoonsong/execution-apis/blob/focil/src/engine/experimental/eip7805.md#engine_updatepayloadwithinclusionlistv1
+  proc engine_updatePayloadWithinInclusionListV1(payloadID: Bytes8, inclusionList: InclusionList): Bytes8
+>>>>>>> 7d85d5b (add focil related engine changes)
 
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
@@ -178,6 +190,16 @@ template newPayload*(
     executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
   engine_newPayloadV4(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
+
+  template newPayload*(
+    rpcClient: RpcClient,
+    payload: ExecutionPayloadV3,
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: Hash32,
+    executionRequests: seq[seq[byte]],
+    inclusionList: InclusionList): Future[PayloadStatusV1] =
+  engine_newPayloadV5(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests, inclusionList)
 
 template exchangeCapabilities*(
     rpcClient: RpcClient,

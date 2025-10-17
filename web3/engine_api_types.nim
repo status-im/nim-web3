@@ -21,6 +21,8 @@ export
 type
   TypedTransaction* = distinct seq[byte]
 
+  InclusionList* = distinct seq[TypedTransaction]
+  
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
