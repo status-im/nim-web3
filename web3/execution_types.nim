@@ -36,8 +36,12 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
+<<<<<<< HEAD
     blockAccessList*: Opt[seq[byte]]
     slotNumber*: Opt[Quantity]
+=======
+    inclusionListTransactions*: Opt[seq[TypedTransaction]]
+>>>>>>> 645186c (add Inclusionlist params)
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -45,8 +49,12 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: Opt[seq[WithdrawalV1]]
     parentBeaconBlockRoot*: Opt[Hash32]
+<<<<<<< HEAD
     slotNumber*: Opt[Quantity]
     targetGasLimit*: Opt[Quantity]
+=======
+    inclusionListTransactions*: Opt[seq[TypedTransaction]]
+>>>>>>> 645186c (add Inclusionlist params)
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
@@ -71,9 +79,13 @@ type
     V6
 
 func version*(payload: ExecutionPayload): Version =
+<<<<<<< HEAD
   if payload.blockAccessList.isSome or payload.slotNumber.isSome:
     Version.V4
   elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
+=======
+  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome or  payload.inclusionListTransactions.isSome:
+>>>>>>> 645186c (add Inclusionlist params)
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -81,9 +93,13 @@ func version*(payload: ExecutionPayload): Version =
     Version.V1
 
 func version*(attr: PayloadAttributes): Version =
+<<<<<<< HEAD
   if attr.slotNumber.isSome or attr.targetGasLimit.isSome:
     Version.V4
   elif attr.parentBeaconBlockRoot.isSome:
+=======
+  if attr.parentBeaconBlockRoot.isSome or attr.inclusionListTransactions.isSome:
+>>>>>>> 645186c (add Inclusionlist params)
     Version.V3
   elif attr.withdrawals.isSome:
     Version.V2
@@ -134,7 +150,8 @@ func V3*(attr: PayloadAttributes): PayloadAttributesV3 =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
-    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get
+    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
+    inclusionListTransactions: attr.inclusionListTransactions.get(newSeq[TypedTransaction]())
   )
 
 func V4*(attr: PayloadAttributes): PayloadAttributesV4 =
@@ -189,7 +206,8 @@ func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: Opt.some(attr.withdrawals),
-    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot)
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
+    inclusionListTransactions: Opt.some(attr.inclusionListTransactions)
   )
 
 func payloadAttributes*(attr: PayloadAttributesV4): PayloadAttributes =
