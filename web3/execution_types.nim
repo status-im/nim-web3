@@ -36,6 +36,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
+    inclusionListTransactions*: Opt[seq[TypedTransaction]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -43,6 +44,7 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: Opt[seq[WithdrawalV1]]
     parentBeaconBlockRoot*: Opt[Hash32]
+    inclusionListTransactions*: Opt[seq[TypedTransaction]]
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
@@ -65,7 +67,7 @@ type
     V5
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
+  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome or  payload.inclusionListTransactions.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -73,7 +75,7 @@ func version*(payload: ExecutionPayload): Version =
     Version.V1
 
 func version*(attr: PayloadAttributes): Version =
-  if attr.parentBeaconBlockRoot.isSome:
+  if attr.parentBeaconBlockRoot.isSome or attr.inclusionListTransactions.isSome:
     Version.V3
   elif attr.withdrawals.isSome:
     Version.V2
@@ -122,7 +124,8 @@ func V3*(attr: PayloadAttributes): PayloadAttributesV3 =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
-    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get
+    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
+    inclusionListTransactions: attr.inclusionListTransactions.get(newSeq[TypedTransaction]())
   )
 
 func V1*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV1] =
@@ -161,7 +164,8 @@ func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: Opt.some(attr.withdrawals),
-    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot)
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
+    inclusionListTransactions: Opt.some(attr.inclusionListTransactions)
   )
 
 func payloadAttributes*(x: Opt[PayloadAttributesV1]): Opt[PayloadAttributes] =
