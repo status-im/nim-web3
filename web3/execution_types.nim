@@ -36,6 +36,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
+    blockAccessList*: Opt[seq[byte]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -63,9 +64,12 @@ type
     V3
     V4
     V5
+    V6
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
+  if payload.blockAccessList.isSome:
+    Version.V4
+  elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -81,9 +85,11 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  if res.blobsBundleV2.isSome and
+  if res.executionPayload.blockAccessList.isSome:
+    Version.V6
+  elif res.blobsBundleV2.isSome and
       res.blobsBundleV2.get.proofs.len == (CELLS_PER_EXT_BLOB * res.blobsBundleV2.get.blobs.len):
-     Version.V5
+    Version.V5
   elif res.executionRequests.isSome:
     Version.V4
   elif res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
@@ -253,6 +259,28 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     excessBlobGas: p.excessBlobGas.get(0.Quantity)
   )
 
+func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
+  ExecutionPayloadV4(
+    parentHash: p.parentHash,
+    feeRecipient: p.feeRecipient,
+    stateRoot: p.stateRoot,
+    receiptsRoot: p.receiptsRoot,
+    logsBloom: p.logsBloom,
+    prevRandao: p.prevRandao,
+    blockNumber: p.blockNumber,
+    gasLimit: p.gasLimit,
+    gasUsed: p.gasUsed,
+    timestamp: p.timestamp,
+    extraData: p.extraData,
+    baseFeePerGas: p.baseFeePerGas,
+    blockHash: p.blockHash,
+    transactions: p.transactions,
+    withdrawals: p.withdrawals.get,
+    blobGasUsed: p.blobGasUsed.get(0.Quantity),
+    excessBlobGas: p.excessBlobGas.get(0.Quantity),
+    blockAccessList: p.blockAccessList.get
+  )
+
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
   ExecutionPayloadV1(
     parentHash: p.parentHash,
@@ -348,6 +376,28 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
     excessBlobGas: Opt.some(p.excessBlobGas)
   )
 
+func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
+  ExecutionPayload(
+    parentHash: p.parentHash,
+    feeRecipient: p.feeRecipient,
+    stateRoot: p.stateRoot,
+    receiptsRoot: p.receiptsRoot,
+    logsBloom: p.logsBloom,
+    prevRandao: p.prevRandao,
+    blockNumber: p.blockNumber,
+    gasLimit: p.gasLimit,
+    gasUsed: p.gasUsed,
+    timestamp: p.timestamp,
+    extraData: p.extraData,
+    baseFeePerGas: p.baseFeePerGas,
+    blockHash: p.blockHash,
+    transactions: p.transactions,
+    withdrawals: Opt.some(p.withdrawals),
+    blobGasUsed: Opt.some(p.blobGasUsed),
+    excessBlobGas: Opt.some(p.excessBlobGas),
+    blockAccessList: Opt.some(p.blockAccessList)
+  )
+
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
   ExecutionPayload(
     parentHash: p.parentHash,
@@ -402,6 +452,15 @@ func V5*(res: GetPayloadResponse): GetPayloadV5Response =
     executionRequests: res.executionRequests.get,
   )
 
+func V6*(res: GetPayloadResponse): GetPayloadV6Response =
+  GetPayloadV6Response(
+    executionPayload: res.executionPayload.V4,
+    blockValue: res.blockValue.get,
+    blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
+    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
+    executionRequests: res.executionRequests.get,
+  )
+
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
   GetPayloadResponse(executionPayload: x.executionPayload)
 
@@ -429,7 +488,7 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
     executionRequests: Opt.some(x.executionRequests),
   )
 
-func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
+func getPayloadResponse*(x: GetPayloadV5Response | GetPayloadV6Response): GetPayloadResponse =
   GetPayloadResponse(
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),
