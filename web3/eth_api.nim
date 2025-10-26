@@ -31,7 +31,7 @@ createRpcSigsFromNim(RpcClient):
   proc eth_mining(): bool
   proc eth_hashrate(): Quantity
   proc eth_gasPrice(): Quantity
-  proc eth_blobBaseFee(): Quantity
+  proc eth_blobBaseFee(): UInt256
   proc eth_accounts(): seq[Address]
   proc eth_blockNumber(): Quantity
   proc eth_getBalance(data: Address, blockId: BlockIdentifier): UInt256
@@ -70,9 +70,10 @@ createRpcSigsFromNim(RpcClient):
   proc eth_getFilterLogs(filterId: string): JsonNode
   proc eth_getLogs(filterOptions: FilterOptions): seq[LogObject]
   proc eth_chainId(): UInt256
+  proc eth_config(): EthConfigObject
 
   proc eth_getWork(): seq[UInt256]
-  proc eth_submitWork(nonce: int64, powHash: Hash32, mixDigest: Hash32): bool
+  proc eth_submitWork(nonce: uint64, powHash: Hash32, mixDigest: Hash32): bool
   proc eth_submitHashrate(hashRate: UInt256, id: UInt256): bool
   proc eth_subscribe(name: string, options: FilterOptions): string
   proc eth_subscribe(name: string): string

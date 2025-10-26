@@ -21,6 +21,8 @@ export
 type
   TypedTransaction* = distinct seq[byte]
 
+  InclusionList* = distinct seq[TypedTransaction]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
@@ -115,6 +117,8 @@ type
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
+    inclusionListTransactions*: seq[TypedTransaction]
+
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
@@ -127,9 +131,19 @@ type
     proofs*: seq[KzgProof]
     blobs*: seq[Blob]
 
+  BlobsBundleV2* = object
+    commitments*: seq[KzgCommitment]
+    proofs*: seq[KzgProof]
+    blobs*: seq[Blob]
+
+  # https://github.com/ethereum/execution-apis/blob/40088597b8b4f48c45184da002e27ffc3c37641f/src/engine/cancun.md#blobandproofv1
   BlobAndProofV1* = object
     blob*: Blob
     proof*: KzgProof
+
+  BlobAndProofV2* = object
+    blob*: Blob
+    proofs*: array[CELLS_PER_EXT_BLOB, KzgProof]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
@@ -160,6 +174,7 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
+    inclusionListTransactions*: seq[TypedTransaction]
 
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
@@ -221,7 +236,16 @@ type
     shouldOverrideBuilder*: bool
     executionRequests*: seq[seq[byte]]
 
+  GetPayloadV5Response* = object
+    executionPayload*: ExecutionPayloadV3
+    blockValue*: UInt256
+    blobsBundle*: BlobsBundleV2
+    shouldOverrideBuilder*: bool
+    executionRequests*: seq[seq[byte]]
+
   GetBlobsV1Response* = seq[BlobAndProofV1]
+
+  GetBlobsV2Response* = seq[BlobAndProofV2]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
@@ -249,6 +273,8 @@ const
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
   engineApiUnsupportedFork* = -38005
+  # https://github.com/ethereum/execution-apis/pull/609/files#diff-59590a19c9f19ab80452d1c5411f6a7206ad1d3bc2d0c5c5ba271a6a50e8d8e8R102
+  engineApiUnknownParent* = -38006
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)

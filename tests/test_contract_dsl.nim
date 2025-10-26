@@ -11,6 +11,7 @@ import
   pkg/unittest2,
   stew/byteutils,
   stint,
+  ../web3/encoding,
   ../web3/contract_dsl
 
 type

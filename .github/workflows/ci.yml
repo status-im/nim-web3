@@ -20,8 +20,6 @@ jobs:
           - os: linux
             cpu: i386
           - os: macos
-            cpu: amd64
-          - os: macos
             cpu: arm64
           - os: windows
             cpu: amd64
@@ -34,11 +32,6 @@ jobs:
           - target:
               os: linux-gcc-14 # This is to use ubuntu 24 and install gcc 14. Should be removed when ubuntu-latest is 26.04
             builder: ubuntu-24.04
-            shell: bash
-          - target:
-              os: macos
-              cpu: amd64
-            builder: macos-13
             shell: bash
           - target:
               os: macos
@@ -81,17 +74,6 @@ jobs:
           EOF
           chmod 755 external/bin/gcc external/bin/g++
           echo '${{ github.workspace }}/external/bin' >> $GITHUB_PATH
-
-      - name: MSYS2 (Windows i386)
-        if: runner.os == 'Windows' && matrix.target.cpu == 'i386'
-        uses: msys2/setup-msys2@v2
-        with:
-          path-type: inherit
-          msystem: MINGW32
-          install: >-
-            base-devel
-            git
-            mingw-w64-i686-toolchain
 
       - name: MSYS2 (Windows amd64)
         if: runner.os == 'Windows' && matrix.target.cpu == 'amd64'
@@ -155,6 +137,12 @@ jobs:
           echo "ncpu=$ncpu" >> $GITHUB_ENV
           echo "MAKE_CMD=${MAKE_CMD}" >> $GITHUB_ENV
 
+      - name: Configure ARM64 build environment (macOS)
+        if: runner.os == 'macOS' && matrix.target.cpu == 'arm64'
+        run: |
+          # Force ARM64 architecture for Nim compilation with proper flags passed to clang
+          echo "NIMFLAGS=--cpu:arm64 --cc:clang --passC:\"-target arm64-apple-macos11\" --passL:\"-target arm64-apple-macos11\"" >> $GITHUB_ENV                                                                                            
+
       - name: Build Nim and Nimble
         run: |
           curl -O -L -s -S https://raw.githubusercontent.com/status-im/nimbus-build-system/master/scripts/build_nim.sh
@@ -162,6 +150,11 @@ jobs:
             QUICK_AND_DIRTY_COMPILER=1 QUICK_AND_DIRTY_NIMBLE=1 CC=gcc \
             bash build_nim.sh nim csources dist/nimble NimBinaries
           echo '${{ github.workspace }}/nim/bin' >> $GITHUB_PATH
+      - name: Setup Nimble
+        uses: nim-lang/setup-nimble-action@v1
+        with:
+          nimble-version: 'latest'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Use gcc 14
         # Should be removed when ubuntu-latest is 26.04

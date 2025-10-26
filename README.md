@@ -9,7 +9,7 @@ The humble beginnings of a Nim library similar to web3.[js|py]
 
 ## Installation
 
-You can install the developement version of the library through nimble with the following command
+You can install the development version of the library through nimble with the following command
 
 ```console
 nimble install https://github.com/status-im/nim-web3@#master
@@ -17,9 +17,73 @@ nimble install https://github.com/status-im/nim-web3@#master
 
 ## Development
 
-You should first run `./simulator.sh` which runs `hardhat node`
+First, fetch the submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+Install nodemon globally, hardhat locally and create a `hardhat.config.js` file:
+
+```bash
+npm install -g nodemon
+npm install hardhat
+echo "module.exports = {};" > hardhat.config.js
+```
+
+Then you should run `./simulator.sh` which runs `hardhat node`
 
 This creates a local simulated Ethereum network on your local machine and the tests will use this for their E2E processing
+
+### ABI encoder / decoder
+
+Implements encoding of parameters according to the Ethereum
+[Contract ABI Specification][1] using nim-serialization interface.
+
+Usage
+-----
+
+```nim
+import
+  serialization,
+  stint,
+  web3/[encoding, decoding]
+
+# encode unsigned integers, booleans, enums
+Abi.encode(42'u8)
+
+# encode uint256
+Abi.encode(42.u256)
+
+# encode byte arrays and sequences
+Abi.encode([1'u8, 2'u8, 3'u8])
+Abi.encode(@[1'u8, 2'u8, 3'u8])
+
+# encode tuples
+Abi.encode( (42'u8, @[1'u8, 2'u8, 3'u8], true) )
+
+# decode values of different types
+Abi.decode(bytes, uint8)
+Abi.decode(bytes, UInt256)
+Abi.decode(bytes, array[3, uint8])
+Abi.decode(bytes, seq[uint8])
+
+# decode tuples
+Abi.decode(bytes, (uint32, bool, seq[byte]))
+
+# custom type
+type Contract = object
+  a: uint64
+  b {.dontSerialize.}: string
+  c: bool
+
+let encoded = Abi.encode(x)
+let decoded = Abi.decode(encoded, Contract)
+
+# encoded.a == decoded.a
+# encoded.b == ""
+# encoded.c == decoded.c
+```
 
 ## License
 
@@ -32,3 +96,5 @@ or
 - Apache License, Version 2.0, ([LICENSE-APACHEv2](LICENSE-APACHEv2) or http://www.apache.org/licenses/LICENSE-2.0)
 
 at your option. This file may not be copied, modified, or distributed except according to those terms.
+
+[1]: https://docs.soliditylang.org/en/latest/abi-spec.html

@@ -8,26 +8,235 @@
 # those terms.
 
 import
-  std/macros,
-  stint, ./eth_api_types, stew/[assign2, byteutils]
+  std/[sequtils, macros],
+  faststreams/outputs,
+  stint,
+  stew/[byteutils, endians2],
+  serialization,
+  ./eth_api_types,
+  ./abi_utils,
+  ./abi_serialization
 
-func encode*[bits: static[int]](x: StUint[bits]): seq[byte] =
+{.push raises: [].}
+
+export abi_serialization, abi_utils
+
+type
+  AbiEncoder* = object
+    output: OutputStream
+
+func finish(encoder: var AbiEncoder): seq[byte] =
+  encoder.output.getOutput(seq[byte])
+
+proc write(encoder: var AbiEncoder, bytes: openArray[byte]) {.raises: [SerializationError]} =
+  try:
+    encoder.output.write(bytes)
+  except IOError as e:
+    raise newException(SerializationError, "Failed to write bytes: " & e.msg)
+
+proc padleft(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [SerializationError]} =
+  let padSize = abiSlotSize - bytes.len
+  if padSize > 0:
+    encoder.write(repeat(padding, padSize))
+  encoder.write(bytes)
+
+proc padright(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0'u8) {.raises: [SerializationError]} =
+  ## When padding right, the byte length may exceed abiSlotSize.
+  ## So we first apply a modulo operation to compute the remainder.
+  ## If the result is 0, we apply a second modulo  to avoid adding
+  ## a full slot of padding.
+  encoder.write(bytes)
+  let padSize = (abiSlotSize - (bytes.len mod abiSlotSize)) mod abiSlotSize
+
+  if padSize > 0:
+    encoder.write(repeat(padding, padSize))
+
+proc encode(encoder: var AbiEncoder, value: AbiUnsignedInt | StUint) {.raises: [SerializationError]} =
+  encoder.padleft(value.toBytesBE)
+
+proc encode(encoder: var AbiEncoder, value: AbiSignedInt | StInt) {.raises: [SerializationError]} =
+  when typeof(value) is StInt:
+    let unsignedValue = cast[StInt[(type value).bits]](value)
+    let isNegative = value.isNegative
+  else:
+    let unsignedValue = cast[(type value).toUnsigned](value)
+    let isNegative = value < 0
+
+  let bytes = unsignedValue.toBytesBE
+  let padding = if isNegative: 0xFF'u8 else: 0x00'u8
+  encoder.padleft(bytes, padding)
+
+proc encode(encoder: var AbiEncoder, value: bool) {.raises: [SerializationError]} =
+  encoder.padleft([if value: 1'u8 else: 0'u8])
+
+proc encode(encoder: var AbiEncoder, value: enum) {.raises: [SerializationError]} =
+  encoder.encode(uint64(ord(value)))
+
+proc encode(encoder: var AbiEncoder, value: Address) {.raises: [SerializationError]} =
+  encoder.padleft(array[20, byte](value))
+
+proc encode(encoder: var AbiEncoder, value: Bytes32) {.raises: [SerializationError]} =
+  encoder.padleft(array[32, byte](value))
+
+proc encode[I](encoder: var AbiEncoder, bytes: array[I, byte]) {.raises: [SerializationError]} =
+  encoder.padright(bytes)
+
+proc encode(encoder: var AbiEncoder, bytes: seq[byte]) {.raises: [SerializationError]} =
+  encoder.encode(bytes.len.uint64)
+  encoder.padright(bytes)
+
+proc encode(encoder: var AbiEncoder, value: string) {.raises: [SerializationError]} =
+  encoder.encode(value.toBytes)
+
+proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationError]} =
+  type Base = distinctBase(typeof(value))
+  encoder.encode(Base(value))
+
+proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
+proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
+
+template encodeCollection(encoder: var AbiEncoder, value: untyped) =
+  ## When T is dynamic, ABI layout looks like:
+  ##
+  ## +----------------------------+
+  ## | offset to element 0       |  <-- 32
+  ## +----------------------------+
+  ## | offset to element 1       |  <-- 32 + size of encoded element 0
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  ## | encoded element 0         |  <-- item at offset 0
+  ## +----------------------------+
+  ## | encoded element 1         |  <-- item at offset 1
+  ## +----------------------------+
+  ## | ...                        |
+  ## +----------------------------+
+  if isDynamic(typeof(value[0])):
+    var blocks: seq[seq[byte]] = @[]
+    var offset = value.len * abiSlotSize
+
+    # Encode offset first
+    for element in value:
+      var e = AbiEncoder(output: memoryOutput())
+      e.encode(element)
+      let bytes = e.finish()
+      blocks.add(bytes)
+
+      encoder.encode(offset.uint64)
+      offset += bytes.len
+
+    # Then encode the data
+    for data in blocks:
+      encoder.write(data)
+  else:
+    ## When T is static, ABI layout looks like:
+    ##
+    ## +----------------------------+
+    ## | element 0                 |  <-- 32
+    ## +----------------------------+
+    ## | element 1                 |  <-- 32
+    ## +----------------------------+
+    ## | ...                        |
+    ## +----------------------------+
+    ## | element N-1               |
+    ## +----------------------------+
+    for element in value:
+      encoder.encode(element)
+
+proc encode[T, I](encoder: var AbiEncoder, value: array[I, T]) {.raises: [SerializationError].} =
+  ## Fixed array does not include the length in the ABI encoding.
+  encodeCollection(encoder, value)
+
+proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].} =
+  ## Sequences are dynamic by definition, so we always encode their length first.
+  encoder.encode(value.len.uint64)
+
+  encodeCollection(encoder, value)
+
+proc encodeField(field: auto): seq[byte] {.raises: [SerializationError].} =
+  var e = AbiEncoder(output: memoryOutput())
+  e.encode(field)
+  return e.finish()
+
+proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]} =
+  ## Tuple can contain both static and dynamic elements.
+  ## When the data is dynamic, the offset to the data is encoded first.
+  ##
+  ## Example: (static, dynamic, dynamic)
+  ##
+  ## +------------------------------+
+  ## | element 1                   |
+  ## +------------------------------+
+  ## | offset to element 2         |
+  ## +------------------------------+
+  ## | offset to element 3         |
+  ## +------------------------------+
+  ## | element 2                   |
+  ## +------------------------------+
+  ## | element 3                   |
+  ## +------------------------------+
+  when isStatic(T):
+    for field in tupl.fields:
+      encoder.encode(field)
+  else:
+    var offset {.used.} = T.arity * abiSlotSize
+    var cursor = encoder.output.delayFixedSizeWrite(offset)
+
+    for field in tupl.fields:
+      when isDynamic(typeof(field)):
+        let bytes = encodeField(field)
+        encoder.write(bytes)
+
+        # Encode the offset of the dynamic data
+        cursor.write(encodeField(offset.uint64))
+        offset += bytes.len
+      else:
+        cursor.write(encodeField(field))
+
+    cursor.finalize()
+
+proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} =
+  var encoder = AbiEncoder(output: memoryOutput())
+  type StInts = StInt | StUint
+
+  when T is range:
+    when T.low is int or T.low is uint:
+      {.error: "Ranges with int or uint bounds are not supported. Use explicit types like int8, int16, uint8, etc.".}
+
+  when T is object and T is not StInts:
+    var offset {.used.} = totalSerializedFields(T) * abiSlotSize
+    var cursor = encoder.output.delayFixedSizeWrite(offset)
+
+    value.enumInstanceSerializedFields(_, fieldValue):
+      when isDynamic(typeof(fieldValue)):
+        let bytes = encodeField(fieldValue)
+        encoder.write(bytes)
+
+        # Encode the offset of the dynamic data
+        cursor.write(encodeField(offset.uint64))
+        offset += bytes.len
+      else:
+        cursor.write(encodeField(fieldValue))
+
+    cursor.finalize()
+
+    try:
+      w.write encoder.finish()
+    except IOError as e:
+      raise newException(SerializationError, "Failed to write value: " & e.msg)
+  else:
+    try:
+        encoder.encode(value)
+        w.write encoder.finish()
+    except IOError as e:
+      raise newException(SerializationError, "Failed to write value: " & e.msg)
+
+# Keep the old encode functions for compatibility
+func encode*[bits: static[int]](x: StUint[bits]): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   @(x.toBytesBE())
 
-func encode*[bits: static[int]](x: StInt[bits]): seq[byte] =
+func encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   @(x.toBytesBE())
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int =
-  const meaningfulLen = to.bits div 8
-  let offset = offset + baseOffset
-  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
-
-func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int =
-  const meaningfulLen = N div 8
-  let offset = offset + baseOffset
-  to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
 
 func encodeFixed(a: openArray[byte]): seq[byte] =
   var padding = a.len mod 32
@@ -35,25 +244,9 @@ func encodeFixed(a: openArray[byte]): seq[byte] =
   result.setLen(padding) # Zero fill padding
   result.add(a)
 
-func encode*[N: static int](b: FixedBytes[N]): seq[byte] = encodeFixed(b.data)
-func encode*(b: Address): seq[byte] = encodeFixed(b.data)
-func encode*[N](b: array[N, byte]): seq[byte] {.inline.} = encodeFixed(b)
-
-func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int =
-  let meaningfulLen = to.len
-  var padding = to.len mod 32
-  if padding != 0:
-    padding = 32 - padding
-  let offset = baseOffset + offset + padding
-  if to.len != 0:
-    assign(to, input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen + padding
-
-func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline.} =
-  decodeFixed(input, baseOffset, offset, array[N, byte](to))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline.} =
-  decodeFixed(input, baseOffset, offset, array[20, byte](to))
+func encode*[N: static int](b: FixedBytes[N]): seq[byte] {.deprecated: "use Abi.encode instead" .} = encodeFixed(b.data)
+func encode*(b: Address): seq[byte] {.deprecated: "use Abi.encode instead" .} = encodeFixed(b.data)
+func encode*[N](b: array[N, byte]): seq[byte] {.inline, deprecated: "use Abi.encode instead".} = encodeFixed(b)
 
 func encodeDynamic(v: openArray[byte]): seq[byte] =
   result = encode(v.len.u256)
@@ -62,98 +255,20 @@ func encodeDynamic(v: openArray[byte]): seq[byte] =
   if pad != 0:
     result.setLen(result.len + 32 - pad)
 
-func encode*(x: DynamicBytes): seq[byte] {.inline.} =
+func encode*(x: DynamicBytes): seq[byte] {.inline, deprecated: "use Abi.encode instead".} =
   encodeDynamic(distinctBase x)
 
-func encode*(x: seq[byte]): seq[byte] {.inline.} =
+func encode*(x: seq[byte]): seq[byte] {.inline, deprecated: "use Abi.encode instead".} =
   encodeDynamic(x)
 
-func encode*(x: string): seq[byte] {.inline.} =
+func encode*(x: string): seq[byte] {.inline, deprecated: "use Abi.encode instead".} =
   encodeDynamic(x.toOpenArrayByte(0, x.high))
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int =
-  var dataOffsetBig, dataLenBig: UInt256
-  result = decode(input, baseOffset, offset, dataOffsetBig)
-  let dataOffset = dataOffsetBig.truncate(int)
-  discard decode(input, baseOffset, dataOffset, dataLenBig)
-  let dataLen = dataLenBig.truncate(int)
-  let actualDataOffset = baseOffset + dataOffset + 32
-  to = input[actualDataOffset ..< actualDataOffset + dataLen]
+func encode*(x: bool): seq[byte] {.deprecated: "use Abi.encode instead" .} = encode(x.int.u256)
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int =
-  var dataOffsetBig, dataLenBig: UInt256
-  result = decode(input, baseOffset, offset, dataOffsetBig)
-  let dataOffset = dataOffsetBig.truncate(int)
-  discard decode(input, baseOffset, dataOffset, dataLenBig)
-  let dataLen = dataLenBig.truncate(int)
-  let actualDataOffset = baseOffset + dataOffset + 32
-  to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
+func encode*(x: tuple): seq[byte] {.deprecated: "use Abi.encode instead" .}
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline.} =
-  var s: seq[byte]
-  result = decode(input, baseOffset, offset, s)
-  # TODO: Check data len, and raise?
-  to = typeof(to)(move(s))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int
-
-func decode*[T](input: openArray[byte], baseOffset, offset: int, to: var seq[T]): int {.inline.} =
-  var dataOffsetBig, dataLenBig: UInt256
-  result = decode(input, baseOffset, offset, dataOffsetBig)
-  let dataOffset = dataOffsetBig.truncate(int)
-  discard decode(input, baseOffset, dataOffset, dataLenBig)
-  # TODO: Check data len, and raise?
-  let dataLen = dataLenBig.truncate(int)
-  to.setLen(dataLen)
-  let baseOffset = baseOffset + dataOffset + 32
-  var offset = 0
-  for i in 0 ..< dataLen:
-    offset += decode(input, baseOffset, offset, to[i])
-
-func isDynamicObject(T: typedesc): bool
-
-template isDynamicType(a: typedesc): bool =
-  when a is seq | openArray | string | DynamicBytes:
-    true
-  elif a is object:
-    const r = isDynamicObject(a)
-    r
-  else:
-    false
-
-func isDynamicObject(T: typedesc): bool =
-  var a: T
-  for v in fields(a):
-    if isDynamicType(typeof(v)): return true
-  false
-
-func encode*(x: bool): seq[byte] = encode(x.int.u256)
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var bool): int =
-  var i: Int256
-  result = decode(input, baseOffset, offset, i)
-  to = not i.isZero()
-
-func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int =
-  when isDynamicObject(typeof(obj)):
-    var dataOffsetBig: UInt256
-    result = decode(input, baseOffset, offset, dataOffsetBig)
-    let dataOffset = dataOffsetBig.truncate(int)
-    let offset = baseOffset + dataOffset
-    var offset2 = 0
-    for k, field in fieldPairs(obj):
-      let sz = decode(input, offset, offset2, field)
-      offset2 += sz
-  else:
-    var offset = offset
-    for field in fields(obj):
-      let sz = decode(input, baseOffset, offset, field)
-      offset += sz
-      result += sz
-
-func encode*(x: tuple): seq[byte]
-
-func encode*[T](x: openArray[T]): seq[byte] =
+func encode*[T](x: openArray[T]): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   result = encode(x.len.u256)
   when isDynamicType(T):
     result.setLen((1 + x.len) * 32)
@@ -171,7 +286,7 @@ func getTupleImpl(t: NimNode): NimNode =
 macro typeListLen*(t: typedesc[tuple]): int =
   newLit(t.getTupleImpl().len)
 
-func encode*(x: tuple): seq[byte] =
+func encode*(x: tuple): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   var offsets {.used.}: array[typeListLen(typeof(x)), int]
   var i = 0
   for v in fields(x):
@@ -189,7 +304,3 @@ func encode*(x: tuple): seq[byte] =
       result[o .. o + 31] = encode(offset.u256)
       result &= encode(v)
     inc i
-
-# Obsolete
-func decode*(input: string, offset: int, to: var DynamicBytes): int {.inline, deprecated: "Use decode(openArray[byte], ...) instead".} =
-  decode(hexToSeqByte(input), 0, offset div 2, to) * 2

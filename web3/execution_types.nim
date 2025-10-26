@@ -36,6 +36,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
+    inclusionListTransactions*: Opt[seq[TypedTransaction]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -43,6 +44,7 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: Opt[seq[WithdrawalV1]]
     parentBeaconBlockRoot*: Opt[Hash32]
+    inclusionListTransactions*: Opt[seq[TypedTransaction]]
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
@@ -53,6 +55,7 @@ type
     executionPayload*: ExecutionPayload
     blockValue*: Opt[UInt256]
     blobsBundle*: Opt[BlobsBundleV1]
+    blobsBundleV2*: Opt[BlobsBundleV2]
     shouldOverrideBuilder*: Opt[bool]
     executionRequests*: Opt[seq[seq[byte]]]
 
@@ -61,9 +64,10 @@ type
     V2
     V3
     V4
+    V5
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
+  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome or  payload.inclusionListTransactions.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -71,7 +75,7 @@ func version*(payload: ExecutionPayload): Version =
     Version.V1
 
 func version*(attr: PayloadAttributes): Version =
-  if attr.parentBeaconBlockRoot.isSome:
+  if attr.parentBeaconBlockRoot.isSome or attr.inclusionListTransactions.isSome:
     Version.V3
   elif attr.withdrawals.isSome:
     Version.V2
@@ -79,7 +83,10 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  if res.executionRequests.isSome:
+  if res.blobsBundleV2.isSome and
+      res.blobsBundleV2.get.proofs.len == (CELLS_PER_EXT_BLOB * res.blobsBundleV2.get.blobs.len):
+     Version.V5
+  elif res.executionRequests.isSome:
     Version.V4
   elif res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
     Version.V3
@@ -117,7 +124,8 @@ func V3*(attr: PayloadAttributes): PayloadAttributesV3 =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
-    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get
+    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
+    inclusionListTransactions: attr.inclusionListTransactions.get(newSeq[TypedTransaction]())
   )
 
 func V1*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV1] =
@@ -156,7 +164,8 @@ func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: Opt.some(attr.withdrawals),
-    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot)
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
+    inclusionListTransactions: Opt.some(attr.inclusionListTransactions)
   )
 
 func payloadAttributes*(x: Opt[PayloadAttributesV1]): Opt[PayloadAttributes] =
@@ -388,6 +397,15 @@ func V4*(res: GetPayloadResponse): GetPayloadV4Response =
     executionRequests: res.executionRequests.get,
   )
 
+func V5*(res: GetPayloadResponse): GetPayloadV5Response =
+  GetPayloadV5Response(
+    executionPayload: res.executionPayload.V3,
+    blockValue: res.blockValue.get,
+    blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
+    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
+    executionRequests: res.executionRequests.get,
+  )
+
 func getPayloadResponse*(x: ExecutionPayloadV1): GetPayloadResponse =
   GetPayloadResponse(executionPayload: x.executionPayload)
 
@@ -402,6 +420,7 @@ func getPayloadResponse*(x: GetPayloadV3Response): GetPayloadResponse =
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),
     blobsBundle: Opt.some(x.blobsBundle),
+    blobsBundleV2: Opt.none(BlobsBundleV2),
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder)
   )
 
@@ -410,6 +429,16 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),
     blobsBundle: Opt.some(x.blobsBundle),
+    shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
+    executionRequests: Opt.some(x.executionRequests),
+  )
+
+func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
+  GetPayloadResponse(
+    executionPayload: x.executionPayload.executionPayload,
+    blockValue: Opt.some(x.blockValue),
+    blobsBundle: Opt.none(BlobsBundleV1),
+    blobsBundleV2: Opt.some(x.blobsBundle),
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
     executionRequests: Opt.some(x.executionRequests),
   )
