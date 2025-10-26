@@ -273,6 +273,8 @@ const
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
   engineApiUnsupportedFork* = -38005
+  # https://github.com/ethereum/execution-apis/pull/609/files#diff-59590a19c9f19ab80452d1c5411f6a7206ad1d3bc2d0c5c5ba271a6a50e8d8e8R102
+  engineApiUnknownParent* = -38006
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)
