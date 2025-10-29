@@ -18,7 +18,7 @@ requires "nim >= 2.0.0"
 requires "chronicles"
 requires "chronos"
 requires "bearssl"
-requires "eth >= 0.9.0"
+requires "eth#BALs_EIP-7928-updates" # TODO: update this after merging nim-eth changes and tagging
 requires "faststreams"
 requires "json_rpc >= 0.5.2"
 requires "serialization >= 0.4.4"

@@ -11,11 +11,13 @@
 
 import
   stint,
+  eth/common/[block_access_lists, block_access_lists_rlp],
   ./engine_api_types
 
 export
   stint,
-  engine_api_types
+  engine_api_types,
+  block_access_lists
 
 type
   ExecutionPayload* = object
@@ -36,7 +38,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
-    blockAccessList*: Opt[seq[byte]]
+    blockAccessList*: Opt[BlockAccessList]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -278,7 +280,7 @@ func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
     withdrawals: p.withdrawals.get,
     blobGasUsed: p.blobGasUsed.get(0.Quantity),
     excessBlobGas: p.excessBlobGas.get(0.Quantity),
-    blockAccessList: p.blockAccessList.get
+    blockAccessList: p.blockAccessList.get.encode()
   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
@@ -376,28 +378,6 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
     excessBlobGas: Opt.some(p.excessBlobGas)
   )
 
-func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
-  ExecutionPayload(
-    parentHash: p.parentHash,
-    feeRecipient: p.feeRecipient,
-    stateRoot: p.stateRoot,
-    receiptsRoot: p.receiptsRoot,
-    logsBloom: p.logsBloom,
-    prevRandao: p.prevRandao,
-    blockNumber: p.blockNumber,
-    gasLimit: p.gasLimit,
-    gasUsed: p.gasUsed,
-    timestamp: p.timestamp,
-    extraData: p.extraData,
-    baseFeePerGas: p.baseFeePerGas,
-    blockHash: p.blockHash,
-    transactions: p.transactions,
-    withdrawals: Opt.some(p.withdrawals),
-    blobGasUsed: Opt.some(p.blobGasUsed),
-    excessBlobGas: Opt.some(p.excessBlobGas),
-    blockAccessList: Opt.some(p.blockAccessList)
-  )
-
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
   ExecutionPayload(
     parentHash: p.parentHash,
@@ -488,7 +468,7 @@ func getPayloadResponse*(x: GetPayloadV4Response): GetPayloadResponse =
     executionRequests: Opt.some(x.executionRequests),
   )
 
-func getPayloadResponse*(x: GetPayloadV5Response | GetPayloadV6Response): GetPayloadResponse =
+func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
   GetPayloadResponse(
     executionPayload: x.executionPayload.executionPayload,
     blockValue: Opt.some(x.blockValue),

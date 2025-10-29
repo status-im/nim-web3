@@ -116,7 +116,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/main/src/engine/amsterdam.md#executionpayloadv4
+  # https://github.com/ethereum/execution-apis/blob/4ec8e5735ebb3f2ce0702726385cdde70034f78c/src/engine/amsterdam.md#executionpayloadv4
   ExecutionPayloadV4* = object
     parentHash*: Hash32
     feeRecipient*: Address

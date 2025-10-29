@@ -66,7 +66,7 @@ suite "Execution types tests":
   var
     payloadV4 = payload
     responseV6 = response
-  payloadV4.blockAccessList = Opt.some(@[0x1.byte, 0x2, 0x3])
+  payloadV4.blockAccessList = Opt.some(@[AccountChanges(address: default(Address))])
   responseV6.executionPayload = payloadV4
   responseV6.executionRequests =  Opt.some(@[@[0x1.byte, 0x2, 0x3]])
 
@@ -132,9 +132,6 @@ suite "Execution types tests":
     check responseV6.version == Version.V6
 
   test "ExecutionPayload roundtrip":
-    let v4 = payloadV4.V4
-    check v4 == v4.executionPayload.V4
-
     let v3 = payload.V3
     check v3 == v3.executionPayload.V3
 
@@ -155,9 +152,6 @@ suite "Execution types tests":
     check v1 == v1.payloadAttributes.V1
 
   test "GetPayloadResponse roundtrip":
-    let v6 = responseV6.V6
-    check v6 == v6.getPayloadResponse.V6
-
     let v3 = response.V3
     check v3 == v3.getPayloadResponse.V3
 
