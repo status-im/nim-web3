@@ -61,10 +61,6 @@ createRpcSigsFromNim(RpcClient):
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
     parentBeaconBlockRoot: Opt[Hash32],
     executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
-  proc engine_newPayloadV5(payload: ExecutionPayload,
-    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
 
@@ -122,12 +118,6 @@ template getPayload*(
     payloadId: Bytes8): Future[GetPayloadV5Response] =
   engine_getPayloadV5(rpcClient, payloadId)
 
-template getPayload*(
-    rpcClient: RpcClient,
-    T: type GetPayloadV6Response,
-    payloadId: Bytes8): Future[GetPayloadV6Response] =
-  engine_getPayloadV6(rpcClient, payloadId)
-
 template getBlobs*(
     rpcClient: RpcClient,
     T: type GetBlobsV1Response,
@@ -167,15 +157,6 @@ template newPayload*(
     parentBeaconBlockRoot: Hash32,
     executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
   engine_newPayloadV4(
-    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
-
-template newPayload*(
-    rpcClient: RpcClient,
-    payload: ExecutionPayloadV4,
-    versionedHashes: seq[VersionedHash],
-    parentBeaconBlockRoot: Hash32,
-    executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
-  engine_newPayloadV5(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
 
 template exchangeCapabilities*(
