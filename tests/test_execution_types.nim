@@ -66,7 +66,7 @@ suite "Execution types tests":
   var
     payloadV4 = payload
     responseV6 = response
-  payloadV4.blockAccessList = Opt.some(@[AccountChanges(address: default(Address))])
+  payloadV4.blockAccessList = Opt.some(@[0x1.byte, 0x2, 0x3])
   responseV6.executionPayload = payloadV4
   responseV6.executionRequests =  Opt.some(@[@[0x1.byte, 0x2, 0x3]])
 

@@ -11,13 +11,11 @@
 
 import
   stint,
-  eth/common/[block_access_lists, block_access_lists_rlp],
   ./engine_api_types
 
 export
   stint,
-  engine_api_types,
-  block_access_lists
+  engine_api_types
 
 type
   ExecutionPayload* = object
@@ -38,7 +36,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
-    blockAccessList*: Opt[BlockAccessList]
+    blockAccessList*: Opt[seq[byte]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -280,7 +278,7 @@ func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
     withdrawals: p.withdrawals.get,
     blobGasUsed: p.blobGasUsed.get(0.Quantity),
     excessBlobGas: p.excessBlobGas.get(0.Quantity),
-    blockAccessList: p.blockAccessList.get.encode()
+    blockAccessList: p.blockAccessList.get
   )
 
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
