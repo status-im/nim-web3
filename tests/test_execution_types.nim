@@ -40,7 +40,7 @@ suite "Execution types tests":
       transactions: @[TypedTransaction.conv(14)],
       withdrawals: Opt.some(@[wd]),
       blobGasUsed: Opt.some(15.Quantity),
-      excessBlobGas: Opt.some(16.Quantity),
+      excessBlobGas: Opt.some(16.Quantity)
     )
 
     attr = PayloadAttributes(
@@ -63,6 +63,12 @@ suite "Execution types tests":
       blobsBundle: Opt.some(blobs),
       shouldOverrideBuilder: Opt.some(false),
     )
+  var
+    payloadV4 = payload
+    responseV6 = response
+  payloadV4.blockAccessList = Opt.some(@[0x1.byte, 0x2, 0x3])
+  responseV6.executionPayload = payloadV4
+  responseV6.executionRequests =  Opt.some(@[@[0x1.byte, 0x2, 0x3]])
 
   test "payload version":
     var badv31 = payload
@@ -88,6 +94,7 @@ suite "Execution types tests":
     check v32.excessBlobGas == 0.Quantity
     check v32.blobGasUsed == payload.blobGasUsed.get
 
+    check payloadV4.version == Version.V4
 
   test "attr version":
     var v2 = attr
@@ -121,6 +128,8 @@ suite "Execution types tests":
     let v32 = badv32.V3
     check v32.blobsBundle == response.blobsBundle.get
     check v32.shouldOverrideBuilder == false
+
+    check responseV6.version == Version.V6
 
   test "ExecutionPayload roundtrip":
     let v3 = payload.V3

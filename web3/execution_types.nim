@@ -36,6 +36,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     blobGasUsed*: Opt[Quantity]
     excessBlobGas*: Opt[Quantity]
+    blockAccessList*: Opt[seq[byte]]
 
   PayloadAttributes* = object
     timestamp*: Quantity
@@ -63,9 +64,12 @@ type
     V3
     V4
     V5
+    V6
 
 func version*(payload: ExecutionPayload): Version =
-  if payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
+  if payload.blockAccessList.isSome:
+    Version.V4
+  elif payload.blobGasUsed.isSome or payload.excessBlobGas.isSome:
     Version.V3
   elif payload.withdrawals.isSome:
     Version.V2
@@ -81,9 +85,11 @@ func version*(attr: PayloadAttributes): Version =
     Version.V1
 
 func version*(res: GetPayloadResponse): Version =
-  if res.blobsBundleV2.isSome and
+  if res.executionPayload.blockAccessList.isSome:
+    Version.V6
+  elif res.blobsBundleV2.isSome and
       res.blobsBundleV2.get.proofs.len == (CELLS_PER_EXT_BLOB * res.blobsBundleV2.get.blobs.len):
-     Version.V5
+    Version.V5
   elif res.executionRequests.isSome:
     Version.V4
   elif res.blobsBundle.isSome or res.shouldOverrideBuilder.isSome:
@@ -253,6 +259,28 @@ func V3*(p: ExecutionPayload): ExecutionPayloadV3 =
     excessBlobGas: p.excessBlobGas.get(0.Quantity)
   )
 
+func V4*(p: ExecutionPayload): ExecutionPayloadV4 =
+  ExecutionPayloadV4(
+    parentHash: p.parentHash,
+    feeRecipient: p.feeRecipient,
+    stateRoot: p.stateRoot,
+    receiptsRoot: p.receiptsRoot,
+    logsBloom: p.logsBloom,
+    prevRandao: p.prevRandao,
+    blockNumber: p.blockNumber,
+    gasLimit: p.gasLimit,
+    gasUsed: p.gasUsed,
+    timestamp: p.timestamp,
+    extraData: p.extraData,
+    baseFeePerGas: p.baseFeePerGas,
+    blockHash: p.blockHash,
+    transactions: p.transactions,
+    withdrawals: p.withdrawals.get,
+    blobGasUsed: p.blobGasUsed.get(0.Quantity),
+    excessBlobGas: p.excessBlobGas.get(0.Quantity),
+    blockAccessList: p.blockAccessList.get
+  )
+
 func V1*(p: ExecutionPayloadV1OrV2): ExecutionPayloadV1 =
   ExecutionPayloadV1(
     parentHash: p.parentHash,
@@ -396,6 +424,15 @@ func V4*(res: GetPayloadResponse): GetPayloadV4Response =
 func V5*(res: GetPayloadResponse): GetPayloadV5Response =
   GetPayloadV5Response(
     executionPayload: res.executionPayload.V3,
+    blockValue: res.blockValue.get,
+    blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
+    shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),
+    executionRequests: res.executionRequests.get,
+  )
+
+func V6*(res: GetPayloadResponse): GetPayloadV6Response =
+  GetPayloadV6Response(
+    executionPayload: res.executionPayload.V4,
     blockValue: res.blockValue.get,
     blobsBundle: res.blobsBundleV2.get(BlobsBundleV2()),
     shouldOverrideBuilder: res.shouldOverrideBuilder.get(false),

@@ -116,10 +116,32 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
+  # https://github.com/ethereum/execution-apis/blob/4ec8e5735ebb3f2ce0702726385cdde70034f78c/src/engine/amsterdam.md#executionpayloadv4
+  ExecutionPayloadV4* = object
+    parentHash*: Hash32
+    feeRecipient*: Address
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
+    blockNumber*: Quantity
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    timestamp*: Quantity
+    extraData*: DynamicBytes[0, 32]
+    baseFeePerGas*: UInt256
+    blockHash*: Hash32
+    transactions*: seq[TypedTransaction]
+    withdrawals*: seq[WithdrawalV1]
+    blobGasUsed*: Quantity
+    excessBlobGas*: Quantity
+    blockAccessList*: seq[byte]
+
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
     ExecutionPayloadV2 |
-    ExecutionPayloadV3
+    ExecutionPayloadV3 |
+    ExecutionPayloadV4
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/cancun.md#blobsbundlev1
   BlobsBundleV1* = object
@@ -233,6 +255,13 @@ type
 
   GetPayloadV5Response* = object
     executionPayload*: ExecutionPayloadV3
+    blockValue*: UInt256
+    blobsBundle*: BlobsBundleV2
+    shouldOverrideBuilder*: bool
+    executionRequests*: seq[seq[byte]]
+
+  GetPayloadV6Response* = object
+    executionPayload*: ExecutionPayloadV4
     blockValue*: UInt256
     blobsBundle*: BlobsBundleV2
     shouldOverrideBuilder*: bool

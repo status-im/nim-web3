@@ -28,6 +28,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32): PayloadStatusV1
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
+  proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponse
@@ -37,6 +38,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV3(payloadId: Bytes8): GetPayloadV3Response
   proc engine_getPayloadV4(payloadId: Bytes8): GetPayloadV4Response
   proc engine_getPayloadV5(payloadId: Bytes8): GetPayloadV5Response
+  proc engine_getPayloadV6(payloadId: Bytes8): GetPayloadV6Response
   proc engine_getPayloadBodiesByHashV1(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
