@@ -376,6 +376,28 @@ func executionPayload*(p: ExecutionPayloadV3): ExecutionPayload =
     excessBlobGas: Opt.some(p.excessBlobGas)
   )
 
+func executionPayload*(p: ExecutionPayloadV4): ExecutionPayload =
+  ExecutionPayload(
+    parentHash: p.parentHash,
+    feeRecipient: p.feeRecipient,
+    stateRoot: p.stateRoot,
+    receiptsRoot: p.receiptsRoot,
+    logsBloom: p.logsBloom,
+    prevRandao: p.prevRandao,
+    blockNumber: p.blockNumber,
+    gasLimit: p.gasLimit,
+    gasUsed: p.gasUsed,
+    timestamp: p.timestamp,
+    extraData: p.extraData,
+    baseFeePerGas: p.baseFeePerGas,
+    blockHash: p.blockHash,
+    transactions: p.transactions,
+    withdrawals: Opt.some(p.withdrawals),
+    blobGasUsed: Opt.some(p.blobGasUsed),
+    excessBlobGas: Opt.some(p.excessBlobGas),
+    blockAccessList: Opt.some(p.blockAccessList),
+  )
+
 func executionPayload*(p: ExecutionPayloadV1OrV2): ExecutionPayload =
   ExecutionPayload(
     parentHash: p.parentHash,
