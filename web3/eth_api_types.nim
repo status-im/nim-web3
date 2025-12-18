@@ -115,7 +115,7 @@ type
     nonce*: Opt[Bytes8]
     mixHash*: Hash32                         # hash of the generated proof-of-work. null when its pending block.
     size*: Quantity                          # integer the size of this block in bytes.
-    totalDifficulty*: UInt256                # integer of the total difficulty of the chain until this block.
+    totalDifficulty*: Opt[UInt256]           # integer of the total difficulty of the chain until this block.
     transactions*: seq[TxOrHash]             # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[Hash32]                     # list of uncle hashes.
     baseFeePerGas*: Opt[UInt256]             # EIP-1559
