@@ -7,11 +7,13 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+{.push raises: [], gcsafe.}
+
 import
   std/[tables, uri, macros],
   httputils, chronos,
   results,
-  json_rpc/[rpcclient, jsonmarshal],
+  json_rpc/[jsonmarshal, router, rpcclient],
   json_rpc/private/jrpc_sys,
   eth/common/keys,
   chronos/apps/http/httpclient,
@@ -75,8 +77,9 @@ type
     data*: seq[byte]
     sender*: TSender
 
-func getValue(params: RequestParamsRx, field: string, FieldType: type):
-        Result[FieldType, string] {.gcsafe, raises: [].} =
+func getValue(
+    params: RequestParamsRx, field: string, FieldType: type
+): Result[FieldType, string] =
   try:
     for param in params.named:
       if param.name == field:
@@ -88,72 +91,53 @@ func getValue(params: RequestParamsRx, field: string, FieldType: type):
   except CatchableError as exc:
     return err(exc.msg)
 
-proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
-                                Result[void, string] {.gcsafe, raises: [].} =
-  let subs = params.getValue("subscription", string).valueOr:
-    return err(error)
-  let s = w.subscriptions.getOrDefault(subs)
+proc onSubscription(w: Web3, subscription: string, params: JsonString) =
+  let s = w.subscriptions.getOrDefault(subscription)
   if not s.isNil and not s.removed:
-    let res = params.getValue("result", JsonString).valueOr:
-      return err(error)
     if s.historicalEventsProcessed:
-      s.eventHandler(res)
+      s.eventHandler(params)
     else:
-      s.pendingEvents.add(res)
-
-  ok()
+      s.pendingEvents.add(params)
 
 func newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
-  result.subscriptions = initTable[string, Subscription]()
-  let w3 = result
-
-  provider.onProcessMessage = proc(client: RpcClient, line: string):
-                                Result[bool, string] {.gcsafe, raises: [].} =
-    try:
-      let req = JrpcSys.decode(line, RequestRx)
-      if req.`method`.isNone:
-        # fallback to regular onProcessMessage
-        return ok(true)
-
-      # This could be subscription notification
-      let name = req.`method`.get
-      if name == "eth_subscription":
-        if req.params.kind != rpNamed:
-          return ok(false)
-        w3.handleSubscriptionNotification(req.params).isOkOr:
-          return err(error)
-
-      # don't fallback, just quit onProcessMessage
-      return ok(false)
-    except CatchableError as exc:
-      return err(exc.msg)
 
 proc newWeb3*(
     uri: string,
     getHeaders: GetJsonRpcRequestHeaders = nil,
-    httpFlags: HttpClientFlags = {}):
-    Future[Web3] {.async.} =
+    httpFlags: HttpClientFlags = {},
+): Future[Web3] {.async.} =
   let u = parseUri(uri)
   var provider: RpcClient
   case u.scheme
   of "http", "https":
-    let p = newRpcHttpClient(getHeaders = getHeaders,
-                             flags = httpFlags)
+    let p = newRpcHttpClient(getHeaders = getHeaders, flags = httpFlags)
     await p.connect(uri)
-    provider = p
+
+    let w3 = newWeb3(p)
+    p.onDisconnect = proc() =
+      if not w3.onDisconnect.isNil:
+        w3.onDisconnect()
+    w3
   of "ws", "wss":
-    let p = newRpcWebSocketClient(getHeaders = getHeaders)
+    let router = RpcRouter.new()
+
+    let p = newRpcWebSocketClient(getHeaders = getHeaders, router = router)
     await p.connect(uri)
-    provider = p
+
+    let w3 = newWeb3(p)
+    router[].rpc("eth_subscription") do(
+      subscription: string, resultPar {.serializedFieldName: "result".}: JsonString
+    ) -> void:
+      w3.onSubscription(subscription, resultPar)
+
+    p.onDisconnect = proc() =
+      w3.subscriptions.clear()
+      if not w3.onDisconnect.isNil:
+        w3.onDisconnect()
+    w3
   else:
     raise newException(CatchableError, "Unknown web3 url scheme")
-  result = newWeb3(provider)
-  let r = result
-  provider.onDisconnect = proc() =
-    r.subscriptions.clear()
-    if not r.onDisconnect.isNil:
-      r.onDisconnect()
 
 proc close*(web3: Web3): Future[void] = web3.provider.close()
 
