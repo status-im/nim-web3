@@ -47,7 +47,7 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
 
-    name: '${{ matrix.target.os }}-${{ matrix.target.cpu }} (Nim ${{ matrix.branch }})'
+    name: "${{ matrix.target.os }}-${{ matrix.target.cpu }} (Nim ${{ matrix.branch }})"
     runs-on: ${{ matrix.builder }}
     steps:
       - name: Checkout
@@ -91,7 +91,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: external/dlls
-          key: 'dlls'
+          key: "dlls"
 
       - name: Install DLL dependencies (Windows)
         if: >
@@ -141,7 +141,7 @@ jobs:
         if: runner.os == 'macOS' && matrix.target.cpu == 'arm64'
         run: |
           # Force ARM64 architecture for Nim compilation with proper flags passed to clang
-          echo "NIMFLAGS=--cpu:arm64 --cc:clang --passC:\"-target arm64-apple-macos11\" --passL:\"-target arm64-apple-macos11\"" >> $GITHUB_ENV                                                                                            
+          echo "NIMFLAGS=--cpu:arm64 --cc:clang --passC:\"-target arm64-apple-macos11\" --passL:\"-target arm64-apple-macos11\"" >> $GITHUB_ENV
 
       - name: Build Nim and Nimble
         run: |
@@ -153,12 +153,12 @@ jobs:
       - name: Setup Nimble
         uses: nim-lang/setup-nimble-action@v1
         with:
-          nimble-version: 'latest'
+          nimble-version: "latest"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Use gcc 14
         # Should be removed when ubuntu-latest is 26.04
-        if : ${{ matrix.target.os == 'linux-gcc-14' }}
+        if: ${{ matrix.target.os == 'linux-gcc-14' }}
         run: |
           # Add GCC-14 to alternatives
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 14
