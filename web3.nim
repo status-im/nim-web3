@@ -99,8 +99,44 @@ proc onSubscription(w: Web3, subscription: string, params: JsonString) =
     else:
       s.pendingEvents.add(params)
 
+when not declared(RpcConnection):
+  proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
+                                  Result[void, string] {.gcsafe, raises: [].} =
+    let
+      subs = ?params.getValue("subscription", string)
+      res = ?params.getValue("result", JsonString)
+    w.onSubscription(subs, res)
+
+    ok()
+
 func newWeb3*(provider: RpcClient): Web3 =
-  result = Web3(provider: provider)
+  let w3 = Web3(provider: provider)
+
+  when not declared(RpcConnection):
+    # Newer versions of json-rpc implement the bi-directional RpcConnection
+    # instead of relying on raw message processing
+    provider.onProcessMessage = proc(
+        client: RpcClient, line: string
+    ): Result[bool, string] {.gcsafe, raises: [].} =
+      try:
+        let req = JrpcSys.decode(line, RequestRx)
+        if req.`method`.isNone:
+          # fallback to regular onProcessMessage
+          return ok(true)
+
+        # This could be subscription notification
+        let name = req.`method`.get
+        if name == "eth_subscription":
+          if req.params.kind != rpNamed:
+            return ok(false)
+          w3.handleSubscriptionNotification(req.params).isOkOr:
+            return err(error)
+
+        # don't fallback, just quit onProcessMessage
+        return ok(false)
+      except CatchableError as exc:
+        return err(exc.msg)
+  w3
 
 proc newWeb3*(
     uri: string,
@@ -108,33 +144,36 @@ proc newWeb3*(
     httpFlags: HttpClientFlags = {},
 ): Future[Web3] {.async.} =
   let u = parseUri(uri)
-  var provider: RpcClient
+
   case u.scheme
   of "http", "https":
     let p = newRpcHttpClient(getHeaders = getHeaders, flags = httpFlags)
     await p.connect(uri)
 
-    let w3 = newWeb3(p)
-    p.onDisconnect = proc() =
-      if not w3.onDisconnect.isNil:
-        w3.onDisconnect()
-    w3
+    newWeb3(p)
   of "ws", "wss":
-    let router = RpcRouter.new()
+    when not declared(RpcConnection):
+      let p = newRpcWebSocketClient(getHeaders = getHeaders)
+      await p.connect(uri)
 
-    let p = newRpcWebSocketClient(getHeaders = getHeaders, router = router)
-    await p.connect(uri)
+      let w3 = newWeb3(p)
+    else:
+      let
+        router = RpcRouter.new()
+        p = newRpcWebSocketClient(getHeaders = getHeaders, router = router)
+      await p.connect(uri)
 
-    let w3 = newWeb3(p)
-    router[].rpc("eth_subscription") do(
-      subscription: string, resultPar {.serializedFieldName: "result".}: JsonString
-    ) -> void:
-      w3.onSubscription(subscription, resultPar)
+      let w3 = newWeb3(p)
+      router[].rpc("eth_subscription") do(
+        subscription: string, resultPar {.serializedFieldName: "result".}: JsonString
+      ) -> void:
+        w3.onSubscription(subscription, resultPar)
 
     p.onDisconnect = proc() =
       w3.subscriptions.clear()
       if not w3.onDisconnect.isNil:
         w3.onDisconnect()
+
     w3
   else:
     raise newException(CatchableError, "Unknown web3 url scheme")
