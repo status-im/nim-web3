@@ -16,4 +16,7 @@ done
 if [[ -n "${TEST_LANG}" ]]; then
   export TEST_LANG
 fi
+
 nimble test
+
+nimble test --requires="nim-json-rpc#2e7d4b1527f03830c12403c7c8f1b7ef53f55489"
