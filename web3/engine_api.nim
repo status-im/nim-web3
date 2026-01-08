@@ -43,6 +43,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
+  proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
 
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
