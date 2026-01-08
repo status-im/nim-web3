@@ -273,7 +273,7 @@ type
 
   GetBlobsV2Response* = seq[BlobAndProofV2]
 
-  GetMaybeBlobAndProofV2Response* = seq[MaybeBlobAndProofV2]
+  GetBlobsV3Response* = seq[MaybeBlobAndProofV2]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
