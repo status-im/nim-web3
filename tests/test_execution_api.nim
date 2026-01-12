@@ -21,7 +21,8 @@ const
 
 {.push raises: [].}
 
-JrpcConv.automaticSerialization(JsonValueRef, true)
+# XXX explicit readValue/writeValue to avoid automatic serialization
+EthJson.automaticSerialization(JsonValueRef, true)
 
 func compareValue(lhs, rhs: JsonValueRef): bool
 
@@ -136,7 +137,7 @@ proc callWithParams(client: RpcClient, data: TestData): Future[bool] {.async.} =
   try:
     var params = data.input.params
     if data.output.result.string.len > 0:
-      let jsonBytes = JrpcConv.encode(data.output.result.string)
+      let jsonBytes = EthJson.encode(data.output.result.string)
       params.positional.insert(jsonBytes.JsonString, 0)
     else:
       params.positional.insert("-1".JsonString, 0)
@@ -144,8 +145,8 @@ proc callWithParams(client: RpcClient, data: TestData): Future[bool] {.async.} =
     let resJson = await client.call(data.input.`method`, params)
 
     if res.result.string.len > 0:
-      let wantVal = JrpcConv.decode(res.result.string, JsonValueRef[string])
-      let getVal = JrpcConv.decode(resJson.string, JsonValueRef[string])
+      let wantVal = EthJson.decode(res.result.string, JsonValueRef[string])
+      let getVal = EthJson.decode(resJson.string, JsonValueRef[string])
 
       if not compareValue(wantVal, getVal):
         debugEcho data.file
@@ -202,7 +203,7 @@ suite "Ethereum execution api":
   waitFor srv.closeWait()
 
 proc setupMethods(server: RpcServer) =
-  server.rpc("eth_getBlockReceipts") do(blockId: RtBlockIdentifier) -> Opt[seq[ReceiptObject]]:
+  server.rpc("eth_getBlockReceipts", EthJson) do(blockId: RtBlockIdentifier) -> Opt[seq[ReceiptObject]]:
     var res: seq[ReceiptObject]
     return Opt.some(res)
 

@@ -2,15 +2,14 @@ import
   std/[json, strutils],
   pkg/unittest2,
   stint,
-  json_rpc/jsonmarshal,
   ../web3/[conversions, eth_api_types, engine_api_types]
 
 template should_be_value_error(input: string, value: untyped): void =
   expect SerializationError:
-    value = JrpcConv.decode(input, typeof(value))
+    value = EthJson.decode(input, typeof(value))
 
 template should_not_error(input: string, value: untyped): void =
-  value = JrpcConv.decode(input, typeof(value))
+  value = EthJson.decode(input, typeof(value))
 
 suite "Null conversion":
   var resAddress: Address
@@ -68,8 +67,7 @@ suite "Null conversion":
 
   ## Covering the web3/engine_api_types
   ##
-  ## NOTE: These will be transformed by the JrpcConv imported from
-  ##       nim-json-rpc/json_rpc/jsonmarshal
+  ## NOTE: These will be transformed by EthJson
   test "passing nully values to specific convertors":
 
     let payloadAttributesV1 = """{ "timestamp": {item}, "prevRandao": {item}, "suggestedFeeRecipient": {item} }"""
