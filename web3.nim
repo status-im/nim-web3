@@ -13,7 +13,7 @@ import
   std/[tables, uri, macros],
   httputils, chronos,
   results,
-  json_rpc/[jsonmarshal, router, rpcclient],
+  json_rpc/rpcclient,
   json_rpc/private/jrpc_sys,
   eth/common/keys,
   chronos/apps/http/httpclient,
@@ -31,7 +31,8 @@ export
   contract_dsl,
   HttpClientFlag,
   HttpClientFlags,
-  eth_api
+  eth_api,
+  EthJson
 
 type
   Web3* = ref object
@@ -86,7 +87,7 @@ func getValue(
         when FieldType is JsonString:
           return ok(param.value)
         else:
-          let val = JrpcConv.decode(param.value.string, FieldType)
+          let val = EthJson.decode(param.value.string, FieldType)
           return ok(val)
   except CatchableError as exc:
     return err(exc.msg)
@@ -257,7 +258,7 @@ proc subscribeForBlockHeaders*(w: Web3,
   proc eventHandler(json: JsonString) {.gcsafe, raises: [].} =
 
     try:
-      let blk = JrpcConv.decode(json.string, BlockHeader)
+      let blk = EthJson.decode(json.string, BlockHeader)
       blockHeadersCallback(blk)
     except CatchableError as err:
       errorHandler(err[])
