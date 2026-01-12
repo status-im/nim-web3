@@ -123,6 +123,12 @@ template getPayload*(
     payloadId: Bytes8): Future[GetPayloadV5Response] =
   engine_getPayloadV5(rpcClient, payloadId)
 
+template getPayload*(
+    rpcClient: RpcClient,
+    T: type GetPayloadV6Response,
+    payloadId: Bytes8): Future[GetPayloadV6Response] =
+  engine_getPayloadV6(rpcClient, payloadId)
+
 template getBlobs*(
     rpcClient: RpcClient,
     T: type GetBlobsV1Response,
