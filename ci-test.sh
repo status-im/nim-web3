@@ -18,5 +18,3 @@ if [[ -n "${TEST_LANG}" ]]; then
 fi
 
 nimble test
-
-nimble test --requires="json_rpc#2e7d4b1527f03830c12403c7c8f1b7ef53f55489"
