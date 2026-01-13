@@ -104,6 +104,15 @@ proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
 
   ok()
 
+type
+  Web3RequestRx = object
+    jsonrpc : results.Opt[JsonRPC2]
+    `method`: results.Opt[string]
+    params: RequestParamsRx
+    id: results.Opt[RequestId]
+
+Web3RequestRx.useDefaultReaderIn JrpcSys
+
 func newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
   result.subscriptions = initTable[string, Subscription]()
@@ -112,7 +121,7 @@ func newWeb3*(provider: RpcClient): Web3 =
   provider.onProcessMessage = proc(client: RpcClient, line: string):
                                 Result[bool, string] {.gcsafe, raises: [].} =
     try:
-      let req = JrpcSys.decode(line, RequestRx)
+      let req = JrpcSys.decode(line, Web3RequestRx)
       if req.`method`.isNone:
         # fallback to regular onProcessMessage
         return ok(true)
