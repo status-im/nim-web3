@@ -18,13 +18,15 @@ import
   ./primitives,
   ./engine_api_types,
   ./eth_api_types,
+  ./eth_types,
   ./execution_types
 
 import eth/common/eth_types_json_serialization
 
 export
   results,
-  json_serialization
+  json_serialization,
+  eth_types
 
 export eth_types_json_serialization except Topic
 
@@ -32,15 +34,6 @@ export eth_types_json_serialization except Topic
 # EthJson configuration
 #------------------------------------------------------------------------------
 
-createJsonFlavor EthJson,
-  automaticObjectSerialization = false,
-  requireAllFields = false,
-  omitOptionalFields = false, # Don't skip optional fields==none in Writer
-  allowUnknownFields = true,
-  skipNullFields = true,      # Skip optional fields==null in Reader
-  automaticPrimitivesSerialization = false
-
-EthJson.automaticSerialization(JsonNode, true)
 EthJson.automaticSerialization(string, true)
 EthJson.automaticSerialization(JsonString, true)
 EthJson.automaticSerialization(ref, true)
