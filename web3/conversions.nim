@@ -18,7 +18,7 @@ import
   ./primitives,
   ./engine_api_types,
   ./eth_api_types,
-  ./eth_types,
+  ./eth_json_marshal,
   ./execution_types
 
 import eth/common/eth_types_json_serialization
@@ -26,7 +26,7 @@ import eth/common/eth_types_json_serialization
 export
   results,
   json_serialization,
-  eth_types
+  eth_json_marshal
 
 export eth_types_json_serialization except Topic
 
