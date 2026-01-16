@@ -11,7 +11,7 @@ import
   std/[tables, uri, macros],
   httputils, chronos,
   results,
-  json_rpc/[rpcclient, jsonmarshal],
+  json_rpc/rpcclient,
   json_rpc/private/jrpc_sys,
   eth/common/keys,
   chronos/apps/http/httpclient,
@@ -29,7 +29,8 @@ export
   contract_dsl,
   HttpClientFlag,
   HttpClientFlags,
-  eth_api
+  eth_api,
+  EthJson
 
 type
   Web3* = ref object
@@ -83,7 +84,7 @@ func getValue(params: RequestParamsRx, field: string, FieldType: type):
         when FieldType is JsonString:
           return ok(param.value)
         else:
-          let val = JrpcConv.decode(param.value.string, FieldType)
+          let val = EthJson.decode(param.value.string, FieldType)
           return ok(val)
   except CatchableError as exc:
     return err(exc.msg)
@@ -103,6 +104,15 @@ proc handleSubscriptionNotification(w: Web3, params: RequestParamsRx):
 
   ok()
 
+type
+  Web3RequestRx = object
+    jsonrpc : results.Opt[JsonRPC2]
+    `method`: results.Opt[string]
+    params: RequestParamsRx
+    id: results.Opt[RequestId]
+
+Web3RequestRx.useDefaultReaderIn JrpcSys
+
 func newWeb3*(provider: RpcClient): Web3 =
   result = Web3(provider: provider)
   result.subscriptions = initTable[string, Subscription]()
@@ -111,7 +121,7 @@ func newWeb3*(provider: RpcClient): Web3 =
   provider.onProcessMessage = proc(client: RpcClient, line: string):
                                 Result[bool, string] {.gcsafe, raises: [].} =
     try:
-      let req = JrpcSys.decode(line, RequestRx)
+      let req = JrpcSys.decode(line, Web3RequestRx)
       if req.`method`.isNone:
         # fallback to regular onProcessMessage
         return ok(true)
@@ -234,7 +244,7 @@ proc subscribeForBlockHeaders*(w: Web3,
   proc eventHandler(json: JsonString) {.gcsafe, raises: [].} =
 
     try:
-      let blk = JrpcConv.decode(json.string, BlockHeader)
+      let blk = EthJson.decode(json.string, BlockHeader)
       blockHeadersCallback(blk)
     except CatchableError as err:
       errorHandler(err[])

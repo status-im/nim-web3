@@ -13,12 +13,12 @@ import
   std/strutils,
   stew/byteutils,
   faststreams/textio,
-  json_rpc/jsonmarshal,
   json_serialization/pkg/results,
   json_serialization,
   ./primitives,
   ./engine_api_types,
   ./eth_api_types,
+  ./eth_json_marshal,
   ./execution_types
 
 import eth/common/eth_types_json_serialization
@@ -26,83 +26,83 @@ import eth/common/eth_types_json_serialization
 export
   results,
   json_serialization,
-  jsonmarshal
+  eth_json_marshal
 
 export eth_types_json_serialization except Topic
 
 #------------------------------------------------------------------------------
-# JrpcConv configuration
+# EthJson configuration
 #------------------------------------------------------------------------------
 
-JrpcConv.automaticSerialization(string, true)
-JrpcConv.automaticSerialization(JsonString, true)
-JrpcConv.automaticSerialization(ref, true)
-JrpcConv.automaticSerialization(seq, true)
-JrpcConv.automaticSerialization(bool, true)
-JrpcConv.automaticSerialization(float64, true)
-JrpcConv.automaticSerialization(array, true)
+EthJson.automaticSerialization(string, true)
+EthJson.automaticSerialization(JsonString, true)
+EthJson.automaticSerialization(ref, true)
+EthJson.automaticSerialization(seq, true)
+EthJson.automaticSerialization(bool, true)
+EthJson.automaticSerialization(float64, true)
+EthJson.automaticSerialization(array, true)
 
 #------------------------------------------------------------------------------
 # eth_api_types
 #------------------------------------------------------------------------------
 
-SyncObject.useDefaultSerializationIn JrpcConv
-Withdrawal.useDefaultSerializationIn JrpcConv
-AccessPair.useDefaultSerializationIn JrpcConv
-AccessListResult.useDefaultSerializationIn JrpcConv
-LogObject.useDefaultSerializationIn JrpcConv
-StorageProof.useDefaultSerializationIn JrpcConv
-ProofResponse.useDefaultSerializationIn JrpcConv
-FilterOptions.useDefaultSerializationIn JrpcConv
-TransactionArgs.useDefaultReaderIn JrpcConv
-FeeHistoryResult.useDefaultSerializationIn JrpcConv
-Authorization.useDefaultSerializationIn JrpcConv
+SyncObject.useDefaultSerializationIn EthJson
+Withdrawal.useDefaultSerializationIn EthJson
+AccessPair.useDefaultSerializationIn EthJson
+AccessListResult.useDefaultSerializationIn EthJson
+LogObject.useDefaultSerializationIn EthJson
+StorageProof.useDefaultSerializationIn EthJson
+ProofResponse.useDefaultSerializationIn EthJson
+FilterOptions.useDefaultSerializationIn EthJson
+TransactionArgs.useDefaultReaderIn EthJson
+FeeHistoryResult.useDefaultSerializationIn EthJson
+Authorization.useDefaultSerializationIn EthJson
 
-BlockHeader.useDefaultSerializationIn JrpcConv
-BlockObject.useDefaultSerializationIn JrpcConv
-TransactionObject.useDefaultSerializationIn JrpcConv
-ReceiptObject.useDefaultSerializationIn JrpcConv
-BlobScheduleObject.useDefaultSerializationIn JrpcConv
-ConfigObject.useDefaultSerializationIn JrpcConv
-EthConfigObject.useDefaultSerializationIn JrpcConv
+BlockHeader.useDefaultSerializationIn EthJson
+BlockObject.useDefaultSerializationIn EthJson
+TransactionObject.useDefaultSerializationIn EthJson
+ReceiptObject.useDefaultSerializationIn EthJson
+BlobScheduleObject.useDefaultSerializationIn EthJson
+ConfigObject.useDefaultSerializationIn EthJson
+EthConfigObject.useDefaultSerializationIn EthJson
 
 #------------------------------------------------------------------------------
 # engine_api_types
 #------------------------------------------------------------------------------
 
-WithdrawalV1.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV1.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV2.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV1OrV2.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV3.useDefaultSerializationIn JrpcConv
-ExecutionPayloadV4.useDefaultSerializationIn JrpcConv
-BlobsBundleV1.useDefaultSerializationIn JrpcConv
-BlobsBundleV2.useDefaultSerializationIn JrpcConv
-BlobAndProofV1.useDefaultSerializationIn JrpcConv
-BlobAndProofV2.useDefaultSerializationIn JrpcConv
-ExecutionPayloadBodyV1.useDefaultSerializationIn JrpcConv
-PayloadAttributesV1.useDefaultSerializationIn JrpcConv
-PayloadAttributesV2.useDefaultSerializationIn JrpcConv
-PayloadAttributesV3.useDefaultSerializationIn JrpcConv
-PayloadAttributesV1OrV2.useDefaultSerializationIn JrpcConv
-PayloadStatusV1.useDefaultSerializationIn JrpcConv
-ForkchoiceStateV1.useDefaultSerializationIn JrpcConv
-ForkchoiceUpdatedResponse.useDefaultSerializationIn JrpcConv
-GetPayloadV2Response.useDefaultSerializationIn JrpcConv
-GetPayloadV2ResponseExact.useDefaultSerializationIn JrpcConv
-GetPayloadV3Response.useDefaultSerializationIn JrpcConv
-GetPayloadV4Response.useDefaultSerializationIn JrpcConv
-GetPayloadV5Response.useDefaultSerializationIn JrpcConv
-GetPayloadV6Response.useDefaultSerializationIn JrpcConv
-ClientVersionV1.useDefaultSerializationIn JrpcConv
+WithdrawalV1.useDefaultSerializationIn EthJson
+ExecutionPayloadV1.useDefaultSerializationIn EthJson
+ExecutionPayloadV2.useDefaultSerializationIn EthJson
+ExecutionPayloadV1OrV2.useDefaultSerializationIn EthJson
+ExecutionPayloadV3.useDefaultSerializationIn EthJson
+ExecutionPayloadV4.useDefaultSerializationIn EthJson
+BlobsBundleV1.useDefaultSerializationIn EthJson
+BlobsBundleV2.useDefaultSerializationIn EthJson
+BlobAndProofV1.useDefaultSerializationIn EthJson
+BlobAndProofV2.useDefaultSerializationIn EthJson
+ExecutionPayloadBodyV1.useDefaultSerializationIn EthJson
+PayloadAttributesV1.useDefaultSerializationIn EthJson
+PayloadAttributesV2.useDefaultSerializationIn EthJson
+PayloadAttributesV3.useDefaultSerializationIn EthJson
+PayloadAttributesV1OrV2.useDefaultSerializationIn EthJson
+PayloadStatusV1.useDefaultSerializationIn EthJson
+ForkchoiceStateV1.useDefaultSerializationIn EthJson
+ForkchoiceUpdatedResponse.useDefaultSerializationIn EthJson
+GetPayloadV2Response.useDefaultSerializationIn EthJson
+GetPayloadV2ResponseExact.useDefaultSerializationIn EthJson
+GetPayloadV3Response.useDefaultSerializationIn EthJson
+GetPayloadV4Response.useDefaultSerializationIn EthJson
+GetPayloadV5Response.useDefaultSerializationIn EthJson
+GetPayloadV6Response.useDefaultSerializationIn EthJson
+ClientVersionV1.useDefaultSerializationIn EthJson
 
 #------------------------------------------------------------------------------
 # execution_types
 #------------------------------------------------------------------------------
 
-ExecutionPayload.useDefaultSerializationIn JrpcConv
-PayloadAttributes.useDefaultSerializationIn JrpcConv
-GetPayloadResponse.useDefaultSerializationIn JrpcConv
+ExecutionPayload.useDefaultSerializationIn EthJson
+PayloadAttributes.useDefaultSerializationIn EthJson
+GetPayloadResponse.useDefaultSerializationIn EthJson
 
 #------------------------------------------------------------------------------
 # Private helpers
@@ -203,21 +203,21 @@ proc writeHexValue(w: var JsonWriter, v: openArray[byte])
 # Well, both rpc and chronicles share the same encoding of these types
 #------------------------------------------------------------------------------
 
-type CommonJsonFlavors = JrpcConv | DefaultFlavor
+type CommonJsonFlavors = EthJson | DefaultFlavor
 
 proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: DynamicBytes)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*[N](w: var JsonWriter[JrpcConv], v: FixedBytes[N])
+proc writeValue*[N](w: var JsonWriter[EthJson], v: FixedBytes[N])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Address)
+proc writeValue*(w: var JsonWriter[EthJson], v: Address)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Hash32)
+proc writeValue*(w: var JsonWriter[EthJson], v: Hash32)
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, distinctBase(v)
 
@@ -242,27 +242,27 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var DynamicByte
   wrapValueError:
     val = fromHex(DynamicBytes, r.parseString())
 
-proc readValue*[N](r: var JsonReader[JrpcConv], val: var FixedBytes[N])
+proc readValue*[N](r: var JsonReader[EthJson], val: var FixedBytes[N])
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(FixedBytes[N], r.parseString())
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var Address)
+proc readValue*(r: var JsonReader[EthJson], val: var Address)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(Address, r.parseString())
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var Hash32)
+proc readValue*(r: var JsonReader[EthJson], val: var Hash32)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = fromHex(Hash32, r.parseString())
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Number)
+proc writeValue*(w: var JsonWriter[EthJson], v: Number)
       {.gcsafe, raises: [IOError].} =
   w.streamElement(s):
     s.writeText distinctBase(v)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var Number)
+proc readValue*(r: var JsonReader[EthJson], val: var Number)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     val = r.parseInt(uint64).Number
@@ -339,17 +339,17 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var seq[SystemC
     val.add SystemContractPair(name: k, address: v)
 
 #------------------------------------------------------------------------------
-# Exclusive to JrpcConv
+# Exclusive to EthJson
 #------------------------------------------------------------------------------
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: uint64 | uint8)
+proc writeValue*(w: var JsonWriter[EthJson], v: uint64 | uint8)
       {.gcsafe, raises: [IOError].} =
   w.streamElement(s):
     s.write "\"0x"
     s.toHex(v)
     s.write "\""
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var (uint8 | uint64))
+proc readValue*(r: var JsonReader[EthJson], val: var (uint8 | uint64))
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
   if hexStr.invalidQuantityPrefix:
@@ -357,11 +357,11 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var (uint8 | uint64))
   wrapValueError:
     val = strutils.fromHex[typeof(val)](hexStr)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[byte])
+proc writeValue*(w: var JsonWriter[EthJson], v: seq[byte])
       {.gcsafe, raises: [IOError].} =
   writeHexValue w, v
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
+proc readValue*(r: var JsonReader[EthJson], val: var seq[byte])
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   wrapValueError:
     let hexStr = r.parseString()
@@ -369,7 +369,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
       # skip empty hex
       val = hexToSeqByte(hexStr)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
+proc readValue*(r: var JsonReader[EthJson], val: var RtBlockIdentifier)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
   let hexStr = r.parseString()
   wrapValueError:
@@ -379,26 +379,26 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
     else:
       val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
+proc writeValue*(w: var JsonWriter[EthJson], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of bidNumber: w.writeValue(v.number)
   of bidAlias: w.writeValue(v.alias)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var TxOrHash)
+proc readValue*(r: var JsonReader[EthJson], val: var TxOrHash)
        {.gcsafe, raises: [IOError, SerializationError].} =
   if r.tokKind == JsonValueKind.String:
     val = TxOrHash(kind: tohHash, hash: r.readValue(Hash32))
   else:
     val = TxOrHash(kind: tohTx, tx: r.readValue(TransactionObject))
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: TxOrHash)
+proc writeValue*(w: var JsonWriter[EthJson], v: TxOrHash)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of tohHash: w.writeValue(v.hash)
   of tohTx: w.writeValue(v.tx)
 
-proc readValue*[T](r: var JsonReader[JrpcConv], val: var SingleOrList[T])
+proc readValue*[T](r: var JsonReader[EthJson], val: var SingleOrList[T])
        {.gcsafe, raises: [IOError, SerializationError].} =
   let tok = r.tokKind()
   case tok
@@ -414,14 +414,14 @@ proc readValue*[T](r: var JsonReader[JrpcConv], val: var SingleOrList[T])
   else:
     r.raiseUnexpectedValue("TopicOrList unexpected token kind =" & $tok)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: SingleOrList)
+proc writeValue*(w: var JsonWriter[EthJson], v: SingleOrList)
       {.gcsafe, raises: [IOError].} =
   case v.kind
   of slkNull: w.writeValue(JsonString("null"))
   of slkSingle: w.writeValue(v.single)
   of slkList: w.writeValue(v.list)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var SyncingStatus)
+proc readValue*(r: var JsonReader[EthJson], val: var SyncingStatus)
        {.gcsafe, raises: [IOError, SerializationError].} =
   let tok = r.tokKind()
   case tok
@@ -433,7 +433,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var SyncingStatus)
   else:
     r.raiseUnexpectedValue("SyncingStatus unexpected token kind =" & $tok)
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: SyncingStatus)
+proc writeValue*(w: var JsonWriter[EthJson], v: SyncingStatus)
       {.gcsafe, raises: [IOError].} =
   if not v.syncing:
     w.writeValue(false)
@@ -441,7 +441,7 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: SyncingStatus)
     w.writeValue(v.syncObject)
 
 # Somehow nim2 refuse to generate automatically
-proc readValue*(r: var JsonReader[JrpcConv], val: var Opt[seq[ReceiptObject]])
+proc readValue*(r: var JsonReader[EthJson], val: var Opt[seq[ReceiptObject]])
        {.gcsafe, raises: [IOError, SerializationError].} =
   mixin readValue
 
@@ -451,7 +451,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var Opt[seq[ReceiptObject]])
   else:
     val.ok r.readValue(seq[ReceiptObject])
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
+proc writeValue*(w: var JsonWriter[EthJson], v: Opt[seq[ReceiptObject]])
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
 
@@ -460,21 +460,21 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: Opt[seq[ReceiptObject]])
   else:
     w.writeValue JsonString("null")
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[PrecompilePair])
+proc writeValue*(w: var JsonWriter[EthJson], v: seq[PrecompilePair])
       {.gcsafe, raises: [IOError].} =
   w.beginObject()
   for x in v:
     w.writeMember(x.name, x.address)
   w.endObject()
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: seq[SystemContractPair])
+proc writeValue*(w: var JsonWriter[EthJson], v: seq[SystemContractPair])
       {.gcsafe, raises: [IOError].} =
   w.beginObject()
   for x in v:
     w.writeMember(x.name, x.address)
   w.endObject()
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
+proc writeValue*(w: var JsonWriter[EthJson], v: TransactionArgs)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
   var

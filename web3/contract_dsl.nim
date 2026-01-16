@@ -45,7 +45,7 @@ type
     data*: seq[byte]
     topics*: seq[Bytes32]
 
-EventData.useDefaultSerializationIn JrpcConv
+EventData.useDefaultSerializationIn EthJson
 
 proc joinStrings(s: varargs[string]): string = join(s)
 
@@ -251,7 +251,7 @@ proc genEvent(cname: NimNode, eventObject: EventObject): NimNode =
       callWithRawData = nnkCall.newTree(callbackIdent)
 
     argParseBody.add quote do:
-      let `eventData` = JrpcConv.decode(`jsonIdent`.string, EventData)
+      let `eventData` = EthJson.decode(`jsonIdent`.string, EventData)
 
     let tupleType = nnkTupleTy.newTree()
 
