@@ -1,5 +1,5 @@
 # json-rpc
-# Copyright (c) 2024 Status Research & Development GmbH
+# Copyright (c) 2024-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -164,3 +164,7 @@ proc installHandlers*(server: RpcServer) =
   server.rpc("eth_getLogs") do(x: JsonString, filterOptions: FilterOptions) -> seq[LogObject]:
     if x != "-1".JsonString:
       return decodeFromString(x, seq[LogObject])
+
+  server.rpc("net_version") do(x: JsonString) -> string:
+    if x != "-1".JsonString:
+      return decodeFromString(x, string)
