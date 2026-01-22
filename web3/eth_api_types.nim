@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2025 Status Research & Development GmbH
+# Copyright (c) 2019-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -214,6 +214,7 @@ type
     transactionHash*: Opt[Hash32]    # hash of the transactions this log was created from. null when its pending log.
     blockHash*: Opt[Hash32]          # hash of the block where this log was in. null when its pending. null when its pending log.
     blockNumber*: Opt[Quantity]      # the block number where this log was in. null when its pending. null when its pending log.
+    blockTimestamp*: Opt[Quantity]   # the block timestamp where this log was in.
     address*: Address                # address from which this log originated.
     data*: seq[byte]                 # contains one or more 32 Bytes non-indexed arguments of the log.
     topics*: seq[Bytes32]            # array of 0 to 4 32 Bytes DATA of indexed log arguments.
