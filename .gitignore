@@ -33,3 +33,4 @@ test_null_conversion
 test_primitives
 test_signed_tx
 test_string_decoder
+nimble.develop
