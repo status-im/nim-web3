@@ -136,6 +136,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
     blockAccessList*: seq[byte]
+    slotNumber*: Quantity
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
@@ -195,6 +196,14 @@ type
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
 
+  PayloadAttributesV4* = object
+    timestamp*: Quantity
+    prevRandao*: Bytes32
+    suggestedFeeRecipient*: Address
+    withdrawals*: seq[WithdrawalV1]
+    parentBeaconBlockRoot*: Hash32
+    slotNumber*: Quantity
+
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
     timestamp*: Quantity
@@ -205,7 +214,8 @@ type
   SomePayloadAttributes* =
     PayloadAttributesV1 |
     PayloadAttributesV2 |
-    PayloadAttributesV3
+    PayloadAttributesV3 |
+    PayloadAttributesV4
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum

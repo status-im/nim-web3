@@ -32,6 +32,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4]): ForkchoiceUpdatedResponse
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
   proc engine_getPayloadV2(payloadId: Bytes8): GetPayloadV2Response
   proc engine_getPayloadV2_exact(payloadId: Bytes8): GetPayloadV2ResponseExact
@@ -86,6 +87,12 @@ template forkchoiceUpdated*(
     forkchoiceState: ForkchoiceStateV1,
     payloadAttributes: Opt[PayloadAttributesV3]): Future[ForkchoiceUpdatedResponse] =
   engine_forkchoiceUpdatedV3(rpcClient, forkchoiceState, payloadAttributes)
+
+template forkchoiceUpdated*(
+    rpcClient: RpcClient,
+    forkchoiceState: ForkchoiceStateV1,
+    payloadAttributes: Opt[PayloadAttributesV4]): Future[ForkchoiceUpdatedResponse] =
+  engine_forkchoiceUpdatedV4(rpcClient, forkchoiceState, payloadAttributes)
 
 template getPayload*(
     rpcClient: RpcClient,
