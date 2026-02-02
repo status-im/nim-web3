@@ -116,7 +116,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/4ec8e5735ebb3f2ce0702726385cdde70034f78c/src/engine/amsterdam.md#executionpayloadv4
+  # https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/amsterdam.md
   ExecutionPayloadV4* = object
     parentHash*: Hash32
     feeRecipient*: Address
@@ -196,6 +196,7 @@ type
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
 
+  # https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/amsterdam.md#payloadattributesv4
   PayloadAttributesV4* = object
     timestamp*: Quantity
     prevRandao*: Bytes32
