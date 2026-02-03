@@ -175,6 +175,11 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
 
+  ExecutionPayloadBodyV2* = object
+    transactions*: seq[TypedTransaction]
+    withdrawals*: Opt[seq[WithdrawalV1]]
+    blockAccessList*: Opt[seq[byte]]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity

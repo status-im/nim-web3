@@ -41,7 +41,9 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV5(payloadId: Bytes8): GetPayloadV5Response
   proc engine_getPayloadV6(payloadId: Bytes8): GetPayloadV6Response
   proc engine_getPayloadBodiesByHashV1(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV1]]
+  proc engine_getPayloadBodiesByHashV2(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV2]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
+  proc engine_getPayloadBodiesByRangeV2(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV2]]
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
