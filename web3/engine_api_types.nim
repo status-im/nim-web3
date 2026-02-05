@@ -175,6 +175,16 @@ type
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
 
+  # https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#executionpayloadbodyv2
+  # For optional blockAccessList field, see:
+  #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyhashv2
+  #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyrangev2
+  # "Client software MUST set blockAccessList field to null for bodies of pre-Amsterdam blocks."  
+  ExecutionPayloadBodyV2* = object
+    transactions*: seq[TypedTransaction]
+    withdrawals*: Opt[seq[WithdrawalV1]]
+    blockAccessList*: Opt[seq[byte]]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
     timestamp*: Quantity
