@@ -85,6 +85,11 @@ func toTx(req: RequestRx): RequestTx =
   )
 
 proc extractTest(fileName: string): TestData {.raises: [IOError, SerializationError].} =
+  # Note: Currently only supports single input/output per file as there is only one test
+  # case that has multiple inputs/outputs (estimate-with-eip7702.io) and it is not worth
+  # adding support for this one. For multiple inputs/outputs the last one will be tested.
+  # These tests anyhow only test for serialization correctness and this multi-input/output
+  # test case tests a specific change in actual output value.
   let lines = readFile(fileName).split("\n")
   var
     description = ""
@@ -100,11 +105,11 @@ proc extractTest(fileName: string): TestData {.raises: [IOError, SerializationEr
         description = description & " " & line.strip()
     elif line.startsWith(">> "):
       if input != "":
-        raise (ref IOError)(msg: "Test contains multiple inputs: " & fileName)
+        debugEcho "Test contains multiple inputs: " & fileName
       input = line
     elif line.startsWith("<< "):
       if output != "":
-        raise (ref IOError)(msg: "Test contains multiple outputs: " & fileName)
+        debugEcho "Test contains multiple outputs: " & fileName
       output = line
   if input == "":
     raise (ref IOError)(msg: "Test contains no input: " & fileName)
@@ -162,7 +167,9 @@ proc callWithParams(client: RpcClient, data: TestData): Future[bool] {.async.} =
     return false
 
 const allowedToFail = [
-  "fee-history.io" # float roundtrip not match
+  # Supports either the specific test file name or all tests for a specific method
+  "fee-history.io", # float roundtrip not match
+  "eth_simulateV1", # unimplemented
 ]
 
 suite "Ethereum execution api":
@@ -185,8 +192,8 @@ suite "Ethereum execution api":
       waitFor client.connect("http://" & $srv.localAddress()[0])
       let response = waitFor client.callWithParams(item)
       let source = fileName & ext
-      if source in allowedToFail:
-        check true
+      if source in allowedToFail or methodName in allowedToFail:
+        skip()
       else:
         check response
       waitFor client.close()

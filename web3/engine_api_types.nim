@@ -116,7 +116,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
 
-  # https://github.com/ethereum/execution-apis/blob/4ec8e5735ebb3f2ce0702726385cdde70034f78c/src/engine/amsterdam.md#executionpayloadv4
+  # https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/amsterdam.md
   ExecutionPayloadV4* = object
     parentHash*: Hash32
     feeRecipient*: Address
@@ -136,6 +136,7 @@ type
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
     blockAccessList*: seq[byte]
+    slotNumber*: Quantity
 
   SomeExecutionPayload* =
     ExecutionPayloadV1 |
@@ -163,6 +164,8 @@ type
     blob*: Blob
     proofs*: array[CELLS_PER_EXT_BLOB, KzgProof]
 
+  OptBlobAndProofV2* = Opt[BlobAndProofV2]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
   #   https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#engine_getpayloadbodiesbyhashv1
@@ -171,6 +174,16 @@ type
   ExecutionPayloadBodyV1* = object
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
+
+  # https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#executionpayloadbodyv2
+  # For optional blockAccessList field, see:
+  #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyhashv2
+  #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyrangev2
+  # "Client software MUST set blockAccessList field to null for bodies of pre-Amsterdam blocks."  
+  ExecutionPayloadBodyV2* = object
+    transactions*: seq[TypedTransaction]
+    withdrawals*: Opt[seq[WithdrawalV1]]
+    blockAccessList*: Opt[seq[byte]]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadattributesv1
   PayloadAttributesV1* = object
@@ -193,6 +206,15 @@ type
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
 
+  # https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/amsterdam.md#payloadattributesv4
+  PayloadAttributesV4* = object
+    timestamp*: Quantity
+    prevRandao*: Bytes32
+    suggestedFeeRecipient*: Address
+    withdrawals*: seq[WithdrawalV1]
+    parentBeaconBlockRoot*: Hash32
+    slotNumber*: Quantity
+
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
     timestamp*: Quantity
@@ -203,7 +225,8 @@ type
   SomePayloadAttributes* =
     PayloadAttributesV1 |
     PayloadAttributesV2 |
-    PayloadAttributesV3
+    PayloadAttributesV3 |
+    PayloadAttributesV4
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
@@ -270,6 +293,8 @@ type
   GetBlobsV1Response* = seq[BlobAndProofV1]
 
   GetBlobsV2Response* = seq[BlobAndProofV2]
+
+  GetBlobsV3Response* = seq[OptBlobAndProofV2]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |

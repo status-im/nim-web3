@@ -32,6 +32,7 @@ createRpcSigsFromNim(RpcClient):
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4]): ForkchoiceUpdatedResponse
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
   proc engine_getPayloadV2(payloadId: Bytes8): GetPayloadV2Response
   proc engine_getPayloadV2_exact(payloadId: Bytes8): GetPayloadV2ResponseExact
@@ -40,9 +41,12 @@ createRpcSigsFromNim(RpcClient):
   proc engine_getPayloadV5(payloadId: Bytes8): GetPayloadV5Response
   proc engine_getPayloadV6(payloadId: Bytes8): GetPayloadV6Response
   proc engine_getPayloadBodiesByHashV1(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV1]]
+  proc engine_getPayloadBodiesByHashV2(hashes: seq[Hash32]): seq[Opt[ExecutionPayloadBodyV2]]
   proc engine_getPayloadBodiesByRangeV1(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV1]]
+  proc engine_getPayloadBodiesByRangeV2(start: Quantity, count: Quantity): seq[Opt[ExecutionPayloadBodyV2]]
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
+  proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
 
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
@@ -86,6 +90,12 @@ template forkchoiceUpdated*(
     payloadAttributes: Opt[PayloadAttributesV3]): Future[ForkchoiceUpdatedResponse] =
   engine_forkchoiceUpdatedV3(rpcClient, forkchoiceState, payloadAttributes)
 
+template forkchoiceUpdated*(
+    rpcClient: RpcClient,
+    forkchoiceState: ForkchoiceStateV1,
+    payloadAttributes: Opt[PayloadAttributesV4]): Future[ForkchoiceUpdatedResponse] =
+  engine_forkchoiceUpdatedV4(rpcClient, forkchoiceState, payloadAttributes)
+
 template getPayload*(
     rpcClient: RpcClient,
     T: type ExecutionPayloadV1,
@@ -121,6 +131,12 @@ template getPayload*(
     T: type GetPayloadV5Response,
     payloadId: Bytes8): Future[GetPayloadV5Response] =
   engine_getPayloadV5(rpcClient, payloadId)
+
+template getPayload*(
+    rpcClient: RpcClient,
+    T: type GetPayloadV6Response,
+    payloadId: Bytes8): Future[GetPayloadV6Response] =
+  engine_getPayloadV6(rpcClient, payloadId)
 
 template getBlobs*(
     rpcClient: RpcClient,
