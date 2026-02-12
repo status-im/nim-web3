@@ -54,6 +54,11 @@ createRpcSigsFromNim(RpcClient):
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#engine_getclientversionv1
   proc engine_getClientVersionV1(version: ClientVersionV1): seq[ClientVersionV1]
 
+  # https://github.com/frisitano/execution-apis/blob/f99e724aca4a748eaa27565631eaebdc51481b08/src/engine/eip8025.md#methods
+  proc engine_verifyExecutionProofV1(executionProof: ExecutionProofV1): ProofStatusV1
+  proc engine_verifyNewPayloadRequestHeaderV1(newPayloadRequestHeader: NewPayloadRequestHeaderV1): ProofStatusV1
+  proc engine_requestProofsV1(executionPayload: ExecutionPayloadV3, versionHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, proofAttributes: ProofAttributesV1): ProofGenId
+
   # convenience apis
   proc engine_newPayloadV1(payload: ExecutionPayload): PayloadStatusV1
   proc engine_newPayloadV2(payload: ExecutionPayload): PayloadStatusV1

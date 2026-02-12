@@ -309,6 +309,55 @@ type
     version*: string #  the version string of the current implementation e.g. v4.6.0 or 1.0.0-alpha.1 or 1.0.0+20130313144700
     commit*: Bytes4
 
+  # https://github.com/frisitano/execution-apis/blob/f99e724aca4a748eaa27565631eaebdc51481b08/src/engine/eip8025.md#structures
+  ProofVerificationStatus* {.pure.} = enum
+    valid = "VALID"
+    invalid = "INVALID"
+    syncing = "SYNCING"
+    not_supported = "NOT_SUPPORTED"
+
+  ProofStatusV1* = object
+    status*: ProofVerificationStatus
+    error*: Opt[string]
+
+  PublicInputV1* = object
+    newPayloadRequestRoot*: Hash32
+
+  ExecutionProofV1* = object
+    proofData*: seq[seq[byte]]
+    proofType*: uint64
+    publicInput*: PublicInputV1
+
+  ExecutionPayloadHeaderV1* = object
+    parentHash*: Hash32
+    feeRecipient*: Address
+    stateRoot*: Hash32
+    receiptsRoot*: Hash32
+    logsBloom*: Bytes256
+    prevRandao*: Bytes32
+    blockNumber*: Quantity
+    gasLimit*: Quantity
+    gasUsed*: Quantity
+    timestamp*: Quantity
+    extraData*: DynamicBytes[0, 32]
+    baseFeePerGas*: UInt256
+    blockHash*: Hash32
+    transactionsRoot*: Hash32
+    withdrawalsRoot*: Hash32
+    blobGasUsed*: Quantity
+    excessBlobGas*: Quantity
+
+  NewPayloadRequestHeaderV1* = object
+    executionPayloadHeader: ExecutionPayloadHeaderV1
+    versionedHashes: seq[VersionedHash]
+    parentBeaconBlockRoot: Hash32
+    executionRequests: seq[seq[byte]]
+
+  ProofAttributesV1* = object
+    proofTypes*: seq[uint64]
+
+  ProofGenId* = Bytes8
+
 const
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/common.md#errors
   engineApiParseError* = -32700
@@ -322,6 +371,10 @@ const
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
   engineApiUnsupportedFork* = -38005
+  engineApiInvalidProofFormat* = -39001
+  engineApiInvalidHeaderFormat* = -39002
+  engineApiInvalidPayload* = -39003
+  engineApiProofGenerationUnavailable* = -39004
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)
