@@ -13,7 +13,7 @@ import
   std/[tables, uri, macros],
   httputils, chronos,
   results,
-  json_rpc/rpcclient,
+  json_rpc/[router, rpcclient],
   json_rpc/private/jrpc_sys,
   eth/common/keys,
   chronos/apps/http/httpclient,
