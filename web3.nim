@@ -165,7 +165,7 @@ proc newWeb3*(
       await p.connect(uri)
 
       let w3 = newWeb3(p)
-      router[].rpc("eth_subscription") do(
+      router[].rpc("eth_subscription", EthJson) do(
         subscription: string, resultPar {.serializedFieldName: "result".}: JsonString
       ) -> void:
         w3.onSubscription(subscription, resultPar)
