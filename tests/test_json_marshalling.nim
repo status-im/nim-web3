@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2025 Status Research & Development GmbH
+# Copyright (c) 2018-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -249,6 +249,11 @@ suite "JSON-RPC Quantity":
       let d = JrpcConv.decode("10", RtBlockIdentifier)
       discard d
 
+    const w = hash32"0x0012c7b99594801d513ae92396379e5ffcf60e23127cbcabb166db28586f01aa"
+    let e = JrpcConv.decode("\"" & $w & "\"", RtBlockIdentifier)
+    check e.kind == bidHash
+    check e.alias == $w
+
   test "check address or list":
     let a = AddressOrList(kind: slkNull)
     let x = JrpcConv.encode(a)
@@ -264,7 +269,7 @@ suite "JSON-RPC Quantity":
         check b == "\"0x16345785d8a0000\""
 
         let x = JrpcConv.decode("\"0xFFFF_FFFF_FFFF_FFFF\"", typeName)
-        check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF_FFFF'u64
+        check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF'u64
         let y = JrpcConv.encode(x)
         check y == "\"0xffffffffffffffff\""
 
