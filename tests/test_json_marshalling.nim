@@ -252,7 +252,7 @@ suite "JSON-RPC Quantity":
     const w = hash32"0x0012c7b99594801d513ae92396379e5ffcf60e23127cbcabb166db28586f01aa"
     let e = JrpcConv.decode("\"" & $w & "\"", RtBlockIdentifier)
     check e.kind == bidHash
-    check e.alias == $w
+    check e.hash == $w
 
   test "check address or list":
     let a = AddressOrList(kind: slkNull)
