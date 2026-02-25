@@ -28,7 +28,7 @@ requires "stew"
 requires "stint"
 requires "results"
 
-requires "https://github.com/status-im/nim-json-rpc#7434eaac677939984639b85dbe17afe557d6c45e"
+requires "https://github.com/nitely/nim-json-rpc#b3eeb285f5cb981043692a473df086c60741eae5"
 
 ### Helper functions
 proc test(args, path: string) =
