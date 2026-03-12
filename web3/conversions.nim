@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2025 Status Research & Development GmbH
+# Copyright (c) 2019-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -189,6 +189,13 @@ func valid(hex: string): bool =
     if x notin HexDigits: return false
   true
 
+func validHash(hex: string): bool =
+  # assume `hex` has been checked before by `valid`
+  const hexHashLen = 32*2
+  if hex[0] == '0' and hex[1] in {'x', 'X'}:
+    return hex.len == hexHashLen + 2
+  hex.len == hexHashLen
+
 when not declared(json_serialization.streamElement): # json_serialization < 0.3.0
   template streamElement(w: var JsonWriter, s, body: untyped) =
     template s: untyped = w.stream
@@ -376,8 +383,12 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
   let hexStr = r.parseString()
   wrapValueError:
     if valid(hexStr):
-      val = RtBlockIdentifier(
-        kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
+      if validHash(hexStr):
+        val = RtBlockIdentifier(
+          kind: bidHash, hash: fromHex(Hash32, hexStr))
+      else:
+        val = RtBlockIdentifier(
+          kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
     else:
       val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
 
@@ -386,6 +397,7 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
   case v.kind
   of bidNumber: w.writeValue(v.number)
   of bidAlias: w.writeValue(v.alias)
+  of bidHash: w.writeValue(v.hash)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var TxOrHash)
        {.gcsafe, raises: [IOError, SerializationError].} =

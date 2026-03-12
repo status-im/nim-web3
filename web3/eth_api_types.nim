@@ -244,6 +244,7 @@ type
   BlockIdentifierKind* = enum
     bidNumber
     bidAlias
+    bidHash
 
   RtBlockIdentifier* = object
     case kind*: BlockIdentifierKind
@@ -251,6 +252,8 @@ type
       number*: Quantity
     of bidAlias:
       alias*: string
+    of bidHash:
+      hash*: Hash32
 
   FeeHistoryReward* = seq[UInt256]
 
