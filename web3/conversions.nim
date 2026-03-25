@@ -189,6 +189,12 @@ func valid(hex: string): bool =
     if x notin HexDigits: return false
   true
 
+# https://business.1inch.com/portal/documentation/apis/web3/ethereum/methods/debug_getRawBlock
+func isBlockTag(tag: string): bool =
+  case tag.toLowerAscii
+  of "earliest", "latest", "pending", "safe", "finalized": true
+  else: false
+
 func validHash(hex: string): bool =
   # assume `hex` has been checked before by `valid`
   const hexHashLen = 32*2
@@ -263,8 +269,11 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var Address)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var Hash32)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
-  wrapValueError:
-    val = fromHex(Hash32, r.parseString())
+    let hexStr = r.parseString()
+    if not valid(hexStr):
+      r.raiseUnexpectedValue("hex string without 0x prefix")
+    wrapValueError:
+      val = fromHex(Hash32, hexStr)
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: Number)
       {.gcsafe, raises: [IOError].} =
@@ -378,19 +387,20 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
       # skip empty hex
       val = hexToSeqByte(hexStr)
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
+proc readValue*( r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
-  let hexStr = r.parseString()
-  wrapValueError:
-    if valid(hexStr):
-      if validHash(hexStr):
-        val = RtBlockIdentifier(
-          kind: bidHash, hash: fromHex(Hash32, hexStr))
+    let blockId = r.parseString()
+    wrapValueError:
+      if valid(blockId) and validHash(blockId):
+        val = RtBlockIdentifier(kind: bidHash, hash: fromHex(Hash32, blockId))
+      elif valid(blockId):
+        val = RtBlockIdentifier(kind: bidNumber, number: Quantity fromHex[uint64](blockId))
+      elif isBlockTag(blockId):
+        val = RtBlockIdentifier(kind: bidAlias, alias: blockId)
+      elif blockId.len > 0 and blockId.allCharsInSet(HexDigits):
+        r.raiseUnexpectedValue("hex string without 0x prefix")
       else:
-        val = RtBlockIdentifier(
-          kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
-    else:
-      val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
+        r.raiseUnexpectedValue("invalid block tag")
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
