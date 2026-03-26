@@ -10,6 +10,7 @@
 {.push raises: [].}
 
 import
+  std/tables,
   stint,
   ./primitives
 
@@ -17,6 +18,7 @@ from eth/common/blocks import Withdrawal
 from eth/common/transactions import AccessPair, Authorization
 
 export
+  tables,
   primitives,
   AccessPair,
   Authorization,
@@ -119,7 +121,7 @@ type
     transactions*: seq[TxOrHash]             # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[Hash32]                     # list of uncle hashes.
     baseFeePerGas*: Opt[UInt256]             # EIP-1559
-    withdrawals*: Opt[seq[Withdrawal]] # EIP-4895
+    withdrawals*: Opt[seq[Withdrawal]]       # EIP-4895
     withdrawalsRoot*: Opt[Hash32]            # EIP-4895
     blobGasUsed*: Opt[Quantity]              # EIP-4844
     excessBlobGas*: Opt[Quantity]            # EIP-4844
@@ -291,6 +293,128 @@ type
     current*: ConfigObject
     next*: Opt[ConfigObject]
     last*: Opt[ConfigObject]
+
+  # OverrideAccount specifies the state of an account to be overridden.
+  OverrideAccount* = object
+    # Nonce sets nonce of the account. Note: the nonce override will only
+    # be applied when it is set to a non-zero value.
+    nonce*: uint64
+
+    # Code sets the contract code. The override will be applied
+    # when the code is non-nil, i.e. setting empty code is possible
+    # using an empty slice.
+    code*: seq[byte]
+
+    # Balance sets the account balance.
+    balance*: UInt256
+
+    # State sets the complete storage. The override will be applied
+    # when the given map is non-nil. Using an empty map wipes the
+    # entire contract storage during the call.
+    state*: Table[Hash32, Hash32]
+
+    # StateDiff allows overriding individual storage slots.
+    stateDiff*: Table[Hash32, Hash32]
+
+  # BlockOverrides specifies the set of header fields to override.
+  BlockOverrides* = object
+    # Number overrides the block number.
+    number*: uint64
+
+    # Time overrides the block timestamp. Time is applied only when
+    # it is non-zero.
+    time*: uint64
+
+    # GasLimit overrides the block gas limit. GasLimit is applied only when
+    # it is non-zero.
+    gasLimit*: uint64
+
+    # Fee recipient overrides the block coinbase. Fee recipient is applied only when
+    # it is different from the zero address.
+    feeRecipient*: Address
+
+    # Random overrides the block extra data which feeds into the RANDOM opcode.
+    # Random is applied only when it is a non-zero hash.
+    prevRandao*: Hash32
+
+    # BaseFee overrides the block base fee.
+    baseFeePerGas*: UInt256
+
+  BlockStateCall* = object
+    # An object to override block-level parameters
+    blockOverrides*: Opt[BlockOverrides]
+
+    # An object to override account states
+    stateOverrides*: OverrideAccount
+
+    # Array of transaction call objects
+    calls*: seq[TransactionArgs]
+
+  SimulationRequest* = object
+    # Array of block state call objects
+    blockStateCalls*: seq[BlockStateCall]
+
+    # A boolean indicating whether to perform validation checks
+    validation*: bool
+
+    # A boolean indicating whether to trace value transfers
+    traceTransfers*: bool
+
+    returnFullTransactions*: bool
+
+  CallError* = object
+    # An error status code
+    code*: int
+
+    # An error message
+    message*: string
+
+    # A data field containing error related information
+    data*: string
+
+  # SimulateCallResult is the result of a simulated call.
+  SimulateCallResult* = object
+    # Return data from the call in hexadecimal
+    returnData*: seq[byte]
+
+    # Array of logs generated during the call
+    logs*: seq[LogObject]
+
+    # Amount of gas used in hexadecimal
+    gasUsed*: uint64
+
+    # Status code of the call in hexadecimal
+    status*: uint64
+
+    # An object array containing error information
+    error*: CallError
+
+  SimulateBlockResult* = object
+    extraData*: Bytes32
+    gasLimit*: uint64
+    gasUsed*: uint64
+    hash*: Hash32
+    logsBloom*: Bytes256
+    miner*: Address
+    mixHash*: Hash32
+    nonce*: uint64
+    number*: uint64
+    parentHash*: Hash32
+    receiptsRoot*: Hash32
+    sha3Uncles*: Hash32
+    size*: uint64
+    stateRoot*: Hash32
+    timestamp*: uint64
+    transactions*: seq[TransactionObject]
+    transactionsRoot*: Hash32
+    baseFeePerGas*: Opt[uint64]
+    withdrawals*: Opt[seq[Withdrawal]]
+    withdrawalsRoot*: Opt[Hash32]
+    blobGasUsed*: Opt[uint64]
+    excessBlobGas*: Opt[uint64]
+    parentBeaconBlockRoot*: Opt[Hash32]
+    requestsHash*: Opt[Hash32]
+    calls*: seq[SimulateCallResult]
 
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)
