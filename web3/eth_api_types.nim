@@ -429,6 +429,7 @@ type
     excessBlobGas*: Opt[uint64]
     parentBeaconBlockRoot*: Opt[Hash32]
     requestsHash*: Opt[Hash32]
+    slotNumber*: Opt[uint64]
     calls*: seq[SimulateCallResult]
 
 func blockId*(n: uint64): RtBlockIdentifier =
