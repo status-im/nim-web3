@@ -379,18 +379,40 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
       val = hexToSeqByte(hexStr)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-  let hexStr = r.parseString()
-  wrapValueError:
-    if valid(hexStr):
-      if validHash(hexStr):
-        val = RtBlockIdentifier(
-          kind: bidHash, hash: fromHex(Hash32, hexStr))
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  case r.tokKind
+  of JsonValueKind.String:
+    let hexStr = r.parseString()
+    wrapValueError:
+      if valid(hexStr):
+        if validHash(hexStr):
+          val = RtBlockIdentifier(
+            kind: bidHash, hash: fromHex(Hash32, hexStr))
+        else:
+          val = RtBlockIdentifier(
+            kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
       else:
+        val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
+  of JsonValueKind.Object:
+    for fieldName in readObjectFields(r):
+      case fieldName
+      of "blockHash":
         val = RtBlockIdentifier(
-          kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
-    else:
-      val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
+          kind: bidHash, hash: r.readValue(Hash32))
+      of "blockNumber":
+        val = RtBlockIdentifier(
+          kind: bidNumber, number: r.readValue(Quantity))
+      of "requireCanonical":
+        if val.kind == bidHash:
+          val.requireCanonical = r.readValue(bool)
+        else:
+          discard r.readValue(bool)
+      else:
+        r.raiseUnexpectedValue(
+          "Unexpected field in block identifier: " & fieldName)
+  else:
+    r.raiseUnexpectedValue(
+      "RtBlockIdentifier: string or object expected")
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
