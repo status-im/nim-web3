@@ -61,7 +61,7 @@ Authorization.useDefaultSerializationIn JrpcConv
 BlockHeader.useDefaultSerializationIn JrpcConv
 BlockObject.useDefaultSerializationIn JrpcConv
 TransactionObject.useDefaultSerializationIn JrpcConv
-ReceiptObject.useDefaultSerializationIn JrpcConv
+ReceiptObject.useDefaultReaderIn JrpcConv
 BlobScheduleObject.useDefaultSerializationIn JrpcConv
 ConfigObject.useDefaultSerializationIn JrpcConv
 EthConfigObject.useDefaultSerializationIn JrpcConv
@@ -148,6 +148,10 @@ template toHexImpl(hex, pos: untyped) =
 
   while hex[pos] == '0' and pos < hex.high:
     inc pos
+
+template writePresent(name: string, value: untyped) =
+  if value.isOk:
+    w.writeMember(name, value)
 
 func getEnumStringTable(enumType: typedesc): Table[string, enumType]
     {.compileTime.} =
@@ -475,6 +479,36 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: SyncingStatus)
     w.writeValue(false)
   else:
     w.writeValue(v.syncObject)
+
+# The only place we write the serialized receiptobject is when dealing with rpc responses
+# The rpc-compat tests expects field to be absent from the response instead of being populated by null
+# Hence the need to handle it instead of using the default serialization
+proc writeValue*(w: var JsonWriter[JrpcConv], v: ReceiptObject)
+      {.gcsafe, raises: [IOError].} =
+  # Catch case when the ref is itself Nil:The expected behaviour then is null
+  if v.isNil:
+    w.writeValue(JsonString("null"))
+    return
+
+  w.beginObject()
+  w.writeMember("transactionHash", v.transactionHash)
+  w.writeMember("transactionIndex", v.transactionIndex)
+  w.writeMember("blockHash", v.blockHash)
+  w.writeMember("blockNumber", v.blockNumber)
+  w.writeMember("from", v.`from`)
+  w.writeMember("to", v.to)
+  w.writeMember("cumulativeGasUsed", v.cumulativeGasUsed)
+  w.writeMember("effectiveGasPrice", v.effectiveGasPrice)
+  w.writeMember("gasUsed", v.gasUsed)
+  w.writeMember("contractAddress", v.contractAddress)
+  w.writeMember("logs", v.logs)
+  w.writeMember("logsBloom", v.logsBloom)
+  writePresent("type", v.`type`)
+  writePresent("root", v.root)
+  writePresent("status", v.status)
+  writePresent("blobGasUsed", v.blobGasUsed)
+  writePresent("blobGasPrice", v.blobGasPrice)
+  w.endObject()
 
 # Somehow nim2 refuse to generate automatically
 proc readValue*(r: var JsonReader[JrpcConv], val: var Opt[seq[ReceiptObject]])
