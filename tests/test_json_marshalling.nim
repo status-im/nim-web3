@@ -35,6 +35,11 @@ proc rand(_: type uint64): uint64 =
   discard randomBytes(res)
   uint64.fromBytesBE(res)
 
+proc rand(_: type int): int =
+  var res: array[sizeof(result), byte]
+  discard randomBytes(res)
+  copyMem(result.addr, res[0].addr, sizeof(result))
+
 proc rand[T: Quantity](_: type T): T =
   var res: array[sizeof(T), byte]
   discard randomBytes(res)
@@ -104,6 +109,9 @@ proc rand(_: type seq[seq[byte]]): seq[seq[byte]] =
   var z = newSeq[byte](10)
   discard randomBytes(z)
   @[z, z, z]
+
+proc rand(_: type Table[Hash32, Hash32]): Table[Hash32, Hash32] =
+  result[Hash32.rand()] = Hash32.rand()
 
 proc rand[T](_: type SingleOrList[T]): SingleOrList[T] =
   SingleOrList[T](kind: slkSingle, single: rand(T))
@@ -233,6 +241,14 @@ suite "JSON-RPC Quantity":
     checkRandomObject(GetPayloadResponse)
 
     checkRandomObject(EthConfigObject)
+
+    checkRandomObject(OverrideAccount)
+    checkRandomObject(BlockOverrides)
+    checkRandomObject(BlockStateCall)
+    checkRandomObject(SimulationRequest)
+    checkRandomObject(CallError)
+    checkRandomObject(SimulateCallResult)
+    checkRandomObject(SimulateBlockResult)
 
   test "check blockId":
     let a = RtBlockIdentifier(kind: bidNumber, number: 77.Quantity)
