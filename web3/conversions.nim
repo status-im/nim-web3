@@ -41,6 +41,7 @@ EthJson.automaticSerialization(seq, true)
 EthJson.automaticSerialization(bool, true)
 EthJson.automaticSerialization(float64, true)
 EthJson.automaticSerialization(array, true)
+EthJson.automaticSerialization(int, true)
 
 #------------------------------------------------------------------------------
 # eth_api_types
@@ -65,6 +66,14 @@ ReceiptObject.useDefaultSerializationIn EthJson
 BlobScheduleObject.useDefaultSerializationIn EthJson
 ConfigObject.useDefaultSerializationIn EthJson
 EthConfigObject.useDefaultSerializationIn EthJson
+
+OverrideAccount.useDefaultSerializationIn EthJson
+BlockOverrides.useDefaultSerializationIn EthJson
+BlockStateCall.useDefaultSerializationIn EthJson
+SimulationRequest.useDefaultSerializationIn EthJson
+CallError.useDefaultSerializationIn EthJson
+SimulateCallResult.useDefaultSerializationIn EthJson
+SimulateBlockResult.useDefaultSerializationIn EthJson
 
 #------------------------------------------------------------------------------
 # engine_api_types
@@ -564,6 +573,18 @@ proc writeValue*(w: var JsonWriter[EthJson], v: StorageValuesRequest)
   for x in v.list:
     w.writeMember(x.address.to0xHex, x.data)
   w.endObject()
+
+proc writeValue*(w: var JsonWriter[EthJson], v: Table[Hash32, Hash32])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for k, val in v:
+    w.writeMember(k.to0xHex, val)
+  w.endObject()
+
+proc readValue*(r: var JsonReader[EthJson], val: var Table[Hash32, Hash32])
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, Hash32, Hash32):
+    val[k] = v
 
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(distinctBase(v))
