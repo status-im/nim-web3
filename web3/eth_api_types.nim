@@ -258,6 +258,7 @@ type
       alias*: string
     of bidHash:
       hash*: Hash32
+      requireCanonical*: bool
 
   FeeHistoryReward* = seq[UInt256]
 
