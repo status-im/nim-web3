@@ -147,6 +147,7 @@ type
     nonce*: Quantity                              # the number of transactions made by the sender prior to this one.
     blockHash*: Opt[Hash32]                       # hash of the block where this transaction was in. null when its pending.
     blockNumber*: Opt[Quantity]                   # block number where this transaction was in. null when its pending.
+    blockTimestamp*: Opt[Quantity]                # the block timestamp where this transaction was in.
     transactionIndex*: Opt[Quantity]              # integer of the transactions index position in the block. null when its pending.
     `from`*: Address                              # address of the sender.
     to*: Opt[Address]                             # address of the receiver. null when its a contract creation transaction.
