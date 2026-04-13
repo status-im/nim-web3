@@ -387,20 +387,47 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var seq[byte])
       # skip empty hex
       val = hexToSeqByte(hexStr)
 
-proc readValue*( r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
-       {.gcsafe, raises: [IOError, JsonReaderError].} =
-    let blockId = r.parseString()
-    wrapValueError:
-      if valid(blockId) and validHash(blockId):
-        val = RtBlockIdentifier(kind: bidHash, hash: fromHex(Hash32, blockId))
-      elif valid(blockId):
-        val = RtBlockIdentifier(kind: bidNumber, number: Quantity fromHex[uint64](blockId))
-      elif isBlockTag(blockId):
-        val = RtBlockIdentifier(kind: bidAlias, alias: blockId)
-      elif blockId.len > 0 and blockId.allCharsInSet(HexDigits):
-        r.raiseUnexpectedValue("hex string without 0x prefix")
+proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  case r.tokKind
+  of JsonValueKind.String:
+    let hexStr = r.parseString()
+    if valid(hexStr):
+      if validHash(hexStr):
+        wrapValueError:
+          val = RtBlockIdentifier(
+            kind: bidHash, hash: fromHex(Hash32, hexStr))
       else:
-        r.raiseUnexpectedValue("invalid block tag")
+        if hexStr.invalidQuantityPrefix:
+          r.raiseUnexpectedValue("Quantity value has invalid leading 0")
+        wrapValueError:
+          val = RtBlockIdentifier(
+            kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
+    elif isBlockTag(hexStr):
+      val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
+    else:
+      r.raiseUnexpectedValue(
+        "RtBlockIdentifier: expected hex quantity, block hash, or block tag")
+  of JsonValueKind.Object:
+    for fieldName in readObjectFields(r):
+      case fieldName
+      of "blockHash":
+        val = RtBlockIdentifier(
+          kind: bidHash, hash: r.readValue(Hash32))
+      of "blockNumber":
+        val = RtBlockIdentifier(
+          kind: bidNumber, number: r.readValue(Quantity))
+      of "requireCanonical":
+        if val.kind == bidHash:
+          val.requireCanonical = r.readValue(bool)
+        else:
+          discard r.readValue(bool)
+      else:
+        r.raiseUnexpectedValue(
+          "Unexpected field in block identifier: " & fieldName)
+  else:
+    r.raiseUnexpectedValue(
+      "RtBlockIdentifier: string or object expected")
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: RtBlockIdentifier)
       {.gcsafe, raises: [IOError].} =
