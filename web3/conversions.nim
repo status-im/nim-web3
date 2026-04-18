@@ -531,6 +531,25 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
       w.writeMember(k, val)
   w.endObject()
 
+proc readValue*(r: var JsonReader[JrpcConv], val: var StorageValuesRequest)
+      {.gcsafe, raises: [IOError, SerializationError].} =
+  mixin readValue
+
+  var value: StorageObject
+  for address in readObjectFields(r, Address):
+    value.address = address
+    value.data.setLen(0)
+    readValue(r, value.data)
+    val.list.add(move(value))
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: StorageValuesRequest)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+  w.beginObject()
+  for x in v.list:
+    w.writeMember(x.address.to0xHex, x.data)
+  w.endObject()
+
 func `$`*(v: Quantity): string {.inline.} =
   encodeQuantity(distinctBase(v))
 
