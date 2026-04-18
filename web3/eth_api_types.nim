@@ -294,6 +294,15 @@ type
     next*: Opt[ConfigObject]
     last*: Opt[ConfigObject]
 
+  StorageObject* = object
+    address*: Address
+    data*: seq[Bytes32]
+
+  StorageValuesRequest* = object
+    list*: seq[StorageObject]
+
+  StorageValuesResponse* = StorageValuesRequest
+
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)
 
