@@ -241,6 +241,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(GetPayloadResponse)
 
     checkRandomObject(EthConfigObject)
+    checkRandomObject(StorageValuesRequest)
 
     checkRandomObject(OverrideAccount)
     checkRandomObject(BlockOverrides)

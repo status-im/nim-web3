@@ -90,6 +90,7 @@ createRpcSigsFromNim(RpcClient):
     rewardPercentiles: Opt[seq[float64]]): FeeHistoryResult
 
   proc eth_simulateV1(request: SimulationRequest, blockId: BlockIdentifier): seq[SimulateCallResult]
+  proc eth_getStorageValues(request: StorageValuesRequest, blockId: BlockIdentifier): StorageValuesResponse
 
   proc debug_getRawBlock(blockId: BlockIdentifier): RlpEncodedBytes
   proc debug_getRawHeader(blockId: BlockIdentifier): RlpEncodedBytes

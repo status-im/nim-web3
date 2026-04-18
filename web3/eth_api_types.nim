@@ -98,7 +98,7 @@ type
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
     requestsHash*: Opt[Hash32]           # EIP-7685
     slotNumber*: Opt[Quantity]           # EIP-7843
-    
+
   ## A block object, or null when no block was found
   BlockObject* = ref object
     number*: Quantity                        # the block number. null when its pending block.
@@ -129,7 +129,7 @@ type
     parentBeaconBlockRoot*: Opt[Hash32]      # EIP-4788
     requestsHash*: Opt[Hash32]               # EIP-7685
     slotNumber*: Opt[Quantity]               # EIP-7843
-    
+
   TxOrHashKind* = enum
     tohHash
     tohTx
@@ -420,6 +420,15 @@ type
     requestsHash*: Opt[Hash32]
     slotNumber*: Opt[uint64]
     calls*: seq[SimulateCallResult]
+
+  StorageObject* = object
+    address*: Address
+    data*: seq[Bytes32]
+
+  StorageValuesRequest* = object
+    list*: seq[StorageObject]
+
+  StorageValuesResponse* = StorageValuesRequest
 
 func blockId*(n: uint64): RtBlockIdentifier =
   RtBlockIdentifier(kind: bidNumber, number: Quantity n)
