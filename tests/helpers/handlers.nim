@@ -66,6 +66,12 @@ proc installHandlers*(server: RpcServer) =
     if x != "-1".JsonString:
       result = decodeFromString(x, FixedBytes[32])
 
+  server.rpc("eth_getStorageValues") do(x: JsonString, request: StorageValuesRequest, blockTag: RtBlockIdentifier) -> StorageValuesResponse:
+    var res: StorageValuesResponse
+    if x != "-1".JsonString:
+      res = decodeFromString(x, StorageValuesResponse)
+    return res
+
   server.rpc("eth_getProof") do(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier) -> ProofResponse:
     var p: ProofResponse
     if x != "-1".JsonString:
