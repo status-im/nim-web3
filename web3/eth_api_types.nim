@@ -302,23 +302,23 @@ type
   OverrideAccount* = object
     # Nonce sets nonce of the account. Note: the nonce override will only
     # be applied when it is set to a non-zero value.
-    nonce*: uint64
+    nonce*: Opt[uint64]
 
     # Code sets the contract code. The override will be applied
     # when the code is non-nil, i.e. setting empty code is possible
     # using an empty slice.
-    code*: seq[byte]
+    code*: Opt[seq[byte]]
 
     # Balance sets the account balance.
-    balance*: UInt256
+    balance*: Opt[UInt256]
 
     # State sets the complete storage. The override will be applied
     # when the given map is non-nil. Using an empty map wipes the
     # entire contract storage during the call.
-    state*: Table[Hash32, Hash32]
+    state*: Table[UInt256, UInt256]
 
     # StateDiff allows overriding individual storage slots.
-    stateDiff*: Table[Hash32, Hash32]
+    stateDiff*: Table[UInt256, UInt256]
 
   # BlockOverrides specifies the set of header fields to override.
   BlockOverrides* = object
@@ -339,17 +339,21 @@ type
 
     # Random overrides the block extra data which feeds into the RANDOM opcode.
     # Random is applied only when it is a non-zero hash.
-    prevRandao*: Hash32
+    prevRandao*: Bytes32
 
     # BaseFee overrides the block base fee.
     baseFeePerGas*: UInt256
+
+    withdrawals*: Opt[seq[Withdrawal]]
+
+    beaconRoot*: Hash32
 
   BlockStateCall* = object
     # An object to override block-level parameters
     blockOverrides*: Opt[BlockOverrides]
 
     # An object to override account states
-    stateOverrides*: OverrideAccount
+    stateOverrides*: Table[Address, OverrideAccount]
 
     # Array of transaction call objects
     calls*: seq[TransactionArgs]
