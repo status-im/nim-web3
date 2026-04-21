@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2024 Status Research & Development GmbH
+# Copyright (c) 2019-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
 #    http://www.apache.org/licenses/LICENSE-2.0)
@@ -89,6 +89,7 @@ createRpcSigsFromNim(RpcClient):
     newestBlock: BlockIdentifier,
     rewardPercentiles: Opt[seq[float64]]): FeeHistoryResult
 
+  proc eth_simulateV1(request: SimulationRequest, blockId: BlockIdentifier): seq[SimulateBlockResult]
   proc eth_getStorageValues(request: StorageValuesRequest, blockId: BlockIdentifier): StorageValuesResponse
 
   proc debug_getRawBlock(blockId: BlockIdentifier): RlpEncodedBytes

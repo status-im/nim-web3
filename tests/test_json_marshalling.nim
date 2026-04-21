@@ -35,6 +35,11 @@ proc rand(_: type uint64): uint64 =
   discard randomBytes(res)
   uint64.fromBytesBE(res)
 
+proc rand(_: type int): int =
+  var res: array[sizeof(result), byte]
+  discard randomBytes(res)
+  copyMem(result.addr, res[0].addr, sizeof(result))
+
 proc rand[T: Quantity](_: type T): T =
   var res: array[sizeof(T), byte]
   discard randomBytes(res)
@@ -105,6 +110,9 @@ proc rand(_: type seq[seq[byte]]): seq[seq[byte]] =
   discard randomBytes(z)
   @[z, z, z]
 
+proc rand(_: type Table[UInt256, UInt256]): Table[UInt256, UInt256] =
+  result[UInt256.rand()] = UInt256.rand()
+
 proc rand[T](_: type SingleOrList[T]): SingleOrList[T] =
   SingleOrList[T](kind: slkSingle, single: rand(T))
 
@@ -125,6 +133,9 @@ proc rand[X: ref](T: type X): T =
   result = T()
   for field in fields(result[]):
     field = rand(typeof(field))
+
+proc rand(_: type Table[Address, OverrideAccount]): Table[Address, OverrideAccount] =
+  result[Address.rand()] = OverrideAccount.rand()
 
 template checkRandomObject(T: type) =
   let obj = rand(T)
@@ -234,6 +245,14 @@ suite "JSON-RPC Quantity":
 
     checkRandomObject(EthConfigObject)
     checkRandomObject(StorageValuesRequest)
+
+    checkRandomObject(OverrideAccount)
+    checkRandomObject(BlockOverrides)
+    checkRandomObject(BlockStateCall)
+    checkRandomObject(SimulationRequest)
+    checkRandomObject(CallError)
+    checkRandomObject(SimulateCallResult)
+    checkRandomObject(SimulateBlockResult)
 
   test "check blockId":
     let a = RtBlockIdentifier(kind: bidNumber, number: 77.Quantity)

@@ -41,6 +41,7 @@ JrpcConv.automaticSerialization(seq, true)
 JrpcConv.automaticSerialization(bool, true)
 JrpcConv.automaticSerialization(float64, true)
 JrpcConv.automaticSerialization(array, true)
+JrpcConv.automaticSerialization(int, true)
 
 #------------------------------------------------------------------------------
 # eth_api_types
@@ -65,6 +66,14 @@ ReceiptObject.useDefaultSerializationIn JrpcConv
 BlobScheduleObject.useDefaultSerializationIn JrpcConv
 ConfigObject.useDefaultSerializationIn JrpcConv
 EthConfigObject.useDefaultSerializationIn JrpcConv
+
+OverrideAccount.useDefaultSerializationIn JrpcConv
+BlockOverrides.useDefaultSerializationIn JrpcConv
+BlockStateCall.useDefaultSerializationIn JrpcConv
+SimulationRequest.useDefaultSerializationIn JrpcConv
+CallError.useDefaultSerializationIn JrpcConv
+SimulateCallResult.useDefaultSerializationIn JrpcConv
+SimulateBlockResult.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
 # engine_api_types
@@ -545,6 +554,30 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
     else:
       w.writeMember(k, val)
   w.endObject()
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Table[UInt256, UInt256])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for k, val in v:
+    w.writeMember("0x" & k.toHex, val)
+  w.endObject()
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var Table[UInt256, UInt256])
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, UInt256, UInt256):
+    val[k] = v
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Table[Address, OverrideAccount])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for k, val in v:
+    w.writeMember(k.to0xHex, val)
+  w.endObject()
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var Table[Address, OverrideAccount])
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, Address, OverrideAccount):
+    val[k] = v
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var StorageValuesRequest)
       {.gcsafe, raises: [IOError, SerializationError].} =
