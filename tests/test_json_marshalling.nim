@@ -261,9 +261,14 @@ suite "JSON-RPC Quantity":
     check c.kind == bidNumber
     check c.number == 77.Quantity
 
-    let d = JrpcConv.decode("\"10\"", RtBlockIdentifier)
+    let d = JrpcConv.decode("\"latest\"", RtBlockIdentifier)
     check d.kind == bidAlias
-    check d.alias == "10"
+    check d.alias == "latest"
+
+    # https://github.com/ethereum/execution-apis/blob/main/tests/debug_getRawBlock/get-invalid-number.io
+    expect JsonReaderError:
+      let invalid = JrpcConv.decode("\"10\"", RtBlockIdentifier)
+      discard invalid
 
     expect JsonReaderError:
       let d = JrpcConv.decode("10", RtBlockIdentifier)

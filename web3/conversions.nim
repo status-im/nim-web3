@@ -198,6 +198,12 @@ func valid(hex: string): bool =
     if x notin HexDigits: return false
   true
 
+# https://business.1inch.com/portal/documentation/apis/web3/ethereum/methods/debug_getRawBlock
+func isBlockTag(tag: string): bool =
+  case tag.toLowerAscii
+  of "earliest", "latest", "pending", "safe", "finalized": true
+  else: false
+
 func validHash(hex: string): bool =
   # assume `hex` has been checked before by `valid`
   const hexHashLen = 32*2
@@ -272,8 +278,11 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var Address)
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var Hash32)
        {.gcsafe, raises: [IOError, JsonReaderError].} =
-  wrapValueError:
-    val = fromHex(Hash32, r.parseString())
+    let hexStr = r.parseString()
+    if not valid(hexStr):
+      r.raiseUnexpectedValue("hex string without 0x prefix")
+    wrapValueError:
+      val = fromHex(Hash32, hexStr)
 
 proc writeValue*(w: var JsonWriter[JrpcConv], v: Number)
       {.gcsafe, raises: [IOError].} =
@@ -392,16 +401,22 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var RtBlockIdentifier)
   case r.tokKind
   of JsonValueKind.String:
     let hexStr = r.parseString()
-    wrapValueError:
-      if valid(hexStr):
-        if validHash(hexStr):
+    if valid(hexStr):
+      if validHash(hexStr):
+        wrapValueError:
           val = RtBlockIdentifier(
             kind: bidHash, hash: fromHex(Hash32, hexStr))
-        else:
+      else:
+        if hexStr.invalidQuantityPrefix:
+          r.raiseUnexpectedValue("Quantity value has invalid leading 0")
+        wrapValueError:
           val = RtBlockIdentifier(
             kind: bidNumber, number: Quantity fromHex[uint64](hexStr))
-      else:
-        val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
+    elif isBlockTag(hexStr):
+      val = RtBlockIdentifier(kind: bidAlias, alias: hexStr)
+    else:
+      r.raiseUnexpectedValue(
+        "RtBlockIdentifier: expected hex quantity, block hash, or block tag")
   of JsonValueKind.Object:
     for fieldName in readObjectFields(r):
       case fieldName
