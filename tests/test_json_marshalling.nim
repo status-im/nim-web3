@@ -110,8 +110,8 @@ proc rand(_: type seq[seq[byte]]): seq[seq[byte]] =
   discard randomBytes(z)
   @[z, z, z]
 
-proc rand(_: type Table[Hash32, Hash32]): Table[Hash32, Hash32] =
-  result[Hash32.rand()] = Hash32.rand()
+proc rand(_: type Table[UInt256, UInt256]): Table[UInt256, UInt256] =
+  result[UInt256.rand()] = UInt256.rand()
 
 proc rand[T](_: type SingleOrList[T]): SingleOrList[T] =
   SingleOrList[T](kind: slkSingle, single: rand(T))
@@ -133,6 +133,9 @@ proc rand[X: ref](T: type X): T =
   result = T()
   for field in fields(result[]):
     field = rand(typeof(field))
+
+proc rand(_: type Table[Address, OverrideAccount]): Table[Address, OverrideAccount] =
+  result[Address.rand()] = OverrideAccount.rand()
 
 template checkRandomObject(T: type) =
   let obj = rand(T)
