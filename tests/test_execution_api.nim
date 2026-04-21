@@ -169,7 +169,6 @@ proc callWithParams(client: RpcClient, data: TestData): Future[bool] {.async.} =
 const allowedToFail = [
   # Supports either the specific test file name or all tests for a specific method
   "fee-history.io", # float roundtrip not match
-  "eth_simulateV1", # unimplemented
   "testing_buildBlockV1", # unimplemented
 ]
 

@@ -540,16 +540,28 @@ proc writeValue*(w: var JsonWriter[JrpcConv], v: TransactionArgs)
       w.writeMember(k, val)
   w.endObject()
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: Table[Hash32, Hash32])
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Table[UInt256, UInt256])
+      {.gcsafe, raises: [IOError].} =
+  w.beginObject()
+  for k, val in v:
+    w.writeMember("0x" & k.toHex, val)
+  w.endObject()
+
+proc readValue*(r: var JsonReader[JrpcConv], val: var Table[UInt256, UInt256])
+       {.gcsafe, raises: [IOError, SerializationError].} =
+  for k,v in readObject(r, UInt256, UInt256):
+    val[k] = v
+
+proc writeValue*(w: var JsonWriter[JrpcConv], v: Table[Address, OverrideAccount])
       {.gcsafe, raises: [IOError].} =
   w.beginObject()
   for k, val in v:
     w.writeMember(k.to0xHex, val)
   w.endObject()
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var Table[Hash32, Hash32])
+proc readValue*(r: var JsonReader[JrpcConv], val: var Table[Address, OverrideAccount])
        {.gcsafe, raises: [IOError, SerializationError].} =
-  for k,v in readObject(r, Hash32, Hash32):
+  for k,v in readObject(r, Address, OverrideAccount):
     val[k] = v
 
 proc readValue*(r: var JsonReader[JrpcConv], val: var StorageValuesRequest)

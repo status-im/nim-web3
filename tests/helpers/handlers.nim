@@ -72,6 +72,12 @@ proc installHandlers*(server: RpcServer) =
       res = decodeFromString(x, StorageValuesResponse)
     return res
 
+  server.rpc("eth_simulateV1") do(x: JsonString, request: SimulationRequest, blockTag: RtBlockIdentifier) -> seq[SimulateCallResult]:
+    var res: seq[SimulateCallResult]
+    if x != "-1".JsonString:
+      res = decodeFromString(x, seq[SimulateCallResult])
+    return res
+
   server.rpc("eth_getProof") do(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier) -> ProofResponse:
     var p: ProofResponse
     if x != "-1".JsonString:
