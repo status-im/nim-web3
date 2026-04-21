@@ -17,7 +17,7 @@ type
     output: ResponseRx
 
 const
-  inputPath = "tests/execution-apis/tests"
+  inputPath = "tests/execution-apis/tests/eth_simulateV1"
 
 {.push raises: [].}
 
@@ -127,6 +127,7 @@ proc extractTest(fileName: string): TestData {.raises: [IOError, SerializationEr
 
 proc extractTests(): seq[TestData] {.raises: [OSError, IOError, SerializationError].} =
   for fileName in walkDirRec(inputPath):
+    #if "ethSimulate-run-out-of-gas-in-block-38015.io" in fileName:
     if fileName.endsWith(".io"):
       result.add(fileName.extractTest())
 

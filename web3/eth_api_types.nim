@@ -378,7 +378,7 @@ type
     message*: string
 
     # A data field containing error related information
-    data*: string
+    data*: Opt[string]
 
   # SimulateCallResult is the result of a simulated call.
   SimulateCallResult* = object
@@ -391,21 +391,24 @@ type
     # Amount of gas used in hexadecimal
     gasUsed*: uint64
 
+    maxUsedGas*: uint64
+
     # Status code of the call in hexadecimal
     status*: uint64
 
     # An object array containing error information
-    error*: CallError
+    error*: Opt[CallError]
 
   SimulateBlockResult* = object
-    extraData*: Bytes32
+    extraData*: HistoricExtraData
     gasLimit*: uint64
     gasUsed*: uint64
     hash*: Hash32
     logsBloom*: Bytes256
     miner*: Address
+    difficulty*: UInt256
     mixHash*: Hash32
-    nonce*: uint64
+    nonce*: Bytes8
     number*: uint64
     parentHash*: Hash32
     receiptsRoot*: Hash32
@@ -413,8 +416,9 @@ type
     size*: uint64
     stateRoot*: Hash32
     timestamp*: uint64
-    transactions*: seq[TransactionObject]
+    transactions*: seq[TxOrHash]
     transactionsRoot*: Hash32
+    uncles*: seq[Hash32]
     baseFeePerGas*: Opt[uint64]
     withdrawals*: Opt[seq[Withdrawal]]
     withdrawalsRoot*: Opt[Hash32]
