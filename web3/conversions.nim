@@ -99,6 +99,17 @@ GetPayloadV6Response.useDefaultSerializationIn JrpcConv
 ClientVersionV1.useDefaultSerializationIn JrpcConv
 
 #------------------------------------------------------------------------------
+# engine_api_types - proof engine (EIP-8025)
+#------------------------------------------------------------------------------
+
+ProofStatusV1.useDefaultSerializationIn JrpcConv
+PublicInputV1.useDefaultSerializationIn JrpcConv
+ExecutionProofV1.useDefaultSerializationIn JrpcConv
+ExecutionPayloadHeaderV1.useDefaultSerializationIn JrpcConv
+NewPayloadRequestHeaderV1.useDefaultSerializationIn JrpcConv
+ProofAttributesV1.useDefaultSerializationIn JrpcConv
+
+#------------------------------------------------------------------------------
 # execution_types
 #------------------------------------------------------------------------------
 
@@ -324,6 +335,23 @@ proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var PayloadExec
     r.raiseUnexpectedValue("Failed to parse PayloadExecutionStatus")
 
 proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: PayloadExecutionStatus)
+      {.gcsafe, raises: [IOError].} =
+  w.writeValue($v)
+
+proc readValue*[F: CommonJsonFlavors](r: var JsonReader[F], val: var ProofVerificationStatus)
+       {.gcsafe, raises: [IOError, JsonReaderError].} =
+  const enumStrings = static: getEnumStringTable(ProofVerificationStatus)
+
+  let tok = r.tokKind()
+  if tok != JsonValueKind.String:
+    r.raiseUnexpectedValue("Expect string but got=" & $tok)
+
+  try:
+    val = enumStrings[r.parseString()]
+  except KeyError:
+    r.raiseUnexpectedValue("Failed to parse ProofVerificationStatus")
+
+proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: ProofVerificationStatus)
       {.gcsafe, raises: [IOError].} =
   w.writeValue($v)
 
