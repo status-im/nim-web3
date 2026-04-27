@@ -546,7 +546,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionArgs)
       w.writeMember(k, val)
   w.endObject()
 
-proc readValue*(r: var JsonReader[JrpcConv], val: var StorageValuesRequest)
+proc readValue*(r: var JsonReader[EthJson], val: var StorageValuesRequest)
       {.gcsafe, raises: [IOError, SerializationError].} =
   mixin readValue
 
@@ -557,7 +557,7 @@ proc readValue*(r: var JsonReader[JrpcConv], val: var StorageValuesRequest)
     readValue(r, value.data)
     val.list.add(move(value))
 
-proc writeValue*(w: var JsonWriter[JrpcConv], v: StorageValuesRequest)
+proc writeValue*(w: var JsonWriter[EthJson], v: StorageValuesRequest)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
   w.beginObject()

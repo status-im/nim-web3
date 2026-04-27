@@ -242,13 +242,13 @@ suite "JSON-RPC Quantity":
     check c.kind == bidNumber
     check c.number == 77.Quantity
 
-    let d = JrpcConv.decode("\"latest\"", RtBlockIdentifier)
+    let d = EthJson.decode("\"latest\"", RtBlockIdentifier)
     check d.kind == bidAlias
     check d.alias == "latest"
 
     # https://github.com/ethereum/execution-apis/blob/main/tests/debug_getRawBlock/get-invalid-number.io
     expect JsonReaderError:
-      let invalid = JrpcConv.decode("\"10\"", RtBlockIdentifier)
+      let invalid = EthJson.decode("\"10\"", RtBlockIdentifier)
       discard invalid
 
     expect JsonReaderError:
@@ -256,28 +256,28 @@ suite "JSON-RPC Quantity":
       discard d
 
     const w = hash32"0x0012c7b99594801d513ae92396379e5ffcf60e23127cbcabb166db28586f01aa"
-    let e = JrpcConv.decode("\"" & $w & "\"", RtBlockIdentifier)
+    let e = EthJson.decode("\"" & $w & "\"", RtBlockIdentifier)
     check e.kind == bidHash
     check e.hash == w
 
     # EIP-1898 object form: blockHash
-    let f = JrpcConv.decode("{\"blockHash\":\"" & $w & "\"}", RtBlockIdentifier)
+    let f = EthJson.decode("{\"blockHash\":\"" & $w & "\"}", RtBlockIdentifier)
     check f.kind == bidHash
     check f.hash == w
 
     # EIP-1898 object form: blockNumber
-    let g = JrpcConv.decode("{\"blockNumber\":\"0x77\"}", RtBlockIdentifier)
+    let g = EthJson.decode("{\"blockNumber\":\"0x77\"}", RtBlockIdentifier)
     check g.kind == bidNumber
     check g.number == 0x77.Quantity
 
     # EIP-1898 object form: blockHash with requireCanonical=false
-    let h = JrpcConv.decode("{\"blockHash\":\"" & $w & "\",\"requireCanonical\":false}", RtBlockIdentifier)
+    let h = EthJson.decode("{\"blockHash\":\"" & $w & "\",\"requireCanonical\":false}", RtBlockIdentifier)
     check h.kind == bidHash
     check h.hash == w
     check h.requireCanonical == false
 
     # EIP-1898 object form: blockHash with requireCanonical=true
-    let i = JrpcConv.decode("{\"blockHash\":\"" & $w & "\",\"requireCanonical\":true}", RtBlockIdentifier)
+    let i = EthJson.decode("{\"blockHash\":\"" & $w & "\",\"requireCanonical\":true}", RtBlockIdentifier)
     check i.kind == bidHash
     check i.hash == w
     check i.requireCanonical == true
@@ -297,7 +297,7 @@ suite "JSON-RPC Quantity":
         check b == "\"0x16345785d8a0000\""
 
         let x = EthJson.decode("\"0xFFFF_FFFF_FFFF_FFFF\"", typeName)
-        check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF_FFFF'u64
+        check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF'u64
         let y = EthJson.encode(x)
         check y == "\"0xffffffffffffffff\""
 

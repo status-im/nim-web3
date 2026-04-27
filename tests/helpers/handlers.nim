@@ -67,6 +67,12 @@ proc installHandlers*(server: RpcServer) =
       if x != "-1".JsonString:
         result = decodeFromString(x, FixedBytes[32])
 
+    proc eth_getStorageValues(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier): ProofResponse {.raises: [SerializationError].} =
+      var res: StorageValuesResponse
+      if x != "-1".JsonString:
+        res = decodeFromString(x, StorageValuesResponse)
+      return res
+
     proc eth_getProof(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier): ProofResponse {.raises: [SerializationError].} =
       var p: ProofResponse
       if x != "-1".JsonString:
