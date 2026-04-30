@@ -20,15 +20,13 @@ requires "chronos"
 requires "bearssl"
 requires "eth >= 0.9.0"
 requires "faststreams"
-#requires "json_rpc >= 0.5.4"
+requires "json_rpc >= 0.6.0"
 requires "serialization >= 0.4.4"
 requires "json_serialization >= 0.4.2"
 requires "nimcrypto"
 requires "stew"
 requires "stint"
 requires "results"
-
-requires "https://github.com/status-im/nim-json-rpc#adfd20d8779112fe5f309d8d40c4b7da2ae5faec"
 
 ### Helper functions
 proc test(args, path: string) =
