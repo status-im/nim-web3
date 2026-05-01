@@ -22,155 +22,156 @@ type
   FixedBytes[N: static int] = w3.FixedBytes[N]
 
 func decodeFromString(x: JsonString, T: type): T =
-  let jsonBytes = JrpcConv.decode(x.string, string)
-  result = JrpcConv.decode(jsonBytes, T)
+  let jsonBytes = EthJson.decode(x.string, string)
+  result = EthJson.decode(jsonBytes, T)
 
 proc installHandlers*(server: RpcServer) =
-  server.rpc("eth_syncing") do(x: JsonString) -> SyncingStatus:
-    return SyncingStatus(syncing: false)
+  server.rpc(EthJson):
+    proc eth_syncing(x: JsonString): SyncingStatus {.raises: [].} =
+      return SyncingStatus(syncing: false)
 
-  server.rpc("eth_sendRawTransaction") do(x: JsonString, data: seq[byte]) -> Hash32:
-    let tx = rlp.decode(data, BlobTransaction)
-    let h = computeRlpHash(tx.tx)
-    return Hash32(h.data)
+    proc eth_sendRawTransaction(x: JsonString, data: seq[byte]): Hash32 {.raises: [RlpError].} =
+      let tx = rlp.decode(data, BlobTransaction)
+      let h = computeRlpHash(tx.tx)
+      return Hash32(h.data)
 
-  server.rpc("eth_getTransactionReceipt") do(x: JsonString, data: Hash32) -> ReceiptObject:
-    var r: ReceiptObject
-    if x != "-1".JsonString:
-      r = decodeFromString(x, ReceiptObject)
-    return r
-
-  server.rpc("eth_getTransactionByHash") do(x: JsonString, data: Hash32) -> TransactionObject:
-    var tx: TransactionObject
-    if x != "-1".JsonString:
-      tx = decodeFromString(x, TransactionObject)
-    return tx
-
-  server.rpc("eth_getTransactionByBlockNumberAndIndex") do(x: JsonString, blockId: RtBlockIdentifier, quantity: Quantity) -> TransactionObject:
-    var tx: TransactionObject
-    if x != "-1".JsonString:
-      tx = decodeFromString(x, TransactionObject)
-    return tx
-
-  server.rpc("eth_getTransactionByBlockHashAndIndex") do(x: JsonString, data: Hash32, quantity: Quantity) -> TransactionObject:
-    var tx: TransactionObject
-    if x != "-1".JsonString:
-      tx = decodeFromString(x, TransactionObject)
-    return tx
-
-  server.rpc("eth_getTransactionCount") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> Quantity:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, Quantity)
-
-  server.rpc("eth_getStorageAt") do(x: JsonString, data: Address, slot: UInt256, blockId: RtBlockIdentifier) -> FixedBytes[32]:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, FixedBytes[32])
-
-  server.rpc("eth_getStorageValues") do(x: JsonString, request: StorageValuesRequest, blockTag: RtBlockIdentifier) -> StorageValuesResponse:
-    var res: StorageValuesResponse
-    if x != "-1".JsonString:
-      res = decodeFromString(x, StorageValuesResponse)
-    return res
-
-  server.rpc("eth_getProof") do(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier) -> ProofResponse:
-    var p: ProofResponse
-    if x != "-1".JsonString:
-      p = decodeFromString(x, ProofResponse)
-    return p
-
-  server.rpc("eth_getCode") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> seq[byte]:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, seq[byte])
-
-  server.rpc("eth_getBlockTransactionCountByNumber") do(x: JsonString, blockId: RtBlockIdentifier) -> Quantity:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, Quantity)
-
-  server.rpc("eth_getBlockTransactionCountByHash") do(x: JsonString, data: Hash32) -> Quantity:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, Quantity)
-
-  server.rpc("eth_getBlockReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> Opt[seq[ReceiptObject]]:
-    if x != "-1".JsonString:
-      let r = decodeFromString(x, Opt[seq[ReceiptObject]])
+    proc eth_getTransactionReceipt(x: JsonString, data: Hash32): ReceiptObject {.raises: [SerializationError].} =
+      var r: ReceiptObject
+      if x != "-1".JsonString:
+        r = decodeFromString(x, ReceiptObject)
       return r
 
-  server.rpc("eth_getBlockByNumber") do(x: JsonString, blockId: RtBlockIdentifier, fullTransactions: bool) -> BlockObject:
-    var blk: BlockObject
-    if x != "-1".JsonString:
-      blk = decodeFromString(x, BlockObject)
-    return blk
+    proc eth_getTransactionByHash(x: JsonString, data: Hash32): TransactionObject {.raises: [SerializationError].} =
+      var tx: TransactionObject
+      if x != "-1".JsonString:
+        tx = decodeFromString(x, TransactionObject)
+      return tx
 
-  server.rpc("eth_getBlockByHash") do(x: JsonString, data: Hash32, fullTransactions: bool) -> BlockObject:
-    var blk: BlockObject
-    if x != "-1".JsonString:
-      blk = decodeFromString(x, BlockObject)
-    return blk
+    proc eth_getTransactionByBlockNumberAndIndex(x: JsonString, blockId: RtBlockIdentifier, quantity: Quantity): TransactionObject {.raises: [SerializationError].} =
+      var tx: TransactionObject
+      if x != "-1".JsonString:
+        tx = decodeFromString(x, TransactionObject)
+      return tx
 
-  server.rpc("eth_getBalance") do(x: JsonString, data: Address, blockId: RtBlockIdentifier) -> UInt256:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, UInt256)
+    proc eth_getTransactionByBlockHashAndIndex(x: JsonString, data: Hash32, quantity: Quantity): TransactionObject {.raises: [SerializationError].} =
+      var tx: TransactionObject
+      if x != "-1".JsonString:
+        tx = decodeFromString(x, TransactionObject)
+      return tx
 
-  server.rpc("eth_feeHistory") do(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Opt[seq[float64]]) -> FeeHistoryResult:
-    var fh: FeeHistoryResult
-    if x != "-1".JsonString:
-      fh = decodeFromString(x, FeeHistoryResult)
-    return fh
+    proc eth_getTransactionCount(x: JsonString, data: Address, blockId: RtBlockIdentifier): Quantity {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, Quantity)
 
-  server.rpc("eth_estimateGas") do(x: JsonString, call: TransactionArgs) -> Quantity:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, Quantity)
+    proc eth_getStorageAt(x: JsonString, data: Address, slot: UInt256, blockId: RtBlockIdentifier): FixedBytes[32] {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, FixedBytes[32])
 
-  server.rpc("eth_createAccessList") do(x: JsonString, call: TransactionArgs, blockId: RtBlockIdentifier) -> AccessListResult:
-    var z: AccessListResult
-    if x != "-1".JsonString:
-      z = decodeFromString(x, AccessListResult)
-    return z
+    proc eth_getStorageValues(x: JsonString, request: StorageValuesRequest, blockTag: RtBlockIdentifier): StorageValuesResponse {.raises: [SerializationError].} =
+      var res: StorageValuesResponse
+      if x != "-1".JsonString:
+        res = decodeFromString(x, StorageValuesResponse)
+      return res
 
-  server.rpc("eth_chainId") do(x: JsonString, ) -> Quantity:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, Quantity)
+    proc eth_getProof(x: JsonString, address: Address, slots: seq[UInt256], blockId: RtBlockIdentifier): ProofResponse {.raises: [SerializationError].} =
+      var p: ProofResponse
+      if x != "-1".JsonString:
+        p = decodeFromString(x, ProofResponse)
+      return p
 
-  server.rpc("eth_call") do(x: JsonString, call: TransactionArgs, blockId: RtBlockIdentifier) -> seq[byte]:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, seq[byte])
+    proc eth_getCode(x: JsonString, data: Address, blockId: RtBlockIdentifier): seq[byte] {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, seq[byte])
 
-  server.rpc("eth_blockNumber") do(x: JsonString) -> Quantity:
-    if x != "-1".JsonString:
-      result = decodeFromString(x, Quantity)
+    proc eth_getBlockTransactionCountByNumber(x: JsonString, blockId: RtBlockIdentifier): Quantity {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, Quantity)
 
-  server.rpc("debug_getRawTransaction") do(x: JsonString, data: Bytes32) -> RlpEncodedBytes:
-    var res: seq[byte]
-    if x != "-1".JsonString:
-      res = decodeFromString(x, seq[byte])
-    return res.RlpEncodedBytes
+    proc eth_getBlockTransactionCountByHash(x: JsonString, data: Hash32): Quantity {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, Quantity)
 
-  server.rpc("debug_getRawReceipts") do(x: JsonString, blockId: RtBlockIdentifier) -> seq[RlpEncodedBytes]:
-    var res: seq[RlpEncodedBytes]
-    if x != "-1".JsonString:
-      res = decodeFromString(x, seq[RlpEncodedBytes])
-    return res
+    proc eth_getBlockReceipts(x: JsonString, blockId: RtBlockIdentifier): Opt[seq[ReceiptObject]] {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        let r = decodeFromString(x, Opt[seq[ReceiptObject]])
+        return r
 
-  server.rpc("debug_getRawHeader") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
-    var res: seq[byte]
-    if x != "-1".JsonString:
-      res = decodeFromString(x, seq[byte])
-    return res.RlpEncodedBytes
+    proc eth_getBlockByNumber(x: JsonString, blockId: RtBlockIdentifier, fullTransactions: bool): BlockObject {.raises: [SerializationError].} =
+      var blk: BlockObject
+      if x != "-1".JsonString:
+        blk = decodeFromString(x, BlockObject)
+      return blk
 
-  server.rpc("debug_getRawBlock") do(x: JsonString, blockId: RtBlockIdentifier) -> RlpEncodedBytes:
-    var res: seq[byte]
-    if x != "-1".JsonString:
-      res = decodeFromString(x, seq[byte])
-    return res.RlpEncodedBytes
+    proc eth_getBlockByHash(x: JsonString, data: Hash32, fullTransactions: bool): BlockObject {.raises: [SerializationError].} =
+      var blk: BlockObject
+      if x != "-1".JsonString:
+        blk = decodeFromString(x, BlockObject)
+      return blk
 
-  server.rpc("eth_blobBaseFee") do(x: JsonString) -> Quantity:
-    if x != "-1".JsonString:
-      return decodeFromString(x, Quantity)
+    proc eth_getBalance(x: JsonString, data: Address, blockId: RtBlockIdentifier): UInt256 {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, UInt256)
 
-  server.rpc("eth_getLogs") do(x: JsonString, filterOptions: FilterOptions) -> seq[LogObject]:
-    if x != "-1".JsonString:
-      return decodeFromString(x, seq[LogObject])
+    proc eth_feeHistory(x: JsonString, blockCount: Quantity, newestBlock: RtBlockIdentifier, rewardPercentiles: Opt[seq[float64]]): FeeHistoryResult {.raises: [SerializationError].} =
+      var fh: FeeHistoryResult
+      if x != "-1".JsonString:
+        fh = decodeFromString(x, FeeHistoryResult)
+      return fh
 
-  server.rpc("net_version") do(x: JsonString) -> string:
-    if x != "-1".JsonString:
-      return decodeFromString(x, string)
+    proc eth_estimateGas(x: JsonString, call: TransactionArgs): Quantity {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, Quantity)
+
+    proc eth_createAccessList(x: JsonString, call: TransactionArgs, blockId: RtBlockIdentifier): AccessListResult {.raises: [SerializationError].} =
+      var z: AccessListResult
+      if x != "-1".JsonString:
+        z = decodeFromString(x, AccessListResult)
+      return z
+
+    proc eth_chainId(x: JsonString, ): Quantity {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, Quantity)
+
+    proc eth_call(x: JsonString, call: TransactionArgs, blockId: RtBlockIdentifier): seq[byte] {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, seq[byte])
+
+    proc eth_blockNumber(x: JsonString): Quantity {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        result = decodeFromString(x, Quantity)
+
+    proc debug_getRawTransaction(x: JsonString, data: Bytes32): RlpEncodedBytes {.raises: [SerializationError].} =
+      var res: seq[byte]
+      if x != "-1".JsonString:
+        res = decodeFromString(x, seq[byte])
+      return res.RlpEncodedBytes
+
+    proc debug_getRawReceipts(x: JsonString, blockId: RtBlockIdentifier): seq[RlpEncodedBytes] {.raises: [SerializationError].} =
+      var res: seq[RlpEncodedBytes]
+      if x != "-1".JsonString:
+        res = decodeFromString(x, seq[RlpEncodedBytes])
+      return res
+
+    proc debug_getRawHeader(x: JsonString, blockId: RtBlockIdentifier): RlpEncodedBytes {.raises: [SerializationError].} =
+      var res: seq[byte]
+      if x != "-1".JsonString:
+        res = decodeFromString(x, seq[byte])
+      return res.RlpEncodedBytes
+
+    proc debug_getRawBlock(x: JsonString, blockId: RtBlockIdentifier): RlpEncodedBytes {.raises: [SerializationError].} =
+      var res: seq[byte]
+      if x != "-1".JsonString:
+        res = decodeFromString(x, seq[byte])
+      return res.RlpEncodedBytes
+
+    proc eth_blobBaseFee(x: JsonString): Quantity {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        return decodeFromString(x, Quantity)
+
+    proc eth_getLogs(x: JsonString, filterOptions: FilterOptions): seq[LogObject] {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        return decodeFromString(x, seq[LogObject])
+
+    proc net_version(x: JsonString): string {.raises: [SerializationError].} =
+      if x != "-1".JsonString:
+        return decodeFromString(x, string)
