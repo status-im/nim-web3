@@ -46,6 +46,7 @@ type
     withdrawals*: Opt[seq[WithdrawalV1]]
     parentBeaconBlockRoot*: Opt[Hash32]
     slotNumber*: Opt[Quantity]
+    targetGasLimit*: Opt[Quantity]
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
@@ -80,7 +81,7 @@ func version*(payload: ExecutionPayload): Version =
     Version.V1
 
 func version*(attr: PayloadAttributes): Version =
-  if attr.slotNumber.isSome:
+  if attr.slotNumber.isSome or attr.targetGasLimit.isSome:
     Version.V4
   elif attr.parentBeaconBlockRoot.isSome:
     Version.V3
@@ -143,7 +144,8 @@ func V4*(attr: PayloadAttributes): PayloadAttributesV4 =
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
     parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
-    slotNumber: attr.slotNumber.get
+    slotNumber: attr.slotNumber.get,
+    targetGasLimit: attr.targetGasLimit.get
   )
 
 func V1*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV1] =
@@ -197,7 +199,8 @@ func payloadAttributes*(attr: PayloadAttributesV4): PayloadAttributes =
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: Opt.some(attr.withdrawals),
     parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
-    slotNumber: Opt.some(attr.slotNumber)
+    slotNumber: Opt.some(attr.slotNumber),
+    targetGasLimit: Opt.some(attr.targetGasLimit)
   )
 
 func payloadAttributes*(x: Opt[PayloadAttributesV1]): Opt[PayloadAttributes] =

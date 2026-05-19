@@ -218,6 +218,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(PayloadAttributesV1)
     checkRandomObject(PayloadAttributesV2)
     checkRandomObject(PayloadAttributesV3)
+    checkRandomObject(PayloadAttributesV4)
     checkRandomObject(PayloadAttributesV1OrV2)
     checkRandomObject(PayloadStatusV1)
     checkRandomObject(ForkchoiceStateV1)

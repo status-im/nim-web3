@@ -206,7 +206,7 @@ type
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
 
-  # https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/amsterdam.md#payloadattributesv4
+  # https://github.com/ethereum/execution-apis/blob/a22fbd4464ef77404935a056f9e19db0abb359a1/src/engine/amsterdam.md#payloadattributesv4
   PayloadAttributesV4* = object
     timestamp*: Quantity
     prevRandao*: Bytes32
@@ -214,6 +214,7 @@ type
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
     slotNumber*: Quantity
+    targetGasLimit*: Quantity
 
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
