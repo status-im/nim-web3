@@ -125,6 +125,7 @@ type
     excessBlobGas*: Opt[Quantity]            # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]      # EIP-4788
     requestsHash*: Opt[Hash32]               # EIP-7685
+    blockAccessListHash*: Opt[Hash32]        # EIP-7928
 
   TxOrHashKind* = enum
     tohHash
