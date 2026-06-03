@@ -170,6 +170,10 @@ type
 
   OptBlobAndProofV2* = Opt[BlobAndProofV2]
 
+  BlobCellsAndProofsV1* = object
+    cells*: seq[byte]
+    proofs*: seq[KzgProof]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
   #   https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#engine_getpayloadbodiesbyhashv1
@@ -324,6 +328,8 @@ type
   GetBlobsV2Response* = seq[BlobAndProofV2]
 
   GetBlobsV3Response* = seq[OptBlobAndProofV2]
+
+  GetBlobsV4Response* = seq[BlobCellsAndProofsV1]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |
