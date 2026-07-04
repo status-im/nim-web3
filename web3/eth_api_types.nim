@@ -95,6 +95,8 @@ type
     excessBlobGas*: Opt[Quantity]        # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]  # EIP-4788
     requestsHash*: Opt[Hash32]           # EIP-7685
+    blockAccessListHash*: Opt[Hash32]    # EIP-7928
+    slotNumber*: Opt[uint64]             # EIP-7843
 
   ## A block object, or null when no block was found
   BlockObject* = ref object
@@ -119,13 +121,14 @@ type
     transactions*: seq[TxOrHash]             # list of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter.
     uncles*: seq[Hash32]                     # list of uncle hashes.
     baseFeePerGas*: Opt[UInt256]             # EIP-1559
-    withdrawals*: Opt[seq[Withdrawal]] # EIP-4895
+    withdrawals*: Opt[seq[Withdrawal]]       # EIP-4895
     withdrawalsRoot*: Opt[Hash32]            # EIP-4895
     blobGasUsed*: Opt[Quantity]              # EIP-4844
     excessBlobGas*: Opt[Quantity]            # EIP-4844
     parentBeaconBlockRoot*: Opt[Hash32]      # EIP-4788
     requestsHash*: Opt[Hash32]               # EIP-7685
     blockAccessListHash*: Opt[Hash32]        # EIP-7928
+    slotNumber*: Opt[uint64]                 # EIP-7843
 
   TxOrHashKind* = enum
     tohHash
