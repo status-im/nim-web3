@@ -78,19 +78,20 @@ type
     data*: seq[byte]
     sender*: TSender
 
-func getValue(
-    params: RequestParamsRx, field: string, FieldType: type
-): Result[FieldType, string] =
-  try:
-    for param in params.named:
-      if param.name == field:
-        when FieldType is JsonString:
-          return ok(param.value)
-        else:
-          let val = EthJson.decode(param.value.string, FieldType)
-          return ok(val)
-  except CatchableError as exc:
-    return err(exc.msg)
+when not declared(RpcConnection):
+  func getValue(
+      params: RequestParamsRx, field: string, FieldType: type
+  ): Result[FieldType, string] =
+    try:
+      for param in params.named:
+        if param.name == field:
+          when FieldType is JsonString:
+            return ok(param.value)
+          else:
+            let val = EthJson.decode(param.value.string, FieldType)
+            return ok(val)
+    except CatchableError as exc:
+      return err(exc.msg)
 
 proc onSubscription(w: Web3, subscription: string, params: JsonString) =
   let s = w.subscriptions.getOrDefault(subscription)
