@@ -26,6 +26,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
 
   proc engine_newPayloadV1(payload: ExecutionPayloadV1): PayloadStatusV1
   proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
+  proc engine_newPayloadV2(payload: ExecutionPayloadV1OrV2): PayloadStatusV1
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32): PayloadStatusV1
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
@@ -68,7 +69,6 @@ createRpcSigsFromNim(RpcClient, EthJson):
   # convenience apis
   proc engine_newPayloadV1(payload: ExecutionPayload): PayloadStatus
   proc engine_newPayloadV2(payload: ExecutionPayload): PayloadStatus
-  proc engine_newPayloadV2(payload: ExecutionPayloadV1OrV2): PayloadStatus
   proc engine_newPayloadV3(payload: ExecutionPayload,
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
     parentBeaconBlockRoot: Opt[Hash32]): PayloadStatus
