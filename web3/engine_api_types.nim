@@ -21,7 +21,7 @@ export
 type
   TypedTransaction* = distinct seq[byte]
 
-  InclusionList* = distinct seq[TypedTransaction]
+  InclusionList* = seq[TypedTransaction]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
@@ -117,8 +117,6 @@ type
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
-    inclusionListTransactions*: seq[TypedTransaction]
-
 
   # https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/amsterdam.md
   ExecutionPayloadV4* = object
@@ -209,7 +207,6 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
-    inclusionListTransactions*: seq[TypedTransaction]
 
   # https://github.com/ethereum/execution-apis/blob/a22fbd4464ef77404935a056f9e19db0abb359a1/src/engine/amsterdam.md#payloadattributesv4
   PayloadAttributesV4* = object

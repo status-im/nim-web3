@@ -165,8 +165,7 @@ func V3*(attr: PayloadAttributes): PayloadAttributesV3 =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
-    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
-    inclusionListTransactions: attr.inclusionListTransactions.get(newSeq[TypedTransaction]())
+    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get
   )
 
 func V4*(attr: PayloadAttributes): PayloadAttributesV4 =
@@ -238,8 +237,7 @@ func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: Opt.some(attr.withdrawals),
-    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
-    inclusionListTransactions: Opt.some(attr.inclusionListTransactions)
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot)
   )
 
 func payloadAttributes*(attr: PayloadAttributesV4): PayloadAttributes =
