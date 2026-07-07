@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2025 Status Research & Development GmbH
+# Copyright (c) 2022-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -183,7 +183,7 @@ type
   # For optional blockAccessList field, see:
   #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyhashv2
   #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyrangev2
-  # "Client software MUST set blockAccessList field to null for bodies of pre-Amsterdam blocks."  
+  # "Client software MUST set blockAccessList field to null for bodies of pre-Amsterdam blocks."
   ExecutionPayloadBodyV2* = object
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
@@ -221,6 +221,17 @@ type
     slotNumber*: Quantity
     targetGasLimit*: Quantity
 
+  # STUB: put PayloadAttributesV5 reference link here
+  PayloadAttributesV5* = object
+    timestamp*: Quantity
+    prevRandao*: Bytes32
+    suggestedFeeRecipient*: Address
+    withdrawals*: seq[WithdrawalV1]
+    parentBeaconBlockRoot*: Hash32
+    slotNumber*: Quantity
+    targetGasLimit*: Quantity
+    inclusionListTransactions*: seq[TypedTransaction]
+
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
     timestamp*: Quantity
@@ -232,7 +243,8 @@ type
     PayloadAttributesV1 |
     PayloadAttributesV2 |
     PayloadAttributesV3 |
-    PayloadAttributesV4
+    PayloadAttributesV4 |
+    PayloadAttributesV5
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
@@ -247,6 +259,13 @@ type
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
 
+  # STUB: put PayloadStatusV2 reference link here
+  PayloadStatusV2* = object
+    status*: PayloadExecutionStatus
+    latestValidHash*: Opt[Hash32]
+    validationError*: Opt[string]
+    inclusionListSatisfied*: Opt[bool]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
     headBlockHash*: Hash32
@@ -254,8 +273,13 @@ type
     finalizedBlockHash*: Hash32
 
   # https://github.com/ethereum/execution-apis/blob/main/src/engine/openrpc/schemas/forkchoice.yaml#L18
-  ForkchoiceUpdatedResponse* = object
+  ForkchoiceUpdatedResponseV1* = object
     payloadStatus*: PayloadStatusV1
+    payloadId*: Opt[Bytes8]
+
+  # STUB: put ForkchoiceUpdatedResponseV2 reference link here
+  ForkchoiceUpdatedResponseV2* = object
+    payloadStatus*: PayloadStatusV2
     payloadId*: Opt[Bytes8]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#response-2
