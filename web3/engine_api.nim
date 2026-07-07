@@ -84,7 +84,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
     parentBeaconBlockRoot: Opt[Hash32],
     executionRequests: Opt[seq[seq[byte]]],
-    inclusionList: InclusionList): PayloadStatus
+    inclusionList: Opt[InclusionList]): PayloadStatus
 
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
