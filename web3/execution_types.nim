@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2023-2024 Status Research & Development GmbH
+# Copyright (c) 2023-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -47,12 +47,29 @@ type
     parentBeaconBlockRoot*: Opt[Hash32]
     slotNumber*: Opt[Quantity]
     targetGasLimit*: Opt[Quantity]
+    inclusionListTransactions*: Opt[seq[TypedTransaction]]
+
+  ForkchoiceState* = object
+    headBlockHash*: Hash32
+    safeBlockHash*: Hash32
+    finalizedBlockHash*: Hash32
+
+  PayloadStatus* = object
+    status*: PayloadExecutionStatus
+    latestValidHash*: Opt[Hash32]
+    validationError*: Opt[string]
+    inclusionListSatisfied*: Opt[bool]
+
+  ForkchoiceUpdatedResponse* = object
+    payloadStatus*: PayloadStatus
+    payloadId*: Opt[Bytes8]
 
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
     Opt[PayloadAttributesV2] |
     Opt[PayloadAttributesV3] |
-    Opt[PayloadAttributesV4]
+    Opt[PayloadAttributesV4] |
+    Opt[PayloadAttributesV5]
 
   GetPayloadResponse* = object
     executionPayload*: ExecutionPayload
@@ -81,7 +98,9 @@ func version*(payload: ExecutionPayload): Version =
     Version.V1
 
 func version*(attr: PayloadAttributes): Version =
-  if attr.slotNumber.isSome or attr.targetGasLimit.isSome:
+  if attr.inclusionListTransactions.isSome:
+    Version.V5
+  elif attr.slotNumber.isSome or attr.targetGasLimit.isSome:
     Version.V4
   elif attr.parentBeaconBlockRoot.isSome:
     Version.V3
@@ -89,6 +108,18 @@ func version*(attr: PayloadAttributes): Version =
     Version.V2
   else:
     Version.V1
+
+func version*(state: ForkchoiceState): Version =
+  Version.V1
+
+func version*(status: PayloadStatus): Version =
+  if status.inclusionListSatisfied.isSome:
+    Version.V2
+  else:
+    Version.V1
+
+func version*(response: ForkchoiceUpdatedResponse): Version =
+  response.payloadStatus.version
 
 func version*(res: GetPayloadResponse): Version =
   if res.executionPayload.blockAccessList.isSome:
@@ -134,7 +165,8 @@ func V3*(attr: PayloadAttributes): PayloadAttributesV3 =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
-    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get
+    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
+    inclusionListTransactions: attr.inclusionListTransactions.get(newSeq[TypedTransaction]())
   )
 
 func V4*(attr: PayloadAttributes): PayloadAttributesV4 =
@@ -146,6 +178,18 @@ func V4*(attr: PayloadAttributes): PayloadAttributesV4 =
     parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
     slotNumber: attr.slotNumber.get,
     targetGasLimit: attr.targetGasLimit.get
+  )
+
+func V5*(attr: PayloadAttributes): PayloadAttributesV5 =
+  PayloadAttributesV5(
+    timestamp: attr.timestamp,
+    prevRandao: attr.prevRandao,
+    suggestedFeeRecipient: attr.suggestedFeeRecipient,
+    withdrawals: attr.withdrawals.get(newSeq[WithdrawalV1]()),
+    parentBeaconBlockRoot: attr.parentBeaconBlockRoot.get,
+    slotNumber: attr.slotNumber.get,
+    targetGasLimit: attr.targetGasLimit.get,
+    inclusionListTransactions: attr.inclusionListTransactions.get
   )
 
 func V1*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV1] =
@@ -168,6 +212,11 @@ func V4*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV4] =
     return Opt.none(PayloadAttributesV4)
   Opt.some(attr.get.V4)
 
+func V5*(attr: Opt[PayloadAttributes]): Opt[PayloadAttributesV5] =
+  if attr.isNone:
+    return Opt.none(PayloadAttributesV5)
+  Opt.some(attr.get.V5)
+
 func payloadAttributes*(attr: PayloadAttributesV1): PayloadAttributes =
   PayloadAttributes(
     timestamp: attr.timestamp,
@@ -189,7 +238,8 @@ func payloadAttributes*(attr: PayloadAttributesV3): PayloadAttributes =
     prevRandao: attr.prevRandao,
     suggestedFeeRecipient: attr.suggestedFeeRecipient,
     withdrawals: Opt.some(attr.withdrawals),
-    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot)
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
+    inclusionListTransactions: Opt.some(attr.inclusionListTransactions)
   )
 
 func payloadAttributes*(attr: PayloadAttributesV4): PayloadAttributes =
@@ -203,21 +253,105 @@ func payloadAttributes*(attr: PayloadAttributesV4): PayloadAttributes =
     targetGasLimit: Opt.some(attr.targetGasLimit)
   )
 
+func payloadAttributes*(attr: PayloadAttributesV5): PayloadAttributes =
+  PayloadAttributes(
+    timestamp: attr.timestamp,
+    prevRandao: attr.prevRandao,
+    suggestedFeeRecipient: attr.suggestedFeeRecipient,
+    withdrawals: Opt.some(attr.withdrawals),
+    parentBeaconBlockRoot: Opt.some(attr.parentBeaconBlockRoot),
+    slotNumber: Opt.some(attr.slotNumber),
+    targetGasLimit: Opt.some(attr.targetGasLimit),
+    inclusionListTransactions: Opt.some(attr.inclusionListTransactions)
+  )
+
 func payloadAttributes*(x: Opt[PayloadAttributesV1]): Opt[PayloadAttributes] =
   if x.isNone: Opt.none(PayloadAttributes)
-  else: Opt.some(payloadAttributes x.get)
+  else: Opt.some(payloadAttributes x.value)
 
 func payloadAttributes*(x: Opt[PayloadAttributesV2]): Opt[PayloadAttributes] =
   if x.isNone: Opt.none(PayloadAttributes)
-  else: Opt.some(payloadAttributes x.get)
+  else: Opt.some(payloadAttributes x.value)
 
 func payloadAttributes*(x: Opt[PayloadAttributesV3]): Opt[PayloadAttributes] =
   if x.isNone: Opt.none(PayloadAttributes)
-  else: Opt.some(payloadAttributes x.get)
+  else: Opt.some(payloadAttributes x.value)
 
 func payloadAttributes*(x: Opt[PayloadAttributesV4]): Opt[PayloadAttributes] =
   if x.isNone: Opt.none(PayloadAttributes)
-  else: Opt.some(payloadAttributes x.get)
+  else: Opt.some(payloadAttributes x.value)
+
+func payloadAttributes*(x: Opt[PayloadAttributesV5]): Opt[PayloadAttributes] =
+  if x.isNone: Opt.none(PayloadAttributes)
+  else: Opt.some(payloadAttributes x.value)
+
+func V1*(state: ForkchoiceState): ForkchoiceStateV1 =
+  ForkchoiceStateV1(
+    headBlockHash: state.headBlockHash,
+    safeBlockHash: state.safeBlockHash,
+    finalizedBlockHash: state.finalizedBlockHash
+  )
+
+func forkchoiceState*(state: ForkchoiceStateV1): ForkchoiceState =
+  ForkchoiceState(
+    headBlockHash: state.headBlockHash,
+    safeBlockHash: state.safeBlockHash,
+    finalizedBlockHash: state.finalizedBlockHash
+  )
+
+func V1*(status: PayloadStatus): PayloadStatusV1 =
+  PayloadStatusV1(
+    status: status.status,
+    latestValidHash: status.latestValidHash,
+    validationError: status.validationError
+  )
+
+func V2*(status: PayloadStatus): PayloadStatusV2 =
+  PayloadStatusV2(
+    status: status.status,
+    latestValidHash: status.latestValidHash,
+    validationError: status.validationError,
+    inclusionListSatisfied: status.inclusionListSatisfied
+  )
+
+func payloadStatus*(status: PayloadStatusV1): PayloadStatus =
+  PayloadStatus(
+    status: status.status,
+    latestValidHash: status.latestValidHash,
+    validationError: status.validationError
+  )
+
+func payloadStatus*(status: PayloadStatusV2): PayloadStatus =
+  PayloadStatus(
+    status: status.status,
+    latestValidHash: status.latestValidHash,
+    validationError: status.validationError,
+    inclusionListSatisfied: status.inclusionListSatisfied
+  )
+
+func V1*(status: ForkchoiceUpdatedResponse): ForkchoiceUpdatedResponseV1 =
+  ForkchoiceUpdatedResponseV1(
+    payloadStatus: status.payloadStatus.V1,
+    payloadId: status.payloadId
+  )
+
+func V2*(status: ForkchoiceUpdatedResponse): ForkchoiceUpdatedResponseV2 =
+  ForkchoiceUpdatedResponseV2(
+    payloadStatus: status.payloadStatus.V2,
+    payloadId: status.payloadId
+  )
+
+func forkchoiceUpdatedResponse*(status: ForkchoiceUpdatedResponseV1): ForkchoiceUpdatedResponse =
+  ForkchoiceUpdatedResponse(
+    payloadStatus: payloadStatus status.payloadStatus,
+    payloadId: status.payloadId
+  )
+
+func forkchoiceUpdatedResponse*(status: ForkchoiceUpdatedResponseV2): ForkchoiceUpdatedResponse =
+  ForkchoiceUpdatedResponse(
+    payloadStatus: payloadStatus status.payloadStatus,
+    payloadId: status.payloadId
+  )
 
 func V1V2*(p: ExecutionPayload): ExecutionPayloadV1OrV2 =
   ExecutionPayloadV1OrV2(
@@ -536,3 +670,4 @@ func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
     executionRequests: Opt.some(x.executionRequests),
   )
+

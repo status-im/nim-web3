@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2025 Status Research & Development GmbH
+# Copyright (c) 2022-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -20,6 +20,8 @@ export
 
 type
   TypedTransaction* = distinct seq[byte]
+
+  InclusionList* = distinct seq[TypedTransaction]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
@@ -115,6 +117,8 @@ type
     withdrawals*: seq[WithdrawalV1]
     blobGasUsed*: Quantity
     excessBlobGas*: Quantity
+    inclusionListTransactions*: seq[TypedTransaction]
+
 
   # https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/amsterdam.md
   ExecutionPayloadV4* = object
@@ -179,7 +183,7 @@ type
   # For optional blockAccessList field, see:
   #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyhashv2
   #   https://github.com/ethereum/execution-apis/blob/585763b34564202d4611d318006ea1f3efb43616/src/engine/amsterdam.md#engine_getpayloadbodiesbyrangev2
-  # "Client software MUST set blockAccessList field to null for bodies of pre-Amsterdam blocks."  
+  # "Client software MUST set blockAccessList field to null for bodies of pre-Amsterdam blocks."
   ExecutionPayloadBodyV2* = object
     transactions*: seq[TypedTransaction]
     withdrawals*: Opt[seq[WithdrawalV1]]
@@ -205,6 +209,7 @@ type
     suggestedFeeRecipient*: Address
     withdrawals*: seq[WithdrawalV1]
     parentBeaconBlockRoot*: Hash32
+    inclusionListTransactions*: seq[TypedTransaction]
 
   # https://github.com/ethereum/execution-apis/blob/a22fbd4464ef77404935a056f9e19db0abb359a1/src/engine/amsterdam.md#payloadattributesv4
   PayloadAttributesV4* = object
@@ -215,6 +220,17 @@ type
     parentBeaconBlockRoot*: Hash32
     slotNumber*: Quantity
     targetGasLimit*: Quantity
+
+  # STUB: put PayloadAttributesV5 reference link here
+  PayloadAttributesV5* = object
+    timestamp*: Quantity
+    prevRandao*: Bytes32
+    suggestedFeeRecipient*: Address
+    withdrawals*: seq[WithdrawalV1]
+    parentBeaconBlockRoot*: Hash32
+    slotNumber*: Quantity
+    targetGasLimit*: Quantity
+    inclusionListTransactions*: seq[TypedTransaction]
 
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
@@ -227,7 +243,8 @@ type
     PayloadAttributesV1 |
     PayloadAttributesV2 |
     PayloadAttributesV3 |
-    PayloadAttributesV4
+    PayloadAttributesV4 |
+    PayloadAttributesV5
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
@@ -242,6 +259,13 @@ type
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
 
+  # STUB: put PayloadStatusV2 reference link here
+  PayloadStatusV2* = object
+    status*: PayloadExecutionStatus
+    latestValidHash*: Opt[Hash32]
+    validationError*: Opt[string]
+    inclusionListSatisfied*: Opt[bool]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
     headBlockHash*: Hash32
@@ -249,8 +273,13 @@ type
     finalizedBlockHash*: Hash32
 
   # https://github.com/ethereum/execution-apis/blob/main/src/engine/openrpc/schemas/forkchoice.yaml#L18
-  ForkchoiceUpdatedResponse* = object
+  ForkchoiceUpdatedResponseV1* = object
     payloadStatus*: PayloadStatusV1
+    payloadId*: Opt[Bytes8]
+
+  # STUB: put ForkchoiceUpdatedResponseV2 reference link here
+  ForkchoiceUpdatedResponseV2* = object
+    payloadStatus*: PayloadStatusV2
     payloadId*: Opt[Bytes8]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#response-2
@@ -323,6 +352,8 @@ const
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
   engineApiUnsupportedFork* = -38005
+  # https://github.com/ethereum/execution-apis/pull/609/files#diff-59590a19c9f19ab80452d1c5411f6a7206ad1d3bc2d0c5c5ba271a6a50e8d8e8R102
+  engineApiUnknownParent* = -38006
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)

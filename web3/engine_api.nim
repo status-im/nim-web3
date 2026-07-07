@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2024 Status Research & Development GmbH
+# Copyright (c) 2022-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -29,10 +29,18 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32): PayloadStatusV1
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
-  proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4]): ForkchoiceUpdatedResponse
+
+  # STUB: put engine_newPayloadV6 reference link here
+  proc engine_newPayloadV6(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]], inclusionList: InclusionList): PayloadStatusV2
+
+  proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponseV1
+  proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponseV1
+  proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponseV1
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4]): ForkchoiceUpdatedResponseV1
+
+  # STUB: put engine_forkchoiceUpdatedV5 reference link here
+  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV5]): ForkchoiceUpdatedResponseV2
+
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
   proc engine_getPayloadV2(payloadId: Bytes8): GetPayloadV2Response
   proc engine_getPayloadV2_exact(payloadId: Bytes8): GetPayloadV2ResponseExact
@@ -48,6 +56,9 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
 
+  # STUB: put engine_getInclusionListV1 reference link here
+  proc engine_getInclusionListV1(parentHash: Hash32): InclusionList
+
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
 
@@ -55,46 +66,61 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getClientVersionV1(version: ClientVersionV1): seq[ClientVersionV1]
 
   # convenience apis
-  proc engine_newPayloadV1(payload: ExecutionPayload): PayloadStatusV1
-  proc engine_newPayloadV2(payload: ExecutionPayload): PayloadStatusV1
-  proc engine_newPayloadV2(payload: ExecutionPayloadV1OrV2): PayloadStatusV1
+  proc engine_newPayloadV1(payload: ExecutionPayload): PayloadStatus
+  proc engine_newPayloadV2(payload: ExecutionPayload): PayloadStatus
+  proc engine_newPayloadV2(payload: ExecutionPayloadV1OrV2): PayloadStatus
   proc engine_newPayloadV3(payload: ExecutionPayload,
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32]): PayloadStatusV1
+    parentBeaconBlockRoot: Opt[Hash32]): PayloadStatus
   proc engine_newPayloadV4(payload: ExecutionPayload,
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
     parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
+    executionRequests: Opt[seq[seq[byte]]]): PayloadStatus
   proc engine_newPayloadV5(payload: ExecutionPayload,
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
     parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
-  proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
+    executionRequests: Opt[seq[seq[byte]]]): PayloadStatus
+  proc engine_newPayloadV6(payload: ExecutionPayload,
+    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
+    parentBeaconBlockRoot: Opt[Hash32],
+    executionRequests: Opt[seq[seq[byte]]],
+    inclusionList: InclusionList): PayloadStatus
+
+  proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
-    payloadAttributes: Opt[PayloadAttributesV1]): Future[ForkchoiceUpdatedResponse] =
+    payloadAttributes: Opt[PayloadAttributesV1]): Future[ForkchoiceUpdatedResponseV1] =
   engine_forkchoiceUpdatedV1(rpcClient, forkchoiceState, payloadAttributes)
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
-    payloadAttributes: Opt[PayloadAttributesV2]): Future[ForkchoiceUpdatedResponse] =
+    payloadAttributes: Opt[PayloadAttributesV2]): Future[ForkchoiceUpdatedResponseV1] =
   engine_forkchoiceUpdatedV2(rpcClient, forkchoiceState, payloadAttributes)
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
-    payloadAttributes: Opt[PayloadAttributesV3]): Future[ForkchoiceUpdatedResponse] =
+    payloadAttributes: Opt[PayloadAttributesV3]): Future[ForkchoiceUpdatedResponseV1] =
   engine_forkchoiceUpdatedV3(rpcClient, forkchoiceState, payloadAttributes)
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
-    payloadAttributes: Opt[PayloadAttributesV4]): Future[ForkchoiceUpdatedResponse] =
+    payloadAttributes: Opt[PayloadAttributesV4]): Future[ForkchoiceUpdatedResponseV1] =
   engine_forkchoiceUpdatedV4(rpcClient, forkchoiceState, payloadAttributes)
+
+template forkchoiceUpdated*(
+    rpcClient: RpcClient,
+    forkchoiceState: ForkchoiceStateV1,
+    payloadAttributes: Opt[PayloadAttributesV5]): Future[ForkchoiceUpdatedResponseV2] =
+  engine_forkchoiceUpdatedV5(rpcClient, forkchoiceState, payloadAttributes)
 
 template getPayload*(
     rpcClient: RpcClient,
@@ -179,6 +205,25 @@ template newPayload*(
   engine_newPayloadV4(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
 
+template newPayload*(
+    rpcClient: RpcClient,
+    payload: ExecutionPayloadV4,
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: Hash32,
+    executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
+  engine_newPayloadV5(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
+
+template newPayload*(
+    rpcClient: RpcClient,
+    payload: ExecutionPayloadV4,
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: Hash32,
+    executionRequests: seq[seq[byte]],
+    inclusionList: InclusionList): Future[PayloadStatusV2] =
+  engine_newPayloadV6(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests, inclusionList)
+
 template exchangeCapabilities*(
     rpcClient: RpcClient,
     methods: seq[string]): Future[seq[string]] =
@@ -188,3 +233,6 @@ template getClientVersion*(
     rpcClient: RpcClient,
     version: ClientVersionV1): Future[seq[ClientVersionV1]] =
   engine_getClientVersionV1(rpcClient, version)
+
+template getInclusionList*(parentHash: Hash32): InclusionList =
+  engine_getInclusionListV1(parentHash)

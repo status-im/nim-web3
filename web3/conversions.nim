@@ -88,8 +88,10 @@ PayloadAttributesV3.useDefaultSerializationIn EthJson
 PayloadAttributesV4.useDefaultSerializationIn EthJson
 PayloadAttributesV1OrV2.useDefaultSerializationIn EthJson
 PayloadStatusV1.useDefaultSerializationIn EthJson
+PayloadStatusV2.useDefaultSerializationIn EthJson
 ForkchoiceStateV1.useDefaultSerializationIn EthJson
-ForkchoiceUpdatedResponse.useDefaultSerializationIn EthJson
+ForkchoiceUpdatedResponseV1.useDefaultSerializationIn EthJson
+ForkchoiceUpdatedResponseV2.useDefaultSerializationIn EthJson
 GetPayloadV2Response.useDefaultSerializationIn EthJson
 GetPayloadV2ResponseExact.useDefaultSerializationIn EthJson
 GetPayloadV3Response.useDefaultSerializationIn EthJson
@@ -105,6 +107,9 @@ ClientVersionV1.useDefaultSerializationIn EthJson
 ExecutionPayload.useDefaultSerializationIn EthJson
 PayloadAttributes.useDefaultSerializationIn EthJson
 GetPayloadResponse.useDefaultSerializationIn EthJson
+ForkchoiceState.useDefaultSerializationIn EthJson
+PayloadStatus.useDefaultSerializationIn EthJson
+ForkchoiceUpdatedResponse.useDefaultSerializationIn EthJson
 
 #------------------------------------------------------------------------------
 # Private helpers
