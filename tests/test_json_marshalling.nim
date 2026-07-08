@@ -222,7 +222,7 @@ suite "JSON-RPC Quantity":
     checkRandomObject(PayloadAttributesV1OrV2)
     checkRandomObject(PayloadStatusV1)
     checkRandomObject(ForkchoiceStateV1)
-    checkRandomObject(ForkchoiceUpdatedResponse)
+    checkRandomObject(ForkchoiceUpdatedResponseV1)
     checkRandomObject(GetPayloadV2Response)
     checkRandomObject(GetPayloadV2ResponseExact)
     checkRandomObject(GetPayloadV3Response)

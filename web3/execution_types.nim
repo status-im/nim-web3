@@ -48,6 +48,8 @@ type
     slotNumber*: Opt[Quantity]
     targetGasLimit*: Opt[Quantity]
 
+  ForkchoiceUpdatedResponse* = ForkchoiceUpdatedResponseV1
+
   SomeOptionalPayloadAttributes* =
     Opt[PayloadAttributesV1] |
     Opt[PayloadAttributesV2] |

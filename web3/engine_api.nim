@@ -29,10 +29,10 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32): PayloadStatusV1
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
-  proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponseV1
+  proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponseV1
+  proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponseV1
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4]): ForkchoiceUpdatedResponseV1
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
   proc engine_getPayloadV2(payloadId: Bytes8): GetPayloadV2Response
   proc engine_getPayloadV2_exact(payloadId: Bytes8): GetPayloadV2ResponseExact
