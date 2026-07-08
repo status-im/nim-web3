@@ -269,7 +269,7 @@ type
     safeBlockHash*: Hash32
     finalizedBlockHash*: Hash32
 
-  # https://github.com/ethereum/execution-apis/blob/main/src/engine/openrpc/schemas/forkchoice.yaml#L18
+  # https://github.com/ethereum/execution-apis/blob/f74de4b86e3b011384808c294c3d71f2854729a2/src/engine/openrpc/schemas/forkchoice.yaml#L18
   ForkchoiceUpdatedResponseV1* = object
     payloadStatus*: PayloadStatusV1
     payloadId*: Opt[Bytes8]
