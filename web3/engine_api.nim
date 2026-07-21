@@ -40,7 +40,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4]): ForkchoiceUpdatedResponseV1
 
   # STUB: put engine_forkchoiceUpdatedV5 reference link here
-  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV5]): ForkchoiceUpdatedResponseV2
+  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV5], custodyColumns: Opt[BitArray128]): ForkchoiceUpdatedResponseV2
 
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
   proc engine_getPayloadV2(payloadId: Bytes8): GetPayloadV2Response
@@ -90,7 +90,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[BitArray128]): ForkchoiceUpdatedResponse
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
@@ -119,8 +119,9 @@ template forkchoiceUpdated*(
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
-    payloadAttributes: Opt[PayloadAttributesV5]): Future[ForkchoiceUpdatedResponseV2] =
-  engine_forkchoiceUpdatedV5(rpcClient, forkchoiceState, payloadAttributes)
+    payloadAttributes: Opt[PayloadAttributesV5],
+    custodyColumns: Opt[BitArray128]): Future[ForkchoiceUpdatedResponseV2] =
+  engine_forkchoiceUpdatedV5(rpcClient, forkchoiceState, payloadAttributes, custodyColumns)
 
 template getPayload*(
     rpcClient: RpcClient,

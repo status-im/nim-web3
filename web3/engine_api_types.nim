@@ -23,6 +23,8 @@ type
 
   InclusionList* = seq[TypedTransaction]
 
+  BitArray128* = FixedBytes[16]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
     index*: Quantity
