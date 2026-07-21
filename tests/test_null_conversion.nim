@@ -1,3 +1,12 @@
+# nim-web3
+# Copyright (c) 2023-2026 Status Research & Development GmbH
+# Licensed under either of
+#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
+#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
+# at your option.
+# This file may not be copied, modified, or distributed except according to
+# those terms.
+
 import
   std/[json, strutils],
   pkg/unittest2,
@@ -72,11 +81,11 @@ suite "Null conversion":
 
     let payloadAttributesV1 = """{ "timestamp": {item}, "prevRandao": {item}, "suggestedFeeRecipient": {item} }"""
     let forkchoiceStateV1 = """{ "status": {item}, "safeBlockHash": {item}, "finalizedBlockHash": {item} }"""
-    let forkchoiceUpdatedResponse = """{ "payloadStatus": {item}, "payloadId": {item} }"""
+    let forkchoiceUpdatedResponseV1 = """{ "payloadStatus": {item}, "payloadId": {item} }"""
 
     var resPayloadAttributesV1: PayloadAttributesV1
     var resForkchoiceStateV1: ForkchoiceStateV1
-    var resForkchoiceUpdatedResponse: ForkchoiceUpdatedResponse
+    var resForkchoiceUpdatedResponseV1: ForkchoiceUpdatedResponseV1
 
     for item in @["\"\"", "\"0x\"", "\"0x_\"", ""]:
       template format(str: string): string =
@@ -84,14 +93,14 @@ suite "Null conversion":
 
       should_be_value_error(payloadAttributesV1.format(), resPayloadAttributesV1)
       should_be_value_error(forkchoiceStateV1.format(), resForkchoiceStateV1)
-      should_be_value_error(forkchoiceUpdatedResponse.format(), resForkchoiceUpdatedResponse)
+      should_be_value_error(forkchoiceUpdatedResponseV1.format(), resForkchoiceUpdatedResponseV1)
 
     template setNull(str: string): string =
       str.replace("{item}", "null")
 
     should_not_error(payloadAttributesV1.setNull(), resPayloadAttributesV1)
     should_not_error(forkchoiceStateV1.setNull(), resForkchoiceStateV1)
-    should_not_error(forkchoiceUpdatedResponse.setNull(), resForkchoiceUpdatedResponse)
+    should_not_error(forkchoiceUpdatedResponseV1.setNull(), resForkchoiceUpdatedResponseV1)
 
   ## If different status types can have branching logic
   ## we should cover each status type with different null ops
