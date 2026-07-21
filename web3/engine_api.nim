@@ -56,6 +56,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
+  proc engine_getBlobsV4(blob_versioned_hashes: seq[VersionedHash], indices_bitarray: BitArray128): GetBlobsV4Response
 
   # STUB: put engine_getInclusionListV1 reference link here
   proc engine_getInclusionListV1(parentHash: Hash32): InclusionList
