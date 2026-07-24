@@ -58,7 +58,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
 
   # STUB: put engine_getInclusionListV1 reference link here
-  proc engine_getInclusionListV1(parentHash: Hash32): InclusionList
+  proc engine_getInclusionListV1(): InclusionList
 
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
@@ -235,5 +235,5 @@ template getClientVersion*(
     version: ClientVersionV1): Future[seq[ClientVersionV1]] =
   engine_getClientVersionV1(rpcClient, version)
 
-template getInclusionList*(parentHash: Hash32): InclusionList =
-  engine_getInclusionListV1(parentHash)
+template getInclusionList*(): InclusionList =
+  engine_getInclusionListV1()
