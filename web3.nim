@@ -144,7 +144,7 @@ proc newWeb3*(
     uri: string,
     getHeaders: GetJsonRpcRequestHeaders = nil,
     httpFlags: HttpClientFlags = {},
-): Future[Web3] {.async, raises: [CancelledError, JsonRpcError, CatchableError].} =
+): Future[Web3] {.async: (raises: [CancelledError, JsonRpcError, CatchableError]).} =
   let u = parseUri(uri)
 
   case u.scheme
