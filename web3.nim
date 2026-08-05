@@ -144,7 +144,7 @@ proc newWeb3*(
     uri: string,
     getHeaders: GetJsonRpcRequestHeaders = nil,
     httpFlags: HttpClientFlags = {},
-): Future[Web3] {.async.} =
+): Future[Web3] {.async, raises: [CancelledError, JsonRpcError, CatchableError].} =
   let u = parseUri(uri)
 
   case u.scheme
@@ -183,21 +183,17 @@ proc newWeb3*(
 proc close*(web3: Web3): Future[void] = web3.provider.close()
 
 proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async.} =
-  try:
-    let logs = await s.web3.provider.eth_getJsonLogs(options)
-    for l in logs:
-      if s.removed: break
-      s.eventHandler(l)
-    s.historicalEventsProcessed = true
-    var i = 0
-    while i < s.pendingEvents.len: # Mind reentrancy
-      if s.removed: break
-      s.eventHandler(s.pendingEvents[i])
-      inc i
-    s.pendingEvents = @[]
-  except CatchableError as e:
-    echo "Caught exception in getHistoricalEvents: ", e.msg
-    echo e.getStackTrace()
+  let logs = await s.web3.provider.eth_getJsonLogs(options)
+  for l in logs:
+    if s.removed: break
+    s.eventHandler(l)
+  s.historicalEventsProcessed = true
+  var i = 0
+  while i < s.pendingEvents.len: # Mind reentrancy
+    if s.removed: break
+    s.eventHandler(s.pendingEvents[i])
+    inc i
+  s.pendingEvents = @[]
 
 proc subscribe*(w: Web3, name: string, options: Opt[FilterOptions],
                 eventHandler: SubscriptionEventHandler,
