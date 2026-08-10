@@ -230,7 +230,7 @@ proc subscribeForLogs*(w: Web3, options: FilterOptions,
                       {.async: (raises: [CatchableError]).} =
   result = await subscribe(w, "logs", Opt.some(options), logsHandler, errorHandler)
   if withHistoricEvents:
-    await getHistoricalEvents(result, options)
+    asyncSpawn getHistoricalEvents(result, options)
   else:
     result.historicalEventsProcessed = true
 
