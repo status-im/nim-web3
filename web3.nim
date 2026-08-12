@@ -78,6 +78,10 @@ type
     data*: seq[byte]
     sender*: TSender
 
+  Web3Error* = object of CatchableError
+  UnknownUrlSchemeError* = object of Web3Error
+  NoResponseFromProviderError* = object of Web3Error
+
 when not declared(RpcConnection):
   func getValue(
       params: RequestParamsRx, field: string, FieldType: type
