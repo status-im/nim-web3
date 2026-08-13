@@ -125,6 +125,56 @@ template checkRandomObject(T: type) =
   check bytes == bytes2
 
 suite "JSON-RPC Quantity":
+  test "Random object encoding":
+    checkRandomObject(SyncObject)
+    checkRandomObject(Withdrawal)
+    checkRandomObject(AccessPair)
+    checkRandomObject(AccessListResult)
+    checkRandomObject(LogObject)
+    checkRandomObject(StorageProof)
+    checkRandomObject(ProofResponse)
+    checkRandomObject(FilterOptions)
+    checkRandomObject(TransactionArgs)
+    checkRandomObject(Authorization)
+
+    checkRandomObject(BlockHeader)
+    checkRandomObject(BlockObject)
+    checkRandomObject(TransactionObject)
+    checkRandomObject(ReceiptObject)
+
+    checkRandomObject(WithdrawalV1)
+    checkRandomObject(ExecutionPayloadV1)
+    checkRandomObject(ExecutionPayloadV2)
+    checkRandomObject(ExecutionPayloadV1OrV2)
+    checkRandomObject(ExecutionPayloadV3)
+    checkRandomObject(ExecutionPayloadV4)
+    checkRandomObject(BlobsBundleV1)
+    checkRandomObject(BlobsBundleV2)
+    checkRandomObject(BlobAndProofV1)
+    checkRandomObject(BlobAndProofV2)
+    checkRandomObject(ExecutionPayloadBodyV1)
+    checkRandomObject(ExecutionPayloadBodyV2)
+    checkRandomObject(PayloadAttributesV1)
+    checkRandomObject(PayloadAttributesV2)
+    checkRandomObject(PayloadAttributesV3)
+    checkRandomObject(PayloadAttributesV4)
+    checkRandomObject(PayloadAttributesV1OrV2)
+    checkRandomObject(PayloadStatusV1)
+    checkRandomObject(ForkchoiceStateV1)
+    checkRandomObject(ForkchoiceUpdatedResponseV1)
+    checkRandomObject(GetPayloadV2Response)
+    checkRandomObject(GetPayloadV2ResponseExact)
+    checkRandomObject(GetPayloadV3Response)
+    checkRandomObject(GetPayloadV4Response)
+    checkRandomObject(GetPayloadV5Response)
+    checkRandomObject(GetPayloadV6Response)
+    checkRandomObject(ExecutionPayload)
+    checkRandomObject(PayloadAttributes)
+    checkRandomObject(GetPayloadResponse)
+
+    checkRandomObject(EthConfigObject)
+    checkRandomObject(StorageValuesRequest)
+
   test "check blockId":
     let a = RtBlockIdentifier(kind: bidNumber, number: 77.Quantity)
     let x = EthJson.encode(a)
@@ -197,17 +247,3 @@ suite "JSON-RPC Quantity":
     let z = AccessListResult()
     let w = EthJson.encode(z)
     check w == """{"accessList":[],"error":null,"gasUsed":"0x0"}"""
-
-  test "AccessListResult with error":
-    let z = AccessListResult(
-      error: Opt.some("error")
-    )
-    let w = EthJson.encode(z)
-    check w == """{"accessList":[],"error":"error","gasUsed":"0x0"}"""
-
-  test "Authorization":
-    let z = Authorization(yParity: 3, nonce: 11)
-    let w = EthJson.encode(z)
-    check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0xb","yParity":"0x3","r":"0x0","s":"0x0"}"""
-    let x = EthJson.decode(w, Authorization)
-    check x == z
