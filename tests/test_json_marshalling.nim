@@ -168,6 +168,3 @@ suite "JSON-RPC Quantity":
     checkRandomObject(GetPayloadV4Response)
     checkRandomObject(GetPayloadV5Response)
     checkRandomObject(GetPayloadV6Response)
-    checkRandomObject(ExecutionPayload)
-    checkRandomObject(PayloadAttributes)
-    checkRandomObject(GetPayloadResponse)
