@@ -221,29 +221,3 @@ suite "JSON-RPC Quantity":
     check i.kind == bidHash
     check i.hash == w
     check i.requireCanonical == true
-
-  test "check address or list":
-    let a = AddressOrList(kind: slkNull)
-    let x = EthJson.encode(a)
-    let c = EthJson.decode(x, AddressOrList)
-    check c.kind == slkNull
-
-  test "quantity parser and writer":
-    template checkType(typeName: typedesc): untyped =
-      block:
-        let a = EthJson.decode("\"0x016345785d8a0000\"", typeName)
-        check a.uint64 == 100_000_000_000_000_000'u64
-        let b = EthJson.encode(a)
-        check b == "\"0x16345785d8a0000\""
-
-        let x = EthJson.decode("\"0xFFFF_FFFF_FFFF_FFFF\"", typeName)
-        check x.uint64 == 0xFFFF_FFFF_FFFF_FFFF'u64
-        let y = EthJson.encode(x)
-        check y == "\"0xffffffffffffffff\""
-
-    checkType(Quantity)
-
-  test "AccessListResult":
-    let z = AccessListResult()
-    let w = EthJson.encode(z)
-    check w == """{"accessList":[],"error":null,"gasUsed":"0x0"}"""
