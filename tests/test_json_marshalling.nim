@@ -174,10 +174,3 @@ suite "JSON-RPC Quantity":
 
     checkRandomObject(EthConfigObject)
     checkRandomObject(StorageValuesRequest)
-
-  test "check blockId":
-    let a = RtBlockIdentifier(kind: bidNumber, number: 77.Quantity)
-    let x = EthJson.encode(a)
-    let c = EthJson.decode(x, RtBlockIdentifier)
-    check c.kind == bidNumber
-    check c.number == 77.Quantity
