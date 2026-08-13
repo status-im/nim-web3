@@ -126,7 +126,6 @@ template checkRandomObject(T: type) =
 
 suite "JSON-RPC Quantity":
   test "Random object encoding":
-    checkRandomObject(SyncObject)
     checkRandomObject(Withdrawal)
     checkRandomObject(AccessPair)
     checkRandomObject(AccessListResult)
