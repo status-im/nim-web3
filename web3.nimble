@@ -39,8 +39,22 @@ proc test(args, path: string) =
     " --hint[Processing]:off " &
     path
 
+proc setupHardhat() =
+  # Install and configure Hardhat, then start a node in the background
+  exec "npm install hardhat@3.3"
+  exec "npm pkg set type=\"module\""
+  writeFile "hardhat.config.js", "export default {};\n"
+  exec "npx hardhat --version"
+  exec "nohup npx hardhat node &"
+
+  # Wait until hardhat responds
+  exec "while ! curl -X POST " &
+    "--data '{\"jsonrpc\":\"2.0\",\"method\":\"net_version\",\"params\":[],\"id\":67}' " &
+    "localhost:8545 2>/dev/null; do sleep 1; done"
+
 
 ### tasks
 task test, "Run all tests":
+  setupHardhat()
   test "--mm:refc", "tests/all_tests.nim"
   test "--mm:orc", "tests/all_tests.nim"
