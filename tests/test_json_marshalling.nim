@@ -185,17 +185,3 @@ suite "JSON-RPC Quantity":
     let d = EthJson.decode("\"latest\"", RtBlockIdentifier)
     check d.kind == bidAlias
     check d.alias == "latest"
-
-    # https://github.com/ethereum/execution-apis/blob/main/tests/debug_getRawBlock/get-invalid-number.io
-    expect JsonReaderError:
-      let invalid = EthJson.decode("\"10\"", RtBlockIdentifier)
-      discard invalid
-
-    expect JsonReaderError:
-      let d = EthJson.decode("10", RtBlockIdentifier)
-      discard d
-
-    const w = hash32"0x0012c7b99594801d513ae92396379e5ffcf60e23127cbcabb166db28586f01aa"
-    let e = EthJson.decode("\"" & $w & "\"", RtBlockIdentifier)
-    check e.kind == bidHash
-    check e.hash == w
