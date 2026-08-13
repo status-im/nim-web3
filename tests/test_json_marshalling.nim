@@ -126,6 +126,27 @@ template checkRandomObject(T: type) =
 
 suite "JSON-RPC Quantity":
   test "Random object encoding":
+    checkRandomObject(SyncObject)
+    checkRandomObject(Withdrawal)
+    checkRandomObject(AccessPair)
+    checkRandomObject(AccessListResult)
+    checkRandomObject(LogObject)
+    checkRandomObject(StorageProof)
+    checkRandomObject(ProofResponse)
+    checkRandomObject(FilterOptions)
+    checkRandomObject(TransactionArgs)
+    checkRandomObject(Authorization)
+
+    checkRandomObject(BlockHeader)
+    checkRandomObject(BlockObject)
+    checkRandomObject(TransactionObject)
+    checkRandomObject(ReceiptObject)
+
+    checkRandomObject(WithdrawalV1)
+    checkRandomObject(ExecutionPayloadV1)
+    checkRandomObject(ExecutionPayloadV2)
+    checkRandomObject(ExecutionPayloadV1OrV2)
+    checkRandomObject(ExecutionPayloadV3)
     checkRandomObject(ExecutionPayloadV4)
     checkRandomObject(BlobsBundleV1)
     checkRandomObject(BlobsBundleV2)
@@ -150,3 +171,6 @@ suite "JSON-RPC Quantity":
     checkRandomObject(ExecutionPayload)
     checkRandomObject(PayloadAttributes)
     checkRandomObject(GetPayloadResponse)
+
+    checkRandomObject(EthConfigObject)
+    checkRandomObject(StorageValuesRequest)
