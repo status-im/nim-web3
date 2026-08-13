@@ -40,17 +40,14 @@ proc test(args, path: string) =
     path
 
 proc setupHardhat() =
-  # Install and configure Hardhat, then start a node in the background
-  exec "npm install hardhat@3.3"
-  exec "npm pkg set type=\"module\""
-  writeFile "hardhat.config.js", "export default {};\n"
-  exec "npx hardhat --version"
-  exec "nohup npx hardhat node &"
-
-  # Wait until hardhat responds
-  exec "while ! curl -X POST " &
-    "--data '{\"jsonrpc\":\"2.0\",\"method\":\"net_version\",\"params\":[],\"id\":67}' " &
-    "localhost:8545 2>/dev/null; do sleep 1; done"
+  # ci-test.sh relies on POSIX shell features (background jobs, a `while` wait
+  # loop, `sleep`) that cmd.exe does not understand. nimble's `exec` uses the
+  # platform's default shell (cmd.exe on Windows), so we run the script through
+  # bash explicitly. bash is available on every CI runner (Git Bash on Windows).
+  let bash = findExe("bash")
+  if bash.len == 0:
+    quit("bash is required to set up the Hardhat test node", QuitFailure)
+  exec "\"" & bash & "\" ci-test.sh"
 
 
 ### tasks
