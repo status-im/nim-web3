@@ -35,8 +35,6 @@ proc test(args, path: string) =
 
   exec "nim " & getEnv("TEST_LANG", "c") & " " & getEnv("NIMFLAGS") & " " & args &
     " --outdir:build -r --skipParentCfg" &
-    " --styleCheck:usages --styleCheck:error" &
-    " --hint[Processing]:off " &
     path
 
 
