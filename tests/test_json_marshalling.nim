@@ -154,4 +154,8 @@ suite "JSON-RPC Quantity":
     checkRandomObject(BlobAndProofV2)
     checkRandomObject(ExecutionPayloadBodyV1)
     checkRandomObject(ExecutionPayloadBodyV2)
+    checkRandomObject(PayloadAttributesV1)
+    checkRandomObject(PayloadAttributesV2)
+    checkRandomObject(PayloadAttributesV3)
+    checkRandomObject(PayloadAttributesV4)
     checkRandomObject(PayloadStatusV1)
