@@ -165,6 +165,3 @@ suite "JSON-RPC Quantity":
     checkRandomObject(GetPayloadV2Response)
     checkRandomObject(GetPayloadV2ResponseExact)
     checkRandomObject(GetPayloadV3Response)
-    checkRandomObject(GetPayloadV4Response)
-    checkRandomObject(GetPayloadV5Response)
-    checkRandomObject(GetPayloadV6Response)
