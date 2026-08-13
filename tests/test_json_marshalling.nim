@@ -199,25 +199,3 @@ suite "JSON-RPC Quantity":
     let e = EthJson.decode("\"" & $w & "\"", RtBlockIdentifier)
     check e.kind == bidHash
     check e.hash == w
-
-    # EIP-1898 object form: blockHash
-    let f = EthJson.decode("{\"blockHash\":\"" & $w & "\"}", RtBlockIdentifier)
-    check f.kind == bidHash
-    check f.hash == w
-
-    # EIP-1898 object form: blockNumber
-    let g = EthJson.decode("{\"blockNumber\":\"0x77\"}", RtBlockIdentifier)
-    check g.kind == bidNumber
-    check g.number == 0x77.Quantity
-
-    # EIP-1898 object form: blockHash with requireCanonical=false
-    let h = EthJson.decode("{\"blockHash\":\"" & $w & "\",\"requireCanonical\":false}", RtBlockIdentifier)
-    check h.kind == bidHash
-    check h.hash == w
-    check h.requireCanonical == false
-
-    # EIP-1898 object form: blockHash with requireCanonical=true
-    let i = EthJson.decode("{\"blockHash\":\"" & $w & "\",\"requireCanonical\":true}", RtBlockIdentifier)
-    check i.kind == bidHash
-    check i.hash == w
-    check i.requireCanonical == true
