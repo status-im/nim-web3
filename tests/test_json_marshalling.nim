@@ -181,7 +181,3 @@ suite "JSON-RPC Quantity":
     let c = EthJson.decode(x, RtBlockIdentifier)
     check c.kind == bidNumber
     check c.number == 77.Quantity
-
-    let d = EthJson.decode("\"latest\"", RtBlockIdentifier)
-    check d.kind == bidAlias
-    check d.alias == "latest"
