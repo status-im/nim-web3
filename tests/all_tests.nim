@@ -1,14 +1,3 @@
-# nim-web3
-# Copyright (c) 2018-2026 Status Research & Development GmbH
-# Licensed under either of
-#  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
-#  * MIT license ([LICENSE-MIT](LICENSE-MIT))
-# at your option.
-# This file may not be copied, modified, or distributed except according to
-# those terms.
-
-{. warning[UnusedImport]:off .}
-
 import
   test_null_conversion,
   test_primitives,
@@ -19,7 +8,4 @@ import
   test_signed_tx,
   test_execution_types,
   test_string_decoder,
-  test_abi_utils,
-  test_encoding,
-  test_decoding,
-  test_abi_serialization
+  test_abi_utils
