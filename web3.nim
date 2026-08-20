@@ -193,6 +193,7 @@ proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async: (rais
     s.eventHandler(l)
   s.historicalEventsProcessed = true
   var i = 0
+  let lendingEvents = move(s.pendingEvents)
   while i < s.pendingEvents.len: # Mind reentrancy
     if s.removed: break
     s.eventHandler(s.pendingEvents[i])
