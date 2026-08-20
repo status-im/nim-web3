@@ -96,7 +96,7 @@ template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
     payloadAttributes: Opt[PayloadAttributesV4],
-    custodyColumns: Opt[seq[byte]]): Future[ForkchoiceUpdatedResponse] =
+    custodyColumns = Opt.none(seq[byte])): Future[ForkchoiceUpdatedResponse] =
   engine_forkchoiceUpdatedV4(rpcClient, forkchoiceState, payloadAttributes, custodyColumns)
 
 template getPayload*(
