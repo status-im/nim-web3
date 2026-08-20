@@ -93,7 +93,7 @@ type
     ## Raised when the provider returns an empty response where data was
     ## expected.
 
-  SerializationError* = object of Web3Error
+  AbiSerializationError* = object of Web3Error
     ## Raised when ABI-encoding a request or ABI-decoding a response fails,
     ## typically because the Nim type does not match the contract ABI.
 
@@ -453,14 +453,14 @@ proc call*[T](
     c: ContractInvocation[T, Web3SenderImpl],
     value = 0.u256,
     gas = 3000000'u64,
-    blockNumber = high(Quantity)): Future[T] {.async: (raises: [CancelledError, RpcError, SerializationError, NoResponseFromProviderError]).} =
+    blockNumber = high(Quantity)): Future[T] {.async: (raises: [CancelledError, RpcError, AbiSerializationError, NoResponseFromProviderError]).} =
   let response = await callAux(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
   if response.len > 0:
     try:
       result = Abi.decode(response, T)
     except serialization.SerializationError as exc:
-      raise newException(SerializationError, exc.msg)
+      raise newException(AbiSerializationError, exc.msg)
   else:
     raise newException(NoResponseFromProviderError, "No response from the Web3 provider")
 
@@ -545,7 +545,7 @@ proc createMutableContractInvocation*(
 proc createImmutableContractInvocation*(
     sender: Web3AsyncSenderImpl,
     ReturnType: typedesc,
-    data: sink seq[byte]): Future[ReturnType] {.async: (raises: [CancelledError, RpcError, SerializationError, NoResponseFromProviderError]).} =
+    data: sink seq[byte]): Future[ReturnType] {.async: (raises: [CancelledError, RpcError, AbiSerializationError, NoResponseFromProviderError]).} =
   let response = await callAux(
     sender.web3, sender.contractAddress, sender.defaultAccount, data,
     sender.value, sender.gas, sender.blockNumber)
@@ -555,7 +555,7 @@ proc createImmutableContractInvocation*(
       try:
         Abi.decode(response, (ReturnType,))
       except serialization.SerializationError as exc:
-        raise newException(SerializationError, exc.msg)
+        raise newException(AbiSerializationError, exc.msg)
     return value
   else:
     raise newException(NoResponseFromProviderError, "No response from the Web3 provider")
