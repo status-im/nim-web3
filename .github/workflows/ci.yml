@@ -13,7 +13,6 @@ jobs:
   build:
     uses: status-im/nimbus-common-workflow/.github/workflows/common.yml@main
     with:
-      nim-versions: '["version-2-0", "version-2-2", "devel"]'
       test-command: |
         nim --version
         nimble --version
@@ -23,4 +22,4 @@ jobs:
           NIMFLAGS="--cpu:arm64 --cc:clang --passC:\"-target arm64-apple-macos11\" --passL:\"-target arm64-apple-macos11\""
         fi
 
-        ./ci-test.sh
+        nimble test
