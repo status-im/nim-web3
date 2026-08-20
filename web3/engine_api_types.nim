@@ -167,8 +167,8 @@ type
   OptBlobAndProofV2* = Opt[BlobAndProofV2]
 
   BlobCellsAndProofsV1* = object
-    cells*: seq[Opt[seq[byte]]]
-    proofs*: seq[Opt[KzgProof]]
+    cells*: array[CELLS_PER_EXT_BLOB, Opt[seq[byte]]]
+    proofs*: array[CELLS_PER_EXT_BLOB, Opt[KzgProof]]
 
   OptBlobCellsAndProofsV1* = Opt[BlobCellsAndProofsV1]
 
