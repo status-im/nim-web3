@@ -194,11 +194,10 @@ proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async: (rais
   s.historicalEventsProcessed = true
   var i = 0
   let lendingEvents = move(s.pendingEvents)
-  while i < s.pendingEvents.len: # Mind reentrancy
+  while i < lendingEvents.len: # Mind reentrancy
     if s.removed: break
-    s.eventHandler(s.pendingEvents[i])
+    s.eventHandler(lendingEvents[i])
     inc i
-  s.pendingEvents = @[]
 
 proc subscribe*(w: Web3, name: string, options: Opt[FilterOptions],
                 eventHandler: SubscriptionEventHandler,
