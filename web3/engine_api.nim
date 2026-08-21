@@ -37,10 +37,10 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponseV1
-  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4], custodyColumns: Opt[seq[byte]]): ForkchoiceUpdatedResponseV1
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponseV1
 
   # STUB: put engine_forkchoiceUpdatedV5 reference link here
-  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV5], custodyColumns: Opt[seq[byte]]): ForkchoiceUpdatedResponseV2
+  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV5], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponseV2
 
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
   proc engine_getPayloadV2(payloadId: Bytes8): GetPayloadV2Response
@@ -56,7 +56,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getBlobsV1(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV1Response
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
-  proc engine_getBlobsV4(blob_versioned_hashes: seq[VersionedHash], indices_bitarray: seq[byte]): GetBlobsV4Response
+  proc engine_getBlobsV4(blob_versioned_hashes: seq[VersionedHash], indices_bitarray: FixedBytes[16]): GetBlobsV4Response
 
   # STUB: put engine_getInclusionListV1 reference link here
   proc engine_getInclusionListV1(): InclusionList
@@ -90,8 +90,9 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[seq[byte]]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[seq[byte]]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponse
+  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponse
+
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
@@ -115,14 +116,14 @@ template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
     payloadAttributes: Opt[PayloadAttributesV4],
-    custodyColumns = Opt.none(seq[byte])): Future[ForkchoiceUpdatedResponseV1] =
+    custodyColumns = Opt.none(FixedBytes[16])): Future[ForkchoiceUpdatedResponseV1] =
   engine_forkchoiceUpdatedV4(rpcClient, forkchoiceState, payloadAttributes, custodyColumns)
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
     forkchoiceState: ForkchoiceStateV1,
     payloadAttributes: Opt[PayloadAttributesV5],
-    custodyColumns = Opt.none(seq[byte])): Future[ForkchoiceUpdatedResponseV2] =
+    custodyColumns = Opt.none(FixedBytes[16])): Future[ForkchoiceUpdatedResponseV2] =
   engine_forkchoiceUpdatedV5(rpcClient, forkchoiceState, payloadAttributes, custodyColumns)
 
 template getPayload*(
