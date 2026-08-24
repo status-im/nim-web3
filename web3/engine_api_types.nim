@@ -167,8 +167,12 @@ type
   OptBlobAndProofV2* = Opt[BlobAndProofV2]
 
   BlobCellsAndProofsV1* = object
-    cells*: array[CELLS_PER_EXT_BLOB, Opt[seq[byte]]]
-    proofs*: array[CELLS_PER_EXT_BLOB, Opt[KzgProof]]
+    # Both of these fields must have the same length
+    # and the length is determined by the number of
+    # indices (number of 1's bit) from getBlobsV4
+    # indices_bitarray parameter.
+    blob_cells*: seq[seq[byte]]
+    proofs*: seq[KzgProof]
 
   OptBlobCellsAndProofsV1* = Opt[BlobCellsAndProofsV1]
 
