@@ -166,6 +166,16 @@ type
 
   OptBlobAndProofV2* = Opt[BlobAndProofV2]
 
+  BlobCellsAndProofsV1* = object
+    # Both of these fields must have the same length
+    # and the length is determined by the number of
+    # indices (number of 1's bit) from getBlobsV4
+    # indices_bitarray parameter.
+    blob_cells*: seq[seq[byte]]
+    proofs*: seq[KzgProof]
+
+  OptBlobCellsAndProofsV1* = Opt[BlobCellsAndProofsV1]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#executionpayloadbodyv1
   # For optional withdrawals field, see:
   #   https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#engine_getpayloadbodiesbyhashv1
@@ -296,6 +306,8 @@ type
   GetBlobsV2Response* = seq[BlobAndProofV2]
 
   GetBlobsV3Response* = seq[OptBlobAndProofV2]
+
+  GetBlobsV4Response* = seq[OptBlobCellsAndProofsV1]
 
   SomeGetPayloadResponse* =
     ExecutionPayloadV1 |

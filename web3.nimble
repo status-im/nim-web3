@@ -39,8 +39,27 @@ proc test(args, path: string) =
     " --hint[Processing]:off " &
     path
 
+proc setupHardhat() =
+  # ci-test.sh relies on POSIX shell features (background jobs, a `while` wait
+  # loop, `sleep`) that cmd.exe does not understand. nimble's `exec` uses the
+  # platform's default shell (cmd.exe on Windows), so we run the script through
+  # bash explicitly. bash is available on every CI runner (Git Bash on Windows).
+  let bash = findExe("bash")
+  if bash.len == 0:
+    quit("bash is required to set up the Hardhat test node", QuitFailure)
+  exec "\"" & bash & "\" ci-test.sh"
+
 
 ### tasks
 task test, "Run all tests":
+  setupHardhat()
   test "--mm:refc", "tests/all_tests.nim"
   test "--mm:orc", "tests/all_tests.nim"
+
+task test_slim, "Run the fast subset of tests (no Hardhat node)":
+  # A quick, self-contained subset of the test suite. Runs without the Hardhat
+  # node or any network access, so it is suitable for running inside Nim's own
+  # test suite to catch compiler / stdlib regressions. See tests/slim_tests.nim
+  # for the selection criteria.
+  test "--mm:refc", "tests/slim_tests.nim"
+  test "--mm:orc", "tests/slim_tests.nim"
