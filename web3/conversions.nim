@@ -457,6 +457,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
 
   w.writeMember("blockHash", v.blockHash)
   w.writeMember("blockNumber", v.blockNumber)
+  w.writeMember("blockTimestamp", v.blockTimestamp)
   w.writeMember("chainId", v.chainId)
   w.writeMember("from", v.`from`)
   w.writeMember("transactionIndex", v.transactionIndex)
@@ -492,6 +493,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
     # These fields are not transferred to next tx type
     w.writeMember("authorizationList", v.authorizationList)
 
+  w.writeMember("yParity", v.yParity)
   w.writeMember("v", v.v)
   w.writeMember("r", v.r)
   w.writeMember("s", v.s)
