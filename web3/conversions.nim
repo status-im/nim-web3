@@ -447,6 +447,12 @@ proc readValue*(r: var JsonReader[EthJson], val: var TxOrHash)
 proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
+
+  if v.isNil:
+    w.streamElement(s):
+      s.write "null"
+    return
+
   w.beginObject()
 
   w.writeMember("blockHash", v.blockHash)
