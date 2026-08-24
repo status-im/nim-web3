@@ -60,7 +60,7 @@ Authorization.useDefaultSerializationIn EthJson
 
 BlockHeader.useDefaultSerializationIn EthJson
 BlockObject.useDefaultSerializationIn EthJson
-TransactionObject.useDefaultSerializationIn EthJson
+TransactionObject.useDefaultReaderIn EthJson
 ReceiptObject.useDefaultSerializationIn EthJson
 BlobScheduleObject.useDefaultSerializationIn EthJson
 ConfigObject.useDefaultSerializationIn EthJson
@@ -443,6 +443,50 @@ proc readValue*(r: var JsonReader[EthJson], val: var TxOrHash)
     val = TxOrHash(kind: tohHash, hash: r.readValue(Hash32))
   else:
     val = TxOrHash(kind: tohTx, tx: r.readValue(TransactionObject))
+
+proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+  w.beginObject()
+
+  w.writeMember("blockHash", v.blockHash)
+  w.writeMember("blockNumber", v.blockNumber)
+  w.writeMember("chainId", v.chainId)
+  w.writeMember("from", v.`from`)
+  w.writeMember("transactionIndex", v.transactionIndex)
+  w.writeMember("type", v.`type`)
+  w.writeMember("hash", v.hash)
+
+  let txType = if v.`type`.isSome: v.`type`.value.uint64
+               else: 0'u64
+
+  if txType >= 0:
+    w.writeMember("nonce", v.nonce)
+    w.writeMember("gasPrice", v.gasPrice)
+    w.writeMember("gas", v.gas)
+    w.writeMember("to", v.to)
+    w.writeMember("value", v.value)
+    w.writeMember("input", v.input)
+
+  if txType >= 1:
+    w.writeMember("accessList", v.accessList)
+
+  if txType >= 2:
+    w.writeMember("maxPriorityFeePerGas", v.maxPriorityFeePerGas)
+    w.writeMember("maxFeePerGas", v.maxFeePerGas)
+
+  if txType == 3:
+    w.writeMember("maxFeePerBlobGas", v.maxFeePerBlobGas)
+    w.writeMember("blobVersionedHashes", v.blobVersionedHashes)
+
+  if txType == 4:
+    w.writeMember("authorizationList", v.authorizationList)
+
+  w.writeMember("v", v.v)
+  w.writeMember("r", v.r)
+  w.writeMember("s", v.s)
+
+  w.endObject()
 
 proc writeValue*(w: var JsonWriter[EthJson], v: TxOrHash)
       {.gcsafe, raises: [IOError].} =
