@@ -469,17 +469,21 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
     w.writeMember("input", v.input)
 
   if txType >= 1:
+    # These fields are transferred to next tx type
     w.writeMember("accessList", v.accessList)
 
   if txType >= 2:
+    # These fields are transferred to next tx type
     w.writeMember("maxPriorityFeePerGas", v.maxPriorityFeePerGas)
     w.writeMember("maxFeePerGas", v.maxFeePerGas)
 
   if txType == 3:
+    # These fields are not transferred to next tx type
     w.writeMember("maxFeePerBlobGas", v.maxFeePerBlobGas)
     w.writeMember("blobVersionedHashes", v.blobVersionedHashes)
 
   if txType == 4:
+    # These fields are not transferred to next tx type
     w.writeMember("authorizationList", v.authorizationList)
 
   w.writeMember("v", v.v)
