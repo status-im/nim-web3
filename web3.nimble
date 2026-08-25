@@ -14,7 +14,7 @@ description = "These are the humble beginnings of library similar to web3.[js|py
 license     = "MIT or Apache License 2.0"
 
 ### Dependencies
-requires "nim >= 2.0.16"
+requires "nim >= 2.0.10"
 requires "bearssl >= 0.2.13"
 requires "chronicles >= 0.12.4"
 requires "chronos >= 4.4.0"
