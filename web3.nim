@@ -163,7 +163,7 @@ proc newWeb3*(
     uri: string,
     getHeaders: GetJsonRpcRequestHeaders = nil,
     httpFlags: HttpClientFlags = {},
-): Future[Web3] {.async: (raises: [CancelledError, RpcError, UnknownUrlSchemeError]).} =
+): Future[Web3] {.async: (raises: [CancelledError, Web3Error]).} =
   let u = parseUri(uri)
 
   case u.scheme
@@ -210,7 +210,7 @@ proc newWeb3*(
 
 proc close*(web3: Web3): Future[void] = web3.provider.close()
 
-proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async: (raises: [CancelledError, RpcError]).} =
+proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async: (raises: [CancelledError, Web3Error]).} =
   let logs =
     try:
       await s.web3.provider.eth_getJsonLogs(options)
@@ -230,7 +230,7 @@ proc getHistoricalEvents(s: Subscription, options: FilterOptions) {.async: (rais
 proc subscribe*(w: Web3, name: string, options: Opt[FilterOptions],
                 eventHandler: SubscriptionEventHandler,
                 errorHandler: SubscriptionErrorHandler): Future[Subscription]
-               {.async: (raises: [CancelledError, RpcError]).} =
+               {.async: (raises: [CancelledError, Web3Error]).} =
   ## Sets up a new subsciption using the `eth_subscribe` RPC call.
   ##
   ## May raise a `CatchableError` if the subscription is not established.
@@ -263,7 +263,7 @@ proc subscribeForLogs*(w: Web3, options: FilterOptions,
                        logsHandler: SubscriptionEventHandler,
                        errorHandler: SubscriptionErrorHandler,
                        withHistoricEvents = true): Future[Subscription]
-                      {.async: (raises: [CancelledError, RpcError]).} =
+                      {.async: (raises: [CancelledError, Web3Error]).} =
   result = await subscribe(w, "logs", Opt.some(options), logsHandler, errorHandler)
   if withHistoricEvents:
     asyncSpawn getHistoricalEvents(result, options)
@@ -287,7 +287,7 @@ proc subscribeForLogs*(s: Web3SenderImpl, options: FilterOptions,
 proc subscribeForBlockHeaders*(w: Web3,
                                blockHeadersCallback: proc(b: BlockHeader) {.gcsafe, raises: [].},
                                errorHandler: SubscriptionErrorHandler): Future[Subscription]
-                              {.async: (raises: [CancelledError, RpcError]).} =
+                              {.async: (raises: [CancelledError, Web3Error]).} =
   proc eventHandler(json: JsonString) {.gcsafe, raises: [].} =
 
     try:
@@ -301,7 +301,7 @@ proc subscribeForBlockHeaders*(w: Web3,
   result = await subscribe(w, "newHeads", Opt.none(FilterOptions), eventHandler, errorHandler)
   result.historicalEventsProcessed = true
 
-proc unsubscribe*(s: Subscription): Future[void] {.async: (raises: [CancelledError, RpcError]).} =
+proc unsubscribe*(s: Subscription): Future[void] {.async: (raises: [CancelledError, Web3Error]).} =
   s.web3.subscriptions.del(s.id)
   s.removed = true
   try:
@@ -313,7 +313,7 @@ proc getJsonLogs(s: Web3SenderImpl, topic: Bytes32,
                  fromBlock = Opt.none(RtBlockIdentifier),
                  toBlock = Opt.none(RtBlockIdentifier),
                  blockHash = Opt.none(Hash32)): Future[seq[JsonString]]
-                 {.async: (raises: [CancelledError, RpcError]).} =
+                 {.async: (raises: [CancelledError, Web3Error]).} =
 
   var options = FilterOptions(
     address: AddressOrList(kind: slkSingle, single: s.contractAddress),
@@ -341,7 +341,7 @@ proc getJsonLogs*[TContract](s: Sender[TContract],
   mixin eventTopic
   getJsonLogs(s.sender, eventTopic(EventName), fromBlock, toBlock, blockHash)
 
-proc nextNonce*(web3: Web3): Future[Quantity] {.async: (raises: [CancelledError, RpcError]).} =
+proc nextNonce*(web3: Web3): Future[Quantity] {.async: (raises: [CancelledError, Web3Error]).} =
   if web3.lastKnownNonce.isSome:
     inc web3.lastKnownNonce.get
     return web3.lastKnownNonce.get
@@ -353,7 +353,7 @@ proc nextNonce*(web3: Web3): Future[Quantity] {.async: (raises: [CancelledError,
       raise newException(RpcError, exc.msg)
     web3.lastKnownNonce = Opt.some result
 
-proc send*(web3: Web3, c: TransactionArgs): Future[Hash32] {.async: (raises: [CancelledError, RpcError]).} =
+proc send*(web3: Web3, c: TransactionArgs): Future[Hash32] {.async: (raises: [CancelledError, Web3Error]).} =
   if web3.privateKey.isSome():
     var cc = c
     if cc.nonce.isNone:
@@ -372,7 +372,7 @@ proc send*(web3: Web3, c: TransactionArgs): Future[Hash32] {.async: (raises: [Ca
 proc send*(
     web3: Web3,
     c: TransactionArgs,
-    chainId: ChainId): Future[Hash32] {.deprecated: "Provide chainId in TransactionArgs", async: (raises: [CancelledError, RpcError]).} =
+    chainId: ChainId): Future[Hash32] {.deprecated: "Provide chainId in TransactionArgs", async: (raises: [CancelledError, Web3Error]).} =
   doAssert(web3.privateKey.isSome())
   var cc = c
   if cc.nonce.isNone:
@@ -391,7 +391,7 @@ proc sendData(web3: Web3,
               value: UInt256,
               gas: uint64,
               gasPrice: int,
-              chainId = Opt.none(ChainId)): Future[Hash32] {.async: (raises: [CancelledError, RpcError]).} =
+              chainId = Opt.none(ChainId)): Future[Hash32] {.async: (raises: [CancelledError, Web3Error]).} =
   let
     gasPrice = if web3.privateKey.isSome() or gasPrice != 0: Opt.some(gasPrice.Quantity)
                else: Opt.none(Quantity)
@@ -433,7 +433,7 @@ proc callAux(
     data: seq[byte],
     value = 0.u256,
     gas = 3000000'u64,
-    blockNumber = high(Quantity)): Future[seq[byte]] {.async: (raises: [CancelledError, RpcError]).} =
+    blockNumber = high(Quantity)): Future[seq[byte]] {.async: (raises: [CancelledError, Web3Error]).} =
   var cc: TransactionArgs
   cc.data = Opt.some(data)
   cc.source = Opt.some(defaultAccount)
@@ -453,7 +453,7 @@ proc call*[T](
     c: ContractInvocation[T, Web3SenderImpl],
     value = 0.u256,
     gas = 3000000'u64,
-    blockNumber = high(Quantity)): Future[T] {.async: (raises: [CancelledError, RpcError, AbiSerializationError, NoResponseFromProviderError]).} =
+    blockNumber = high(Quantity)): Future[T] {.async: (raises: [CancelledError, Web3Error]).} =
   let response = await callAux(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, blockNumber)
   if response.len > 0:
@@ -464,7 +464,7 @@ proc call*[T](
   else:
     raise newException(NoResponseFromProviderError, "No response from the Web3 provider")
 
-proc getMinedTransactionReceipt*(web3: Web3, tx: Hash32): Future[ReceiptObject] {.async: (raises: [CancelledError, RpcError]).} =
+proc getMinedTransactionReceipt*(web3: Web3, tx: Hash32): Future[ReceiptObject] {.async: (raises: [CancelledError, Web3Error]).} =
   ## Returns the receipt for the transaction. Waits for it to be mined if necessary.
   # TODO: Potentially more optimal solution is to subscribe and wait for appropriate
   # notification. Now we're just polling every 500ms which should be ok for most cases.
@@ -481,7 +481,7 @@ proc getMinedTransactionReceipt*(web3: Web3, tx: Hash32): Future[ReceiptObject] 
 proc exec*[T](
     c: ContractInvocation[T, Web3SenderImpl],
     value = 0.u256,
-    gas = 3000000'u64): Future[T] {.async: (raises: [CancelledError, RpcError]).} =
+    gas = 3000000'u64): Future[T] {.async: (raises: [CancelledError, Web3Error]).} =
   let h = await c.send(value, gas)
   let receipt = await c.sender.web3.getMinedTransactionReceipt(h)
 
@@ -536,7 +536,7 @@ func contractInstance*(
 proc createMutableContractInvocation*(
     sender: Web3AsyncSenderImpl,
     ReturnType: typedesc,
-    data: sink seq[byte]) {.async: (raises: [CancelledError, RpcError]).} =
+    data: sink seq[byte]) {.async: (raises: [CancelledError, Web3Error]).} =
   assert(sender.gas > 0)
   let h = await sendData(sender.web3, sender.contractAddress, sender.defaultAccount, data, sender.value, sender.gas, sender.gasPrice, sender.chainId)
   let receipt = await sender.web3.getMinedTransactionReceipt(h)
@@ -545,7 +545,7 @@ proc createMutableContractInvocation*(
 proc createImmutableContractInvocation*(
     sender: Web3AsyncSenderImpl,
     ReturnType: typedesc,
-    data: sink seq[byte]): Future[ReturnType] {.async: (raises: [CancelledError, RpcError, AbiSerializationError, NoResponseFromProviderError]).} =
+    data: sink seq[byte]): Future[ReturnType] {.async: (raises: [CancelledError, Web3Error]).} =
   let response = await callAux(
     sender.web3, sender.contractAddress, sender.defaultAccount, data,
     sender.value, sender.gas, sender.blockNumber)
@@ -560,7 +560,7 @@ proc createImmutableContractInvocation*(
   else:
     raise newException(NoResponseFromProviderError, "No response from the Web3 provider")
 
-proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Address] {.async: (raises: [CancelledError, RpcError]).} =
+proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Address] {.async: (raises: [CancelledError, Web3Error]).} =
   var tr: TransactionArgs
   tr.`from` = Opt.some(web3.defaultAccount)
   tr.data = Opt.some(data)
@@ -575,11 +575,11 @@ proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Addres
 proc createContractDeployment*(
     web3: Web3,
     ContractType: typedesc,
-    data: sink seq[byte]): Future[AsyncSender[ContractType]] {.async: (raises: [CancelledError, RpcError]).} =
+    data: sink seq[byte]): Future[AsyncSender[ContractType]] {.async: (raises: [CancelledError, Web3Error]).} =
   let a = await deployContractAux(web3, data, gasPrice = 0)
   return contractInstance(web3, ContractType, a)
 
-proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async: (raises: [CancelledError, RpcError]).} =
+proc isDeployed*(s: Sender, atBlock: RtBlockIdentifier): Future[bool] {.async: (raises: [CancelledError, Web3Error]).} =
   let code =
     try:
       case atBlock.kind
