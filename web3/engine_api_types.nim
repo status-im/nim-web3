@@ -171,8 +171,8 @@ type
     # and the length is determined by the number of
     # indices (number of 1's bit) from getBlobsV4
     # indices_bitarray parameter.
-    blob_cells*: seq[seq[byte]]
-    proofs*: seq[KzgProof]
+    blob_cells*: seq[Opt[seq[byte]]]
+    proofs*: seq[Opt[KzgProof]]
 
   OptBlobCellsAndProofsV1* = Opt[BlobCellsAndProofsV1]
 
