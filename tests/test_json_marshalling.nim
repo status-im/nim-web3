@@ -327,3 +327,24 @@ suite "JSON-RPC Quantity":
     check w == """{"chainId":"0x0","address":"0x0000000000000000000000000000000000000000","nonce":"0xb","yParity":"0x3","r":"0x0","s":"0x0"}"""
     let x = EthJson.decode(w, Authorization)
     check x == z
+
+  test "BlobCellsAndProofsV1 with missing cells":
+    let json = """{"blob_cells":["0x0102",null],"proofs":["0xabababababababababababababababababababababababababababababababababababababababababababababababab",null]}"""
+    let z = EthJson.decode(json, BlobCellsAndProofsV1)
+    check:
+      z.blob_cells.len == 2
+      z.blob_cells[0].get == @[byte 0x01, 0x02]
+      z.blob_cells[1].isNone
+      z.proofs.len == 2
+      z.proofs[0].isSome
+      z.proofs[1].isNone
+    check EthJson.encode(z) == json
+
+  test "GetBlobsV4Response with missing blob":
+    let json = """[{"blob_cells":["0x0102"],"proofs":["0xabababababababababababababababababababababababababababababababababababababababababababababababab"]},null]"""
+    let z = EthJson.decode(json, GetBlobsV4Response)
+    check:
+      z.len == 2
+      z[0].isSome
+      z[1].isNone
+    check EthJson.encode(z) == json

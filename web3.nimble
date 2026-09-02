@@ -8,25 +8,26 @@
 # those terms.
 
 mode        = ScriptMode.Verbose
-version     = "0.8.0"
+version     = "0.8.1"
 author      = "Status Research & Development GmbH"
 description = "These are the humble beginnings of library similar to web3.[js|py]"
 license     = "MIT or Apache License 2.0"
 
 ### Dependencies
-requires "nim >= 2.0.0"
-requires "chronicles"
-requires "chronos"
-requires "bearssl"
+requires "nim >= 2.0.10"
+requires "bearssl >= 0.2.13"
+requires "chronicles >= 0.12.4"
+requires "chronos >= 4.4.0"
 requires "eth >= 0.9.0"
-requires "faststreams"
-requires "json_rpc >= 0.6.0"
+requires "faststreams >= 0.5.0"
+requires "json_rpc >= 0.7.0"
 requires "serialization >= 0.4.4"
 requires "json_serialization >= 0.4.2"
-requires "nimcrypto"
-requires "stew"
-requires "stint"
-requires "results"
+requires "nimcrypto >= 0.7.0"
+requires "results >= 0.5.0"
+requires "serialization >= 0.4.4"
+requires "stew >= 0.5.0"
+requires "stint >= 0.9.0"
 
 ### Helper functions
 proc test(args, path: string) =
