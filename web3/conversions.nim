@@ -60,7 +60,11 @@ Authorization.useDefaultSerializationIn EthJson
 
 BlockHeader.useDefaultSerializationIn EthJson
 BlockObject.useDefaultSerializationIn EthJson
+TransactionFrame.useDefaultSerializationIn EthJson
+FrameSignature.useDefaultSerializationIn EthJson
 TransactionObject.useDefaultReaderIn EthJson
+Log.useDefaultSerializationIn EthJson
+FrameReceipt.useDefaultSerializationIn EthJson
 ReceiptObject.useDefaultSerializationIn EthJson
 BlobScheduleObject.useDefaultSerializationIn EthJson
 ConfigObject.useDefaultSerializationIn EthJson
@@ -467,7 +471,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
   let txType = if v.`type`.isSome: v.`type`.value.uint64
                else: 0'u64
 
-  if txType >= 0:
+  if txType >= 0 and txType != 6:
     w.writeMember("nonce", v.nonce)
     w.writeMember("gasPrice", v.gasPrice)
     w.writeMember("gas", v.gas)
@@ -484,7 +488,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
     w.writeMember("maxPriorityFeePerGas", v.maxPriorityFeePerGas)
     w.writeMember("maxFeePerGas", v.maxFeePerGas)
 
-  if txType == 3:
+  if txType == 3 or txType == 6:
     # These fields are not transferred to next tx type
     w.writeMember("maxFeePerBlobGas", v.maxFeePerBlobGas)
     w.writeMember("blobVersionedHashes", v.blobVersionedHashes)
@@ -492,6 +496,11 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
   if txType == 4:
     # These fields are not transferred to next tx type
     w.writeMember("authorizationList", v.authorizationList)
+
+  if txType == 6:
+    w.writeMember("nonce", v.nonce)
+    w.writeMember("frames", v.frames)
+    w.writeMember("signatures", v.signatures)
 
   w.writeMember("yParity", v.yParity)
   w.writeMember("v", v.v)

@@ -106,6 +106,11 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType): seq
     encodeTransactionEip4844(s, pk)
   of TxEip7702:
     encodeTransactionEip7702(s, pk)
+  of TxType5:
+    raiseAssert "Unsupported transaction type"
+  of TxEip8141:
+    {.warning: "Implement TxEip8141 handler".}
+    raiseAssert "Unsupported transaction type"
 
 func txType(s: TransactionArgs): TxType =
   if s.authorizationList.isSome:
