@@ -81,7 +81,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
 
   proc eth_getProof(
     address: Address,
-    slots: seq[UInt256],
+    slots: seq[Bytes32],
     blockId: BlockIdentifier): ProofResponse
 
   proc eth_feeHistory(
