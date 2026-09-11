@@ -265,6 +265,7 @@ type
     status*: PayloadExecutionStatus
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
+    witness*: Opt[seq[byte]] # no formal spec for this yet
 
   # STUB: put PayloadStatusV2 reference link here
   PayloadStatusV2* = object

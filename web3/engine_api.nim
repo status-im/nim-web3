@@ -34,6 +34,9 @@ createRpcSigsFromNim(RpcClient, EthJson):
   # STUB: put engine_newPayloadV6 reference link here
   proc engine_newPayloadV6(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]], inclusionList: InclusionList): PayloadStatusV2
 
+  proc engine_newPayloadWithWitnessV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
+  proc engine_newPayloadWithWitnessV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
+
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponseV1
@@ -87,12 +90,20 @@ createRpcSigsFromNim(RpcClient, EthJson):
     executionRequests: Opt[seq[seq[byte]]],
     inclusionList: Opt[InclusionList]): PayloadStatus
 
+  proc engine_newPayloadWithWitnessV4(payload: ExecutionPayload,
+    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
+    parentBeaconBlockRoot: Opt[Hash32],
+    executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
+  proc engine_newPayloadWithWitnessV5(payload: ExecutionPayload,
+    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
+    parentBeaconBlockRoot: Opt[Hash32],
+    executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
+
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponse
   proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponse
-
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,

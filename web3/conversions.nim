@@ -89,7 +89,7 @@ PayloadAttributesV3.useDefaultSerializationIn EthJson
 PayloadAttributesV4.useDefaultSerializationIn EthJson
 PayloadAttributesV5.useDefaultSerializationIn EthJson
 PayloadAttributesV1OrV2.useDefaultSerializationIn EthJson
-PayloadStatusV1.useDefaultSerializationIn EthJson
+PayloadStatusV1.useDefaultReaderIn EthJson
 PayloadStatusV2.useDefaultSerializationIn EthJson
 ForkchoiceStateV1.useDefaultSerializationIn EthJson
 ForkchoiceUpdatedResponseV1.useDefaultSerializationIn EthJson
@@ -393,6 +393,20 @@ proc readValue*(r: var JsonReader[EthJson], val: var seq[byte])
     if hexStr != "0x":
       # skip empty hex
       val = hexToSeqByte(hexStr)
+
+proc writeValue*(w: var JsonWriter[EthJson], v: PayloadStatusV1)
+      {.gcsafe, raises: [IOError].} =
+  # The `witness` field is only ever set by the engine_newPayloadWithWitness*
+  # methods. It must be omitted (not written as `null`) everywhere else.
+  mixin writeValue
+  w.beginObject()
+  for k, val in fieldPairs(v):
+    when k == "witness":
+      if v.witness.isSome:
+        w.writeMember(k, val)
+    else:
+      w.writeMember(k, val)
+  w.endObject()
 
 proc readValue*(r: var JsonReader[EthJson], val: var RtBlockIdentifier)
        {.gcsafe, raises: [IOError, SerializationError].} =
