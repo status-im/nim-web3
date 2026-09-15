@@ -14,13 +14,21 @@ import
   ./primitives
 
 from eth/common/blocks import Withdrawal
-from eth/common/transactions import AccessPair, Authorization
+from eth/common/transactions import
+  AccessPair,
+  Authorization,
+  TransactionFrame,
+  FrameSignature
+from eth/common/receipts import FrameReceipt
 
 export
   primitives,
   AccessPair,
   Authorization,
-  Withdrawal
+  Withdrawal,
+  TransactionFrame,
+  FrameSignature,
+  FrameReceipt
 
 type
   SyncObject* = object
@@ -70,6 +78,10 @@ type
 
     # EIP-7702
     authorizationList*: Opt[seq[Authorization]]
+
+    # EIP-8141
+    frames*: Opt[seq[TransactionFrame]]
+    signatures*: Opt[seq[FrameSignature]]
 
   ## A block header object
   BlockHeader* = ref object
@@ -171,6 +183,8 @@ type
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844
     blobVersionedHashes*: Opt[seq[VersionedHash]] # EIP-4844
     authorizationList*: Opt[seq[Authorization]]   # EIP-7702
+    frames*: Opt[seq[TransactionFrame]]           # EIP-8141
+    signatures*: Opt[seq[FrameSignature]]         # EIP-8141
 
   ReceiptObject* = ref object        # A transaction receipt object, or null when no receipt was found:
     transactionHash*: Hash32         # hash of the transaction.
@@ -190,6 +204,8 @@ type
     status*: Opt[Quantity]           # either 1 (success) or 0 (failure)
     blobGasUsed*: Opt[Quantity]      # uint64
     blobGasPrice*: Opt[UInt256]      # UInt256
+    payer*: Opt[Address]
+    frameReceipts*: Opt[seq[FrameReceipt]]
 
   SingleOrListKind* = enum
     slkNull
