@@ -23,6 +23,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#methods
   # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#methods
   # https://github.com/ethereum/execution-apis/tree/v1.0.0-beta.4/src/engine/openrpc/methods
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#methods
 
   proc engine_newPayloadV1(payload: ExecutionPayloadV1): PayloadStatusV1
   proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
@@ -31,8 +32,8 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
 
-  # STUB: put engine_newPayloadV6 reference link here
-  proc engine_newPayloadV6(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]], inclusionList: InclusionList): PayloadStatusV2
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_newpayloadv6
+  proc engine_newPayloadV6(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]], inclusionListTransactions: InclusionList): PayloadStatusV2
 
   proc engine_newPayloadWithWitnessV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_newPayloadWithWitnessV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
@@ -42,7 +43,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponseV1
 
-  # STUB: put engine_forkchoiceUpdatedV5 reference link here
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_forkchoiceupdatedv5
   proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV5], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponseV2
 
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
@@ -61,7 +62,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
   proc engine_getBlobsV4(blob_versioned_hashes: seq[VersionedHash], indices_bitarray: FixedBytes[16]): GetBlobsV4Response
 
-  # STUB: put engine_getInclusionListV1 reference link here
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_getinclusionlistv1
   proc engine_getInclusionListV1(): InclusionList
 
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
@@ -88,7 +89,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
     parentBeaconBlockRoot: Opt[Hash32],
     executionRequests: Opt[seq[seq[byte]]],
-    inclusionList: Opt[InclusionList]): PayloadStatus
+    inclusionListTransactions: Opt[InclusionList]): PayloadStatus
 
   proc engine_newPayloadWithWitnessV4(payload: ExecutionPayload,
     expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
@@ -204,7 +205,7 @@ template getBlobs*(
     rpcClient: RpcClient,
     T: type GetBlobsV4Response,
     blob_versioned_hashes: seq[VersionedHash],
-    indices_bitarray: seq[byte]):
+    indices_bitarray: FixedBytes[16]):
       Future[GetBlobsV4Response] =
   engine_getBlobsV4(rpcClient, blob_versioned_hashes, indices_bitarray)
 
@@ -250,9 +251,10 @@ template newPayload*(
     versionedHashes: seq[VersionedHash],
     parentBeaconBlockRoot: Hash32,
     executionRequests: seq[seq[byte]],
-    inclusionList: InclusionList): Future[PayloadStatusV2] =
+    inclusionListTransactions: InclusionList): Future[PayloadStatusV2] =
   engine_newPayloadV6(
-    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests, inclusionList)
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests,
+    inclusionListTransactions)
 
 template exchangeCapabilities*(
     rpcClient: RpcClient,
@@ -264,5 +266,6 @@ template getClientVersion*(
     version: ClientVersionV1): Future[seq[ClientVersionV1]] =
   engine_getClientVersionV1(rpcClient, version)
 
-template getInclusionList*(): InclusionList =
-  engine_getInclusionListV1()
+template getInclusionList*(
+    rpcClient: RpcClient): Future[InclusionList] =
+  engine_getInclusionListV1(rpcClient)

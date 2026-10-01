@@ -105,6 +105,21 @@ suite "Execution types tests":
     check v2.version == Version.V2
     check v1.version == Version.V1
 
+    var v4 = attr
+    v4.slotNumber = Opt.some(5.Quantity)
+    v4.targetGasLimit = Opt.some(6.Quantity)
+    var v5 = v4
+    v5.inclusionListTransactions = Opt.some(@[TypedTransaction.conv(7)])
+    check v4.version == Version.V4
+    check v5.version == Version.V5
+
+  test "PayloadStatus version":
+    var status = PayloadStatus(status: PayloadExecutionStatus.valid)
+    check status.version == Version.V1
+    status.inclusionListSatisfied = Opt.some(true)
+    check status.version == Version.V2
+    check ForkchoiceUpdatedResponse(payloadStatus: status).version == Version.V2
+
   test "response version":
     var badv31 = response
     badv31.blobsBundle = Opt.none(BlobsBundleV1)
@@ -150,6 +165,35 @@ suite "Execution types tests":
 
     let v1 = attr.V1
     check v1 == v1.payloadAttributes.V1
+
+    var attrV5 = attr
+    attrV5.slotNumber = Opt.some(5.Quantity)
+    attrV5.targetGasLimit = Opt.some(6.Quantity)
+    attrV5.inclusionListTransactions = Opt.some(@[TypedTransaction.conv(7)])
+    let v5 = attrV5.V5
+    check v5 == v5.payloadAttributes.V5
+
+  test "PayloadStatus and ForkchoiceUpdatedResponse roundtrip":
+    let status = PayloadStatus(
+      status: PayloadExecutionStatus.valid,
+      latestValidHash: Opt.some(h256(1)),
+      inclusionListSatisfied: Opt.some(false),
+    )
+    let s2 = status.V2
+    check s2 == s2.payloadStatus.V2
+    let s1 = status.V1
+    check s1 == s1.payloadStatus.V1
+
+    let response = ForkchoiceUpdatedResponse(
+      payloadStatus: status, payloadId: Opt.some(Bytes8.conv(2)))
+    let r2 = response.V2
+    check r2 == r2.forkchoiceUpdatedResponse.V2
+    let r1 = response.V1
+    check r1 == r1.forkchoiceUpdatedResponse.V1
+
+    let fcs = ForkchoiceStateV1(
+      headBlockHash: h256(1), safeBlockHash: h256(2), finalizedBlockHash: h256(3))
+    check fcs == fcs.forkchoiceState.V1
 
   test "GetPayloadResponse roundtrip":
     let v3 = response.V3

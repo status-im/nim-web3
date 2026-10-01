@@ -21,6 +21,7 @@ export
 type
   TypedTransaction* = distinct seq[byte]
 
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_getinclusionlistv1
   InclusionList* = seq[TypedTransaction]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
@@ -228,7 +229,7 @@ type
     slotNumber*: Quantity
     targetGasLimit*: Quantity
 
-  # STUB: put PayloadAttributesV5 reference link here
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#payloadattributesv5
   PayloadAttributesV5* = object
     timestamp*: Quantity
     prevRandao*: Bytes32
@@ -267,7 +268,7 @@ type
     validationError*: Opt[string]
     witness*: Opt[seq[byte]] # no formal spec for this yet
 
-  # STUB: put PayloadStatusV2 reference link here
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#payloadstatusv2
   PayloadStatusV2* = object
     status*: PayloadExecutionStatus
     latestValidHash*: Opt[Hash32]
@@ -285,7 +286,7 @@ type
     payloadStatus*: PayloadStatusV1
     payloadId*: Opt[Bytes8]
 
-  # STUB: put ForkchoiceUpdatedResponseV2 reference link here
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#response-2
   ForkchoiceUpdatedResponseV2* = object
     payloadStatus*: PayloadStatusV2
     payloadId*: Opt[Bytes8]
@@ -362,8 +363,11 @@ const
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
   engineApiUnsupportedFork* = -38005
-  # https://github.com/ethereum/execution-apis/pull/609/files#diff-59590a19c9f19ab80452d1c5411f6a7206ad1d3bc2d0c5c5ba271a6a50e8d8e8R102
-  engineApiUnknownParent* = -38006
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/common.md#errors
+  engineApiTooDeepReorg* = -38006
+
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#constants
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST* = 8192'u64
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)

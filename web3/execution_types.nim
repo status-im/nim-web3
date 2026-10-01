@@ -47,19 +47,25 @@ type
     parentBeaconBlockRoot*: Opt[Hash32]
     slotNumber*: Opt[Quantity]
     targetGasLimit*: Opt[Quantity]
+    # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#payloadattributesv5
     inclusionListTransactions*: Opt[seq[TypedTransaction]]
 
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/paris.md#forkchoicestatev1
   ForkchoiceState* = object
     headBlockHash*: Hash32
     safeBlockHash*: Hash32
     finalizedBlockHash*: Hash32
 
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/paris.md#payloadstatusv1
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#payloadstatusv2
   PayloadStatus* = object
     status*: PayloadExecutionStatus
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
     inclusionListSatisfied*: Opt[bool]
 
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/paris.md#response-1
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#response-2
   ForkchoiceUpdatedResponse* = object
     payloadStatus*: PayloadStatus
     payloadId*: Opt[Bytes8]
@@ -668,4 +674,3 @@ func getPayloadResponse*(x: GetPayloadV5Response): GetPayloadResponse =
     shouldOverrideBuilder: Opt.some(x.shouldOverrideBuilder),
     executionRequests: Opt.some(x.executionRequests),
   )
-
