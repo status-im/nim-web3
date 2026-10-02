@@ -63,6 +63,7 @@ type
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
     inclusionListSatisfied*: Opt[bool]
+    witness*: Opt[seq[byte]] # no formal spec for this yet
 
   # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/paris.md#response-1
   # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#response-2
@@ -307,7 +308,8 @@ func V1*(status: PayloadStatus): PayloadStatusV1 =
   PayloadStatusV1(
     status: status.status,
     latestValidHash: status.latestValidHash,
-    validationError: status.validationError
+    validationError: status.validationError,
+    witness: status.witness,
   )
 
 func V2*(status: PayloadStatus): PayloadStatusV2 =
@@ -315,14 +317,16 @@ func V2*(status: PayloadStatus): PayloadStatusV2 =
     status: status.status,
     latestValidHash: status.latestValidHash,
     validationError: status.validationError,
-    inclusionListSatisfied: status.inclusionListSatisfied
+    witness: status.witness,
+    inclusionListSatisfied: status.inclusionListSatisfied,
   )
 
 func payloadStatus*(status: PayloadStatusV1): PayloadStatus =
   PayloadStatus(
     status: status.status,
     latestValidHash: status.latestValidHash,
-    validationError: status.validationError
+    validationError: status.validationError,
+    witness: status.witness,
   )
 
 func payloadStatus*(status: PayloadStatusV2): PayloadStatus =
@@ -330,6 +334,7 @@ func payloadStatus*(status: PayloadStatusV2): PayloadStatus =
     status: status.status,
     latestValidHash: status.latestValidHash,
     validationError: status.validationError,
+    witness: status.witness,
     inclusionListSatisfied: status.inclusionListSatisfied
   )
 

@@ -273,7 +273,8 @@ type
     status*: PayloadExecutionStatus
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
-    inclusionListSatisfied*: Opt[bool]
+    witness*: Opt[seq[byte]] # no formal spec for this yet
+    inclusionListSatisfied*: Opt[bool]    
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
