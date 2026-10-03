@@ -266,7 +266,6 @@ type
     status*: PayloadExecutionStatus
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
-    witness*: Opt[seq[byte]] # no formal spec for this yet
 
   # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#payloadstatusv2
   PayloadStatusV2* = object

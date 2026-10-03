@@ -10,13 +10,11 @@
 import
   json_rpc/client,
   ./conversions,
-  ./engine_api_types,
-  ./execution_types
+  ./engine_api_types
 
 export
   engine_api_types,
-  conversions,
-  execution_types
+  conversions
 
 createRpcSigsFromNim(RpcClient, EthJson):
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/paris.md#methods
@@ -34,9 +32,6 @@ createRpcSigsFromNim(RpcClient, EthJson):
 
   # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_newpayloadv6
   proc engine_newPayloadV6(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]], inclusionListTransactions: InclusionList): PayloadStatusV2
-
-  proc engine_newPayloadWithWitnessV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
-  proc engine_newPayloadWithWitnessV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
 
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponseV1
@@ -70,41 +65,6 @@ createRpcSigsFromNim(RpcClient, EthJson):
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#engine_getclientversionv1
   proc engine_getClientVersionV1(version: ClientVersionV1): seq[ClientVersionV1]
-
-  # convenience apis
-  proc engine_newPayloadV1(payload: ExecutionPayload): PayloadStatus
-  proc engine_newPayloadV2(payload: ExecutionPayload): PayloadStatus
-  proc engine_newPayloadV3(payload: ExecutionPayload,
-    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32]): PayloadStatus
-  proc engine_newPayloadV4(payload: ExecutionPayload,
-    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]]): PayloadStatus
-  proc engine_newPayloadV5(payload: ExecutionPayload,
-    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]]): PayloadStatus
-  proc engine_newPayloadV6(payload: ExecutionPayload,
-    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]],
-    inclusionListTransactions: Opt[InclusionList]): PayloadStatus
-
-  proc engine_newPayloadWithWitnessV4(payload: ExecutionPayload,
-    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
-  proc engine_newPayloadWithWitnessV5(payload: ExecutionPayload,
-    expectedBlobVersionedHashes: Opt[seq[VersionedHash]],
-    parentBeaconBlockRoot: Opt[Hash32],
-    executionRequests: Opt[seq[seq[byte]]]): PayloadStatusV1
-
-  proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponse
-  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceState, payloadAttributes: Opt[PayloadAttributes], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponse
 
 template forkchoiceUpdated*(
     rpcClient: RpcClient,
