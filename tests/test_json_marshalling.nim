@@ -15,7 +15,6 @@ import
   stew/endians2,
   json_serialization,
   ../web3/engine_api_types,
-  ../web3/execution_types,
   ../web3/[conversions, eth_api_types]
 
 proc rand[N: static int](_: type FixedBytes[N]): FixedBytes[N] =
@@ -229,9 +228,6 @@ suite "JSON-RPC Quantity":
     checkRandomObject(GetPayloadV4Response)
     checkRandomObject(GetPayloadV5Response)
     checkRandomObject(GetPayloadV6Response)
-    checkRandomObject(ExecutionPayload)
-    checkRandomObject(PayloadAttributes)
-    checkRandomObject(GetPayloadResponse)
 
     checkRandomObject(EthConfigObject)
     checkRandomObject(StorageValuesRequest)

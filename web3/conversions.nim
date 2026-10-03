@@ -18,8 +18,7 @@ import
   ./primitives,
   ./engine_api_types,
   ./eth_api_types,
-  ./eth_json_marshal,
-  ./execution_types
+  ./eth_json_marshal
 
 import eth/common/eth_types_json_serialization
 
@@ -98,14 +97,6 @@ GetPayloadV4Response.useDefaultSerializationIn EthJson
 GetPayloadV5Response.useDefaultSerializationIn EthJson
 GetPayloadV6Response.useDefaultSerializationIn EthJson
 ClientVersionV1.useDefaultSerializationIn EthJson
-
-#------------------------------------------------------------------------------
-# execution_types
-#------------------------------------------------------------------------------
-
-ExecutionPayload.useDefaultSerializationIn EthJson
-PayloadAttributes.useDefaultSerializationIn EthJson
-GetPayloadResponse.useDefaultSerializationIn EthJson
 
 #------------------------------------------------------------------------------
 # Private helpers

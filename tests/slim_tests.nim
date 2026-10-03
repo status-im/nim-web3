@@ -28,7 +28,7 @@
 #   - test_signed_tx: mostly pure signing tests, but also contains a network
 #     test, so it is skipped rather than split.
 #   - test_execution_api: needs the tests/execution-apis git submodule.
-#   - test_primitives, test_execution_types, test_string_decoder: covered by
+#   - test_primitives, test_string_decoder: covered by
 #     other tests for the relevant features, kept out to stay lean.
 
 {. warning[UnusedImport]:off .}
