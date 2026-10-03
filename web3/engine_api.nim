@@ -25,7 +25,6 @@ createRpcSigsFromNim(RpcClient, EthJson):
 
   proc engine_newPayloadV1(payload: ExecutionPayloadV1): PayloadStatusV1
   proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
-  proc engine_newPayloadV2(payload: ExecutionPayloadV1OrV2): PayloadStatusV1
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32): PayloadStatusV1
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
@@ -140,35 +139,6 @@ template getPayload*(
     payloadId: Bytes8): Future[GetPayloadV6Response] =
   engine_getPayloadV6(rpcClient, payloadId)
 
-template getBlobs*(
-    rpcClient: RpcClient,
-    T: type GetBlobsV1Response,
-    blob_versioned_hashes: seq[VersionedHash]):
-      Future[GetBlobsV1Response] =
-  engine_getBlobsV1(rpcClient, blob_versioned_hashes)
-
-template getBlobs*(
-    rpcClient: RpcClient,
-    T: type GetBlobsV2Response,
-    blob_versioned_hashes: seq[VersionedHash]):
-      Future[GetBlobsV2Response] =
-  engine_getBlobsV2(rpcClient, blob_versioned_hashes)
-
-template getBlobs*(
-    rpcClient: RpcClient,
-    T: type GetBlobsV3Response,
-    blob_versioned_hashes: seq[VersionedHash]):
-      Future[GetBlobsV3Response] =
-  engine_getBlobsV3(rpcClient, blob_versioned_hashes)
-
-template getBlobs*(
-    rpcClient: RpcClient,
-    T: type GetBlobsV4Response,
-    blob_versioned_hashes: seq[VersionedHash],
-    indices_bitarray: FixedBytes[16]):
-      Future[GetBlobsV4Response] =
-  engine_getBlobsV4(rpcClient, blob_versioned_hashes, indices_bitarray)
-
 template newPayload*(
     rpcClient: RpcClient,
     payload: ExecutionPayloadV1): Future[PayloadStatusV1] =
@@ -225,7 +195,3 @@ template getClientVersion*(
     rpcClient: RpcClient,
     version: ClientVersionV1): Future[seq[ClientVersionV1]] =
   engine_getClientVersionV1(rpcClient, version)
-
-template getInclusionList*(
-    rpcClient: RpcClient): Future[InclusionList] =
-  engine_getInclusionListV1(rpcClient)
