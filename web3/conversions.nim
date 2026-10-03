@@ -213,7 +213,7 @@ proc writeHexValue(w: var JsonWriter, v: openArray[byte])
 # Well, both rpc and chronicles share the same encoding of these types
 #------------------------------------------------------------------------------
 
-type CommonJsonFlavors = EthJson | DefaultFlavor
+type CommonJsonFlavors = EthJson | Json
 
 proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: DynamicBytes)
       {.gcsafe, raises: [IOError].} =
