@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2023-2024 Status Research & Development GmbH
+# Copyright (c) 2023-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -7,7 +7,7 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-{.push raises: [].}
+{.push raises: [], gcsafe.}
 
 import
   std/[hashes as std_hashes, typetraits],
@@ -87,7 +87,7 @@ func fromHex*[minLen, maxLen](T: type DynamicBytes[minLen, maxLen], hexStr: stri
   T hexToSeqByte(hexStr)
 
 func toArray*[N](data: DynamicBytes[N, N]): array[N, byte] =
-  copyMem(addr result[0], unsafeAddr distinctBase(data)[0], N)
+  copyMem(addr result[0], addr distinctBase(data)[0], N)
 
 template data*(v: DynamicBytes): seq[byte] =
   distinctBase v
