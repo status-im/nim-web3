@@ -48,19 +48,19 @@ EthJson.automaticSerialization(array, true)
 SyncObject.useDefaultSerializationIn EthJson
 Withdrawal.useDefaultSerializationIn EthJson
 AccessPair.useDefaultSerializationIn EthJson
-AccessListResult.useDefaultSerializationIn EthJson
+AccessListResult.useDefaultReaderIn EthJson
 LogObject.useDefaultSerializationIn EthJson
 StorageProof.useDefaultSerializationIn EthJson
 ProofResponse.useDefaultSerializationIn EthJson
 FilterOptions.useDefaultSerializationIn EthJson
 TransactionArgs.useDefaultReaderIn EthJson
-FeeHistoryResult.useDefaultSerializationIn EthJson
+FeeHistoryResult.useDefaultReaderIn EthJson
 Authorization.useDefaultSerializationIn EthJson
 
 BlockHeader.useDefaultSerializationIn EthJson
-BlockObject.useDefaultSerializationIn EthJson
+BlockObject.useDefaultReaderIn EthJson
 TransactionObject.useDefaultReaderIn EthJson
-ReceiptObject.useDefaultSerializationIn EthJson
+ReceiptObject.useDefaultReaderIn EthJson
 BlobScheduleObject.useDefaultSerializationIn EthJson
 ConfigObject.useDefaultSerializationIn EthJson
 EthConfigObject.useDefaultSerializationIn EthJson
@@ -449,6 +449,30 @@ proc readValue*(r: var JsonReader[EthJson], val: var TxOrHash)
   else:
     val = TxOrHash(kind: tohTx, tx: r.readValue(TransactionObject))
 
+template writeOptMember(w: var JsonWriter[EthJson], name: string, v: Opt) =
+  if v.isSome:
+    w.writeMember(name, v.get)
+
+template writeMembersOmitUnset(
+    w: var JsonWriter[EthJson], v: object, nullKeys: static openArray[string]) =
+  ## Writes every field; an unset `Opt` field is omitted unless its name is in
+  ## `nullKeys`, in which case it is written as `null`.
+  for k, val in fieldPairs(v):
+    when val is Opt:
+      when k in nullKeys:
+        w.writeMember(k, val)
+      else:
+        w.writeOptMember(k, val)
+    else:
+      w.writeMember(k, val)
+
+template writeMembersOmitUnset(w: var JsonWriter[EthJson], v: object) =
+  for k, val in fieldPairs(v):
+    when val is Opt:
+      w.writeOptMember(k, val)
+    else:
+      w.writeMember(k, val)
+
 proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
       {.gcsafe, raises: [IOError].} =
   mixin writeValue
@@ -463,7 +487,7 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
   w.writeMember("blockHash", v.blockHash)
   w.writeMember("blockNumber", v.blockNumber)
   w.writeMember("blockTimestamp", v.blockTimestamp)
-  w.writeMember("chainId", v.chainId)
+  w.writeOptMember("chainId", v.chainId)
   w.writeMember("from", v.`from`)
   w.writeMember("transactionIndex", v.transactionIndex)
   w.writeMember("type", v.`type`)
@@ -482,23 +506,23 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TransactionObject)
 
   if txType >= 1:
     # These fields are transferred to next tx type
-    w.writeMember("accessList", v.accessList)
+    w.writeOptMember("accessList", v.accessList)
 
   if txType >= 2:
     # These fields are transferred to next tx type
-    w.writeMember("maxPriorityFeePerGas", v.maxPriorityFeePerGas)
-    w.writeMember("maxFeePerGas", v.maxFeePerGas)
+    w.writeOptMember("maxPriorityFeePerGas", v.maxPriorityFeePerGas)
+    w.writeOptMember("maxFeePerGas", v.maxFeePerGas)
 
   if txType == 3:
     # These fields are not transferred to next tx type
-    w.writeMember("maxFeePerBlobGas", v.maxFeePerBlobGas)
-    w.writeMember("blobVersionedHashes", v.blobVersionedHashes)
+    w.writeOptMember("maxFeePerBlobGas", v.maxFeePerBlobGas)
+    w.writeOptMember("blobVersionedHashes", v.blobVersionedHashes)
 
   if txType == 4:
     # These fields are not transferred to next tx type
-    w.writeMember("authorizationList", v.authorizationList)
+    w.writeOptMember("authorizationList", v.authorizationList)
 
-  w.writeMember("yParity", v.yParity)
+  w.writeOptMember("yParity", v.yParity)
   w.writeMember("v", v.v)
   w.writeMember("r", v.r)
   w.writeMember("s", v.s)
@@ -510,6 +534,47 @@ proc writeValue*(w: var JsonWriter[EthJson], v: TxOrHash)
   case v.kind
   of tohHash: w.writeValue(v.hash)
   of tohTx: w.writeValue(v.tx)
+
+proc writeValue*(w: var JsonWriter[EthJson], v: BlockObject)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+
+  if v.isNil:
+    w.streamElement(s):
+      s.write "null"
+    return
+
+  # `nonce` is required by the schema; go-ethereum writes null for a pending block.
+  w.beginObject()
+  w.writeMembersOmitUnset(v[], ["nonce"])
+  w.endObject()
+
+proc writeValue*(w: var JsonWriter[EthJson], v: ReceiptObject)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+
+  if v.isNil:
+    w.streamElement(s):
+      s.write "null"
+    return
+
+  w.beginObject()
+  w.writeMembersOmitUnset(v[], ["to", "contractAddress"])
+  w.endObject()
+
+proc writeValue*(w: var JsonWriter[EthJson], v: AccessListResult)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+  w.beginObject()
+  w.writeMembersOmitUnset(v)
+  w.endObject()
+
+proc writeValue*(w: var JsonWriter[EthJson], v: FeeHistoryResult)
+      {.gcsafe, raises: [IOError].} =
+  mixin writeValue
+  w.beginObject()
+  w.writeMembersOmitUnset(v)
+  w.endObject()
 
 proc readValue*[T](r: var JsonReader[EthJson], val: var SingleOrList[T])
        {.gcsafe, raises: [IOError, SerializationError].} =
