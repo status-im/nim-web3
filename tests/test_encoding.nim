@@ -1,4 +1,4 @@
-import 
+import
     std/unittest,
     std/sequtils,
     std/random,
@@ -256,17 +256,18 @@ suite "ABI encoding":
       32.zeroes            # empty sequence
 
   test "encodes DynamicBytes":
-    let bytes3 = DynamicBytes(@[1'u8, 2'u8, 3'u8])
+    # [0, high(int)]: https://github.com/nim-lang/Nim/issues/26336
+    let bytes3 = DynamicBytes[0, high(int)](@[1'u8, 2'u8, 3'u8])
     check Abi.encode(bytes3) ==
       Abi.encode(3'u64) & # data length right-padded with zeroes
       bytes3.data & 29.zeroes
 
-    let bytes32 = DynamicBytes(@(randomBytes[32]()))
+    let bytes32 = DynamicBytes[0, high(int)](@(randomBytes[32]()))
     check Abi.encode(bytes32) ==
       Abi.encode(32'u64) & # data length
         bytes32.data
 
-    let bytes33 = DynamicBytes(@(randomBytes[33]()))
+    let bytes33 = DynamicBytes[0, high(int)](@(randomBytes[33]()))
     check Abi.encode(bytes33) ==
       Abi.encode(33'u64) & # data length right-padded with zeroes
         bytes33.data & 31.zeroes

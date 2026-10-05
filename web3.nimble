@@ -7,38 +7,47 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-mode        = ScriptMode.Verbose
-version     = "0.8.1"
-author      = "Status Research & Development GmbH"
-description = "These are the humble beginnings of library similar to web3.[js|py]"
-license     = "MIT or Apache License 2.0"
+mode = ScriptMode.Verbose
 
-### Dependencies
-requires "nim >= 2.0.10"
-requires "bearssl >= 0.2.13"
-requires "chronicles >= 0.12.4"
-requires "chronos >= 4.4.0"
-requires "eth >= 0.9.0"
-requires "faststreams >= 0.5.0"
-requires "json_rpc >= 0.7.0"
-requires "serialization >= 0.4.4"
-requires "json_serialization >= 0.5.0"
-requires "nimcrypto >= 0.7.0"
-requires "results >= 0.5.0"
-requires "serialization >= 0.4.4"
-requires "stew >= 0.5.0"
-requires "stint >= 0.9.0"
+packageName   = "web3"
+version       = "0.8.1"
+author        = "Status Research & Development GmbH"
+description   = "These are the humble beginnings of library similar to web3.[js|py]"
+license       = "MIT or Apache License 2.0"
 
-### Helper functions
-proc test(args, path: string) =
-  if not dirExists "build":
-    mkDir "build"
+requires "nim >= 2.0.10",
+         "bearssl >= 0.2.13",
+         "chronicles >= 0.12.4",
+         "chronos >= 4.4.0",
+         "eth >= 0.9.0",
+         "faststreams >= 0.5.0",
+         "json_rpc >= 0.7.0",
+         "serialization >= 0.4.4",
+         "json_serialization >= 0.5.0",
+         "nimcrypto >= 0.7.0",
+         "results >= 0.5.0",
+         "stew >= 0.5.0",
+         "stint >= 0.9.0"
 
-  exec "nim " & getEnv("TEST_LANG", "c") & " " & getEnv("NIMFLAGS") & " " & args &
-    " --outdir:build -r --skipParentCfg" &
-    " --styleCheck:usages --styleCheck:error" &
-    " --hint[Processing]:off " &
-    path
+let nimc = getEnv("NIMC", "nim") # Which nim compiler to use
+let lang = getEnv("NIMLANG", "c") # Which backend (c/cpp/js)
+let flags = getEnv("NIMFLAGS", "") # Extra flags for the compiler
+let verbose = getEnv("V", "") notin ["", "0"]
+let platform = getEnv("PLATFORM", "")
+
+from std/os import quoteShell
+
+let cfg =
+  " --styleCheck:usages --styleCheck:error" &
+  (if verbose: "" else: " --verbosity:0") &
+  " --skipParentCfg --skipUserCfg --outdir:build -f " &
+  quoteShell("--nimcache:build/nimcache/$projectName")
+
+proc build(args, path: string) =
+  exec nimc & " " & lang & " " & cfg & " " & flags & " " & args & " " & path
+
+proc run(args, path: string) =
+  build args & " -r", path
 
 proc setupHardhat() =
   # ci-test.sh relies on POSIX shell features (background jobs, a `while` wait
@@ -51,16 +60,37 @@ proc setupHardhat() =
   exec "\"" & bash & "\" ci-test.sh"
 
 
-### tasks
 task test, "Run all tests":
   setupHardhat()
-  test "--mm:refc", "tests/all_tests.nim"
-  test "--mm:orc", "tests/all_tests.nim"
+  run "--mm:refc", "tests/all_tests"
+  run "--mm:orc", "tests/all_tests"
 
 task test_slim, "Run the fast subset of tests (no Hardhat node)":
   # A quick, self-contained subset of the test suite. Runs without the Hardhat
   # node or any network access, so it is suitable for running inside Nim's own
   # test suite to catch compiler / stdlib regressions. See tests/slim_tests.nim
   # for the selection criteria.
-  test "--mm:refc", "tests/slim_tests.nim"
-  test "--mm:orc", "tests/slim_tests.nim"
+  run "--mm:refc", "tests/slim_tests"
+  run "--mm:orc", "tests/slim_tests"
+
+task test_asan, "Run all tests with ASAN":
+  if platform != "x86" and (NimMajor, NimMinor) >= (2, 2):
+    try:
+      exec "echo '#if __clang_major__ < 20\n#error\n#endif' | clang -E - >/dev/null"
+    except OSError:
+      return
+
+    # https://clang.llvm.org/docs/AddressSanitizer.html
+    putEnv("ASAN_OPTIONS", "detect_leaks=0:detect_stack_use_after_return=1")
+    # https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+    putEnv("UBSAN_OPTIONS", "print_stacktrace=1")
+    let asanArgs =
+      " --mm:orc -d:useMalloc --cc:clang --debugger:native" &
+      " --passC:-fsanitize=address,undefined" &
+      " --passL:-fsanitize=address,undefined" &
+      " --passC:-fno-sanitize-recover=undefined" &
+      " --passC:-fno-sanitize-merge" &
+      " --passC:-fno-omit-frame-pointer" &
+      " --passC:-O1"  # error: inline assembly requires more registers than available
+    setupHardhat()
+    run asanArgs, "tests/all_tests"
