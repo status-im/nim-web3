@@ -10,12 +10,12 @@
 mode = ScriptMode.Verbose
 
 packageName   = "web3"
-version       = "0.8.1"
+version       = "0.9.0"
 author        = "Status Research & Development GmbH"
 description   = "These are the humble beginnings of library similar to web3.[js|py]"
 license       = "MIT or Apache License 2.0"
 
-requires "nim >= 2.0.10",
+requires "nim >= 2.2.14",
          "bearssl >= 0.2.13",
          "chronicles >= 0.12.4",
          "chronos >= 4.4.0",
