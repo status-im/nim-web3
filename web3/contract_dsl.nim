@@ -210,9 +210,9 @@ proc `&`(a, b: openArray[byte]): seq[byte] =
   let szb = b.len
   result.setLen(sza + szb)
   if sza > 0:
-    copyMem(addr result[0], unsafeAddr a[0], sza)
+    copyMem(addr result[0], addr a[0], sza)
   if szb > 0:
-    copyMem(addr result[sza], unsafeAddr b[0], szb)
+    copyMem(addr result[sza], addr b[0], szb)
 
 proc genConstructor(cname: NimNode, constructorObject: ConstructorObject): NimNode =
   let

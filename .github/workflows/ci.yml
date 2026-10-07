@@ -14,12 +14,5 @@ jobs:
     uses: status-im/nimbus-common-workflow/.github/workflows/common.yml@main
     with:
       test-command: |
-        nim --version
-        nimble --version
-        gcc --version
-
-        if [[ "$MATRIX_OS" == "macos" && "$CPU" == "arm64" ]]; then
-          NIMFLAGS="--cpu:arm64 --cc:clang --passC:\"-target arm64-apple-macos11\" --passL:\"-target arm64-apple-macos11\""
-        fi
-
+        nimble test_asan
         nimble test

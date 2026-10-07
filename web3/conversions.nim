@@ -18,8 +18,7 @@ import
   ./primitives,
   ./engine_api_types,
   ./eth_api_types,
-  ./eth_json_marshal,
-  ./execution_types
+  ./eth_json_marshal
 
 import eth/common/eth_types_json_serialization
 
@@ -96,10 +95,13 @@ PayloadAttributesV1.useDefaultSerializationIn EthJson
 PayloadAttributesV2.useDefaultSerializationIn EthJson
 PayloadAttributesV3.useDefaultSerializationIn EthJson
 PayloadAttributesV4.useDefaultSerializationIn EthJson
+PayloadAttributesV5.useDefaultSerializationIn EthJson
 PayloadAttributesV1OrV2.useDefaultSerializationIn EthJson
-PayloadStatusV1.useDefaultSerializationIn EthJson
+PayloadStatusV1.useDefaultReaderIn EthJson
+PayloadStatusV2.useDefaultSerializationIn EthJson
 ForkchoiceStateV1.useDefaultSerializationIn EthJson
 ForkchoiceUpdatedResponseV1.useDefaultSerializationIn EthJson
+ForkchoiceUpdatedResponseV2.useDefaultSerializationIn EthJson
 GetPayloadV2Response.useDefaultSerializationIn EthJson
 GetPayloadV2ResponseExact.useDefaultSerializationIn EthJson
 GetPayloadV3Response.useDefaultSerializationIn EthJson
@@ -107,14 +109,6 @@ GetPayloadV4Response.useDefaultSerializationIn EthJson
 GetPayloadV5Response.useDefaultSerializationIn EthJson
 GetPayloadV6Response.useDefaultSerializationIn EthJson
 ClientVersionV1.useDefaultSerializationIn EthJson
-
-#------------------------------------------------------------------------------
-# execution_types
-#------------------------------------------------------------------------------
-
-ExecutionPayload.useDefaultSerializationIn EthJson
-PayloadAttributes.useDefaultSerializationIn EthJson
-GetPayloadResponse.useDefaultSerializationIn EthJson
 
 #------------------------------------------------------------------------------
 # Private helpers
@@ -228,7 +222,7 @@ proc writeHexValue(w: var JsonWriter, v: openArray[byte])
 # Well, both rpc and chronicles share the same encoding of these types
 #------------------------------------------------------------------------------
 
-type CommonJsonFlavors = EthJson | DefaultFlavor
+type CommonJsonFlavors = EthJson | Json
 
 proc writeValue*[F: CommonJsonFlavors](w: var JsonWriter[F], v: DynamicBytes)
       {.gcsafe, raises: [IOError].} =
@@ -396,6 +390,20 @@ proc readValue*(r: var JsonReader[EthJson], val: var seq[byte])
     if hexStr != "0x":
       # skip empty hex
       val = hexToSeqByte(hexStr)
+
+proc writeValue*(w: var JsonWriter[EthJson], v: PayloadStatusV1)
+      {.gcsafe, raises: [IOError].} =
+  # The `witness` field is only ever set by the engine_newPayloadWithWitness*
+  # methods. It must be omitted (not written as `null`) everywhere else.
+  mixin writeValue
+  w.beginObject()
+  for k, val in fieldPairs(v):
+    when k == "witness":
+      if v.witness.isSome:
+        w.writeMember(k, val)
+    else:
+      w.writeMember(k, val)
+  w.endObject()
 
 proc readValue*(r: var JsonReader[EthJson], val: var RtBlockIdentifier)
        {.gcsafe, raises: [IOError, SerializationError].} =
