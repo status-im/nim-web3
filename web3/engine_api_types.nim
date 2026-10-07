@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2025 Status Research & Development GmbH
+# Copyright (c) 2022-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -20,6 +20,9 @@ export
 
 type
   TypedTransaction* = distinct seq[byte]
+
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_getinclusionlistv1
+  InclusionList* = seq[TypedTransaction]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#withdrawalv1
   WithdrawalV1* = object
@@ -226,6 +229,17 @@ type
     slotNumber*: Quantity
     targetGasLimit*: Quantity
 
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#payloadattributesv5
+  PayloadAttributesV5* = object
+    timestamp*: Quantity
+    prevRandao*: Bytes32
+    suggestedFeeRecipient*: Address
+    withdrawals*: seq[WithdrawalV1]
+    parentBeaconBlockRoot*: Hash32
+    slotNumber*: Quantity
+    targetGasLimit*: Quantity
+    inclusionListTransactions*: seq[TypedTransaction]
+
   # This is ugly, but see the comment on ExecutionPayloadV1OrV2.
   PayloadAttributesV1OrV2* = object
     timestamp*: Quantity
@@ -237,7 +251,8 @@ type
     PayloadAttributesV1 |
     PayloadAttributesV2 |
     PayloadAttributesV3 |
-    PayloadAttributesV4
+    PayloadAttributesV4 |
+    PayloadAttributesV5
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#payloadstatusv1
   PayloadExecutionStatus* {.pure.} = enum
@@ -252,6 +267,13 @@ type
     latestValidHash*: Opt[Hash32]
     validationError*: Opt[string]
 
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#payloadstatusv2
+  PayloadStatusV2* = object
+    status*: PayloadExecutionStatus
+    latestValidHash*: Opt[Hash32]
+    validationError*: Opt[string]
+    inclusionListSatisfied*: Opt[bool]
+
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/paris.md#forkchoicestatev1
   ForkchoiceStateV1* = object
     headBlockHash*: Hash32
@@ -261,6 +283,11 @@ type
   # https://github.com/ethereum/execution-apis/blob/f74de4b86e3b011384808c294c3d71f2854729a2/src/engine/openrpc/schemas/forkchoice.yaml#L18
   ForkchoiceUpdatedResponseV1* = object
     payloadStatus*: PayloadStatusV1
+    payloadId*: Opt[Bytes8]
+
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#response-2
+  ForkchoiceUpdatedResponseV2* = object
+    payloadStatus*: PayloadStatusV2
     payloadId*: Opt[Bytes8]
 
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/shanghai.md#response-2
@@ -335,6 +362,11 @@ const
   engineApiInvalidPayloadAttributes* = -38003
   engineApiTooLargeRequest* = -38004
   engineApiUnsupportedFork* = -38005
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/common.md#errors
+  engineApiTooDeepReorg* = -38006
+
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#constants
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST* = 8192'u64
 
 template `==`*(a, b: TypedTransaction): bool =
   distinctBase(a) == distinctBase(b)
