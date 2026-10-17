@@ -82,6 +82,7 @@ type
     # EIP-8141
     frames*: Opt[seq[TransactionFrame]]
     signatures*: Opt[seq[FrameSignature]]
+    nonceKeys*: Opt[seq[UInt256]]
 
   ## A block header object
   BlockHeader* = ref object
@@ -185,6 +186,7 @@ type
     authorizationList*: Opt[seq[Authorization]]   # EIP-7702
     frames*: Opt[seq[TransactionFrame]]           # EIP-8141
     signatures*: Opt[seq[FrameSignature]]         # EIP-8141
+    nonceKeys*: Opt[seq[UInt256]]                 # EIP-8141
 
   ReceiptObject* = ref object        # A transaction receipt object, or null when no receipt was found:
     transactionHash*: Hash32         # hash of the transaction.
