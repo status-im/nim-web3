@@ -152,6 +152,10 @@ proc decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [Serializat
 proc decode(decoder: var AbiDecoder, T: type string): T {.raises: [SerializationError].} =
   string.fromBytes(decoder.decode(seq[byte]))
 
+proc decode[T](decoder: var AbiDecoder, _: type seq[T]): seq[T]
+    {.raises: [SerializationError].}
+proc decode[I, T](decoder: var AbiDecoder, _: type array[I, T]): array[I, T]
+    {.raises: [SerializationError].}
 proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [SerializationError].}
 
 proc decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [SerializationError].} =

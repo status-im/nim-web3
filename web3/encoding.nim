@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2023 Status Research & Development GmbH
+# Copyright (c) 2023-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -88,12 +88,14 @@ proc encode(encoder: var AbiEncoder, bytes: seq[byte]) {.raises: [SerializationE
 proc encode(encoder: var AbiEncoder, value: string) {.raises: [SerializationError]} =
   encoder.encode(value.toBytes)
 
+proc encode[T, I](encoder: var AbiEncoder, value: array[I, T])
+    {.raises: [SerializationError].}
+proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
+proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
+
 proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationError]} =
   type Base = distinctBase(typeof(value))
   encoder.encode(Base(value))
-
-proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
-proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
 
 template encodeCollection(encoder: var AbiEncoder, value: untyped) =
   ## When T is dynamic, ABI layout looks like:
