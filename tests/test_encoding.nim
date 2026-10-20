@@ -239,6 +239,20 @@ suite "ABI encoding":
       31.zeroes & 2'u8 & @[1'u8, 2'u8] & 30.zeroes &     # first item (length + data)
       31.zeroes & 3'u8 & @[3'u8, 4'u8, 5'u8] & 29.zeroes # second item (length + data)
 
+  test "encodes sequence of static arrays":
+    let a = @[[1'u16, 2'u16], [3'u16, 4'u16]]
+    check Abi.encode(a) ==
+      Abi.encode(2'u64) &
+      Abi.encode(a[0]) &
+      Abi.encode(a[1])
+    check Abi.encode( (a,) ) ==
+      31.zeroes & 32'u8 & # offset to a
+      31.zeroes & 2'u8 &  # a length
+      31.zeroes & 1'u8 &  # a[0][0]
+      31.zeroes & 2'u8 &  # a[0][1]
+      31.zeroes & 3'u8 &  # a[1][0]
+      31.zeroes & 4'u8    # a[1][1]
+
   test "encodes seq of empty seqs":
     let empty: seq[int] =  @[]
     let v: seq[seq[int]] = @[ empty, empty ]
