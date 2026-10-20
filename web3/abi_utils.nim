@@ -18,11 +18,8 @@ func isDynamic*(T: type): bool =
   when T is seq | openArray | string | DynamicBytes:
     return true
   elif T is array:
-    when typeof(default(T)[0]) is byte:
-      return T.len > abiSlotSize
-    else:
-      type t = typeof(default(T)[0])
-      return isDynamic(t)
+    type t = typeof(default(T)[0])
+    return isDynamic(t)
   elif T is tuple:
     for v in fields(default(T)):
       if isDynamic(typeof(v)):

@@ -254,6 +254,14 @@ suite "ABI decoding":
     checkDecode( (a, [b, b]) )
     checkDecode( ([b, b], a) )
 
+  test "reads long byte array inside dynamic tuple":
+    let a = @[1'u8, 2'u8, 3'u8]
+    let b = randomBytes[65]()
+    checkDecode( (a, b) )
+    checkDecode( (b, a) )
+    let encoded = Abi.encode( (a, FixedBytes[65](b)) )
+    check Abi.decode(encoded, (seq[byte], array[65, byte])) == (a, b)
+
   test "reads empty tuples":
     checkDecode( ((),) )
 

@@ -213,6 +213,22 @@ suite "ABI encoding":
       31.zeroes & 192'u8 &              # offset to c (6 * 32 bytes)
       31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
 
+  test "encodes tuple with long byte array and dynamic":
+    let a = 1'u8
+    let b = randomBytes[33]()
+    let c = @[2'u8]
+    check Abi.encode( (a, b, c) ) ==
+      Abi.encode(a) &
+      Abi.encode(b) &
+      Abi.encode(4 * 32'u8) & # offset of c after inline b
+      Abi.encode(c)
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                # a
+      @b & 31.zeroes &                  # b (right-padded to 2 * 32 bytes)
+      31.zeroes & 128'u8 &              # offset to c (4 * 32 bytes)
+      31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
+    check Abi.encode( (a, FixedBytes[33](b), c) ) == Abi.encode( (a, b, c) )
+
   test "encodes tuple with only dynamic fields":
     let t = (@[1'u8, 2'u8], @[3'u8, 4'u8])
     check Abi.encode(t) ==

@@ -24,6 +24,7 @@ suite "ABI utils":
     check static isDynamic((uint8, seq[byte]))
     check static isStatic((uint8, (bool, uint8)))
     check static isDynamic((uint8, (bool, seq[byte])))
+    check static isStatic(array[33, byte])
 
   test "can determine encoded sizes":
     check static staticSize(uint8) == abiSlotSize
