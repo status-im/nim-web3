@@ -53,6 +53,7 @@ func isStatic*(T: type): bool {.compileTime.} =
 func staticSize*(T: type): int {.compileTime.} =
   when T is array:
     when typeof(default(T)[0]) is byte:
+      # TODO: uint8 should get a separate ABI slot per item
       return (T.len + abiSlotSize - 1) div abiSlotSize * abiSlotSize
     else:
       type t = typeof(default(T)[0])

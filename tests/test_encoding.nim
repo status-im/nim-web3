@@ -165,7 +165,7 @@ suite "ABI encoding":
   test "encodes tuple with static array and dynamic":
     let a = 1'u8
     let b = [2'u16, 3'u16]
-    let c = @[4'u8]
+    let c = @[4.byte]
     check Abi.encode( (a, b, c) ) ==
       Abi.encode(a) &
       Abi.encode(b) &
@@ -181,7 +181,7 @@ suite "ABI encoding":
   test "encodes tuple with nested static tuple and dynamic":
     let a = 1'u8
     let b = (2'u8, [3'u16, 4'u16])
-    let c = @[5'u8]
+    let c = @[5.byte]
     check Abi.encode( (a, b, c) ) ==
       Abi.encode(a) &
       Abi.encode(b) &
@@ -198,7 +198,7 @@ suite "ABI encoding":
   test "encodes tuple with nested static array and dynamic":
     let a = 1'u8
     let b = [[2'u16, 3'u16], [4'u16, 5'u16]]
-    let c = @[6'u8]
+    let c = @[6.byte]
     check Abi.encode( (a, b, c) ) ==
       Abi.encode(a) &
       Abi.encode(b) &
