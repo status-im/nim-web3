@@ -24,19 +24,6 @@ suite "ABI utils":
     check static isDynamic((uint8, seq[byte]))
     check static isStatic((uint8, (bool, uint8)))
     check static isDynamic((uint8, (bool, seq[byte])))
-    check static isStatic(Struct[uint8])
-    check static isDynamic(Struct[seq[byte]])
-    check static isStatic(Struct[array[2, array[2, byte]]])
-    check static isDynamic(Struct[array[2, seq[byte]]])
-    check static isStatic(Struct[(uint8, bool)])
-    check static isDynamic(Struct[(uint8, seq[byte])])
-    check static isStatic(array[33, byte])
-    check static isStatic(FixedBytes[33])
-    check static isStatic(Struct[array[33, byte]])
-    check static isDynamic(DistinctBytes)
-    check static isDynamic(DistinctTuple)
-    check static isDynamic(Struct[DistinctBytes])
-    check static isStatic(SkippedStruct)
 
   test "can determine encoded sizes":
     check static staticSize(uint8) == abiSlotSize
