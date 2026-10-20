@@ -181,8 +181,14 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
     for field in tupl.fields:
       encoder.encode(field)
   else:
-    var offset {.used.} = T.arity * abiSlotSize
-    var cursor = encoder.output.delayFixedSizeWrite(offset)
+    const headSize = block:
+      var size = 0
+      for field in default(T).fields:
+        size += typeof(field).headSize
+      size
+    var
+      offset = headSize
+      cursor = encoder.output.delayFixedSizeWrite(offset)
 
     for field in tupl.fields:
       when isDynamic(typeof(field)):
@@ -206,8 +212,14 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
       {.error: "Ranges with int or uint bounds are not supported. Use explicit types like int8, int16, uint8, etc.".}
 
   when T is object and T is not StInts:
-    var offset {.used.} = totalSerializedFields(T) * abiSlotSize
-    var cursor = encoder.output.delayFixedSizeWrite(offset)
+    const headSize = block:
+      var size = 0
+      default(T).enumInstanceSerializedFields(_, fieldValue):
+        size += typeof(fieldValue).headSize
+      size
+    var
+      offset = headSize
+      cursor = encoder.output.delayFixedSizeWrite(offset)
 
     value.enumInstanceSerializedFields(_, fieldValue):
       when isDynamic(typeof(fieldValue)):
@@ -228,8 +240,8 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
       raise newException(SerializationError, "Failed to write value: " & e.msg)
   else:
     try:
-        encoder.encode(value)
-        w.write encoder.finish()
+      encoder.encode(value)
+      w.write encoder.finish()
     except IOError as e:
       raise newException(SerializationError, "Failed to write value: " & e.msg)
 

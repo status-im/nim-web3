@@ -1,4 +1,7 @@
 
+from std/typetraits import distinctBase
+from serialization/object_serialization import enumInstanceSerializedFields
+from stint import StInt, StUint
 from ./primitives import DynamicBytes
 
 {.push raises: [].}
@@ -46,3 +49,31 @@ func isDynamicObject*(T: typedesc): bool {.compileTime.} =
 
 func isStatic*(T: type): bool {.compileTime.} =
   not isDynamic(T)
+
+func staticSize*(T: type): int {.compileTime.} =
+  when T is array:
+    when typeof(default(T)[0]) is byte:
+      return (T.len + abiSlotSize - 1) div abiSlotSize * abiSlotSize
+    else:
+      type t = typeof(default(T)[0])
+      return T.len * staticSize(t)
+  elif T is tuple:
+    var size = 0
+    for v in fields(default(T)):
+      size += staticSize(typeof(v))
+    return size
+  elif T is object and T isnot StInt | StUint:
+    var size = 0
+    default(T).enumInstanceSerializedFields(_, v):
+      size += staticSize(typeof(v))
+    return size
+  elif T is distinct:
+    return staticSize(distinctBase(T))
+  else:
+    return abiSlotSize
+
+func headSize*(T: type): int {.compileTime.} =
+  when isDynamic(T):
+    return abiSlotSize
+  else:
+    return staticSize(T)

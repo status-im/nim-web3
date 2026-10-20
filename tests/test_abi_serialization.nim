@@ -23,6 +23,11 @@ type StorageDeal = object
   signature: array[65, byte]
   metadata: string
 
+type StaticArrayContract = object
+  a: uint8
+  b: array[2, uint16]
+  c: seq[byte]
+
 proc randomBytes[N: static int](): array[N, byte] =
   var a: array[N, byte]
   for b in a.mitems:
@@ -65,3 +70,12 @@ suite "ABI serialization":
     check decoded.pricePerByte == deal.pricePerByte
     check decoded.signature == deal.signature
     check decoded.metadata == deal.metadata
+
+  test "encode and decode type with static array":
+    let x = StaticArrayContract(a: 1, b: [2'u16, 3'u16], c: @[4'u8])
+
+    let encoded = Abi.encode(x)
+    check encoded == Abi.encode((x.a, x.b, x.c))
+
+    let decoded = Abi.decode(encoded, StaticArrayContract)
+    check decoded == x
