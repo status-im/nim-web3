@@ -246,6 +246,13 @@ suite "ABI decoding":
     let a = @[1'u8, 2'u8, 3'u8]
     let b = 0xAABBCCDD'u32
     checkDecode( (a, (b,)) )
+    checkDecode( (a, (b, [b, b])) )
+
+  test "reads static array inside dynamic tuple":
+    let a = @[1'u8, 2'u8, 3'u8]
+    let b = 0xAABBCCDD'u32
+    checkDecode( (a, [b, b]) )
+    checkDecode( ([b, b], a) )
 
   test "reads empty tuples":
     checkDecode( ((),) )
