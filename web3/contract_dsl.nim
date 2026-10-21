@@ -56,7 +56,7 @@ template seqType[T](s: typedesc[seq[T]]): typedesc = T
 proc typeSignature(T: typedesc): string =
   when T is string:
     "string"
-  elif (T is DynamicBytes) or (T is seq[byte]):
+  elif T is DynamicBytes:
     "bytes"
   elif T is FixedBytes:
     "bytes" & $T.N

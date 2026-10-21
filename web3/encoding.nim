@@ -78,15 +78,22 @@ proc encode(encoder: var AbiEncoder, value: Address) {.raises: [SerializationErr
 proc encode(encoder: var AbiEncoder, value: Bytes32) {.raises: [SerializationError]} =
   encoder.padleft(array[32, byte](value))
 
-proc encode[I](encoder: var AbiEncoder, bytes: array[I, byte]) {.raises: [SerializationError]} =
-  encoder.padright(bytes)
+proc encode[I](
+    encoder: var AbiEncoder,
+    bytes: FixedBytes[I]) {.raises: [SerializationError]} =
+  when I notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "bytes<M> has to fit into a single slot".}
+  encoder.padright(distinctBase(bytes))
 
-proc encode(encoder: var AbiEncoder, bytes: seq[byte]) {.raises: [SerializationError]} =
+proc encode(
+    encoder: var AbiEncoder,
+    bytes: DynamicBytes) {.raises: [SerializationError]} =
   encoder.encode(bytes.len.uint64)
-  encoder.padright(bytes)
+  encoder.padright(distinctBase(bytes))
 
 proc encode(encoder: var AbiEncoder, value: string) {.raises: [SerializationError]} =
-  encoder.encode(value.toBytes)
+  encoder.encode(DynamicBytes[0](value.toBytes))
 
 proc encode[T, I](encoder: var AbiEncoder, value: array[I, T])
     {.raises: [SerializationError].}
@@ -94,7 +101,7 @@ proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationE
 proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
 
 proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationError]} =
-  type Base = distinctBase(typeof(value))
+  type Base = distinctBase(typeof(value), recursive = false)
   encoder.encode(Base(value))
 
 template encodeCollection(encoder: var AbiEncoder, value: untyped) =
@@ -253,6 +260,10 @@ func encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.deprecated: "use Ab
   @(x.toBytesBE())
 
 func encodeFixed(a: openArray[byte]): seq[byte] =
+  if a.len notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    raiseAssert "bytes<M> has to fit into a single slot"
+
   var padding = a.len mod 32
   if padding != 0: padding = 32 - padding
   result.setLen(padding) # Zero fill padding
@@ -272,19 +283,16 @@ func encodeDynamic(v: openArray[byte]): seq[byte] =
 func encode*(x: DynamicBytes): seq[byte] {.inline, deprecated: "use Abi.encode instead".} =
   encodeDynamic(distinctBase x)
 
-func encode*(x: seq[byte]): seq[byte] {.inline, deprecated: "use Abi.encode instead".} =
-  encodeDynamic(x)
-
 func encode*(x: string): seq[byte] {.inline, deprecated: "use Abi.encode instead".} =
   encodeDynamic(x.toOpenArrayByte(0, x.high))
 
-func encode*(x: bool): seq[byte] {.deprecated: "use Abi.encode instead" .} = encode(x.int.u256)
+func encode*(x: bool|uint8): seq[byte] {.deprecated: "use Abi.encode instead" .} = encode(x.int.u256)
 
 func encode*(x: tuple): seq[byte] {.deprecated: "use Abi.encode instead" .}
 
 func encode*[T](x: openArray[T]): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   result = encode(x.len.u256)
-  when isDynamicType(T):
+  when isDynamic(T):
     result.setLen((1 + x.len) * 32)
     for i in 0 ..< x.len:
       let offset = result.len - 32
@@ -304,7 +312,7 @@ func encode*(x: tuple): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   var offsets {.used.}: array[typeListLen(typeof(x)), int]
   var i = 0
   for v in fields(x):
-    when isDynamicType(typeof(v)):
+    when isDynamic(typeof(v)):
       offsets[i] = result.len
       result.setLen(result.len + 32)
     else:
@@ -312,7 +320,7 @@ func encode*(x: tuple): seq[byte] {.deprecated: "use Abi.encode instead" .} =
     inc i
   i = 0
   for v in fields(x):
-    when isDynamicType(typeof(v)):
+    when isDynamic(typeof(v)):
       let offset = result.len
       let o = offsets[i]
       result[o .. o + 31] = encode(offset.u256)
