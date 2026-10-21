@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2025 Status Research & Development GmbH
+# Copyright (c) 2019-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -10,7 +10,7 @@
 mode = ScriptMode.Verbose
 
 packageName   = "web3"
-version       = "0.8.1"
+version       = "0.8.2"
 author        = "Status Research & Development GmbH"
 description   = "These are the humble beginnings of library similar to web3.[js|py]"
 license       = "MIT or Apache License 2.0"
