@@ -162,6 +162,57 @@ suite "ABI encoding":
       31.zeroes & 64'u8 &                           # offset to d ((static + offset) * 32 bytes)
       31.zeroes & 3'u8 & d & 29.zeroes              # d (length + data)
 
+  test "encodes tuple with static array and dynamic":
+    let a = 1'u8
+    let b = [2'u16, 3'u16]
+    let c = @[4.byte]
+    check Abi.encode( (a, b, c) ) ==
+      Abi.encode(a) &
+      Abi.encode(b) &
+      Abi.encode(4 * 32'u8) & # offset of c after inline b
+      Abi.encode(c)
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                # a
+      31.zeroes & 2'u8 &                # b[0]
+      31.zeroes & 3'u8 &                # b[1]
+      31.zeroes & 128'u8 &              # offset to c (4 * 32 bytes)
+      31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
+
+  test "encodes tuple with nested static tuple and dynamic":
+    let a = 1'u8
+    let b = (2'u8, [3'u16, 4'u16])
+    let c = @[5.byte]
+    check Abi.encode( (a, b, c) ) ==
+      Abi.encode(a) &
+      Abi.encode(b) &
+      Abi.encode(5 * 32'u8) & # offset of c after inline b
+      Abi.encode(c)
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                # a
+      31.zeroes & 2'u8 &                # b[0]
+      31.zeroes & 3'u8 &                # b[1][0]
+      31.zeroes & 4'u8 &                # b[1][1]
+      31.zeroes & 160'u8 &              # offset to c (5 * 32 bytes)
+      31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
+
+  test "encodes tuple with nested static array and dynamic":
+    let a = 1'u8
+    let b = [[2'u16, 3'u16], [4'u16, 5'u16]]
+    let c = @[6.byte]
+    check Abi.encode( (a, b, c) ) ==
+      Abi.encode(a) &
+      Abi.encode(b) &
+      Abi.encode(6 * 32'u8) & # offset of c after inline b
+      Abi.encode(c)
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                # a
+      31.zeroes & 2'u8 &                # b[0][0]
+      31.zeroes & 3'u8 &                # b[0][1]
+      31.zeroes & 4'u8 &                # b[1][0]
+      31.zeroes & 5'u8 &                # b[1][1]
+      31.zeroes & 192'u8 &              # offset to c (6 * 32 bytes)
+      31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
+
   test "encodes tuple with only dynamic fields":
     let t = (@[1'u8, 2'u8], @[3'u8, 4'u8])
     check Abi.encode(t) ==
@@ -238,6 +289,20 @@ suite "ABI encoding":
       31.zeroes & 128'u8 &                               # offset to second item (first offset + length + data length)
       31.zeroes & 2'u8 & @[1'u8, 2'u8] & 30.zeroes &     # first item (length + data)
       31.zeroes & 3'u8 & @[3'u8, 4'u8, 5'u8] & 29.zeroes # second item (length + data)
+
+  test "encodes sequence of static arrays":
+    let a = @[[1'u16, 2'u16], [3'u16, 4'u16]]
+    check Abi.encode(a) ==
+      Abi.encode(2'u64) &
+      Abi.encode(a[0]) &
+      Abi.encode(a[1])
+    check Abi.encode( (a,) ) ==
+      31.zeroes & 32'u8 & # offset to a
+      31.zeroes & 2'u8 &  # a length
+      31.zeroes & 1'u8 &  # a[0][0]
+      31.zeroes & 2'u8 &  # a[0][1]
+      31.zeroes & 3'u8 &  # a[1][0]
+      31.zeroes & 4'u8    # a[1][1]
 
   test "encodes seq of empty seqs":
     let empty: seq[int] =  @[]

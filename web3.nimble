@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2025 Status Research & Development GmbH
+# Copyright (c) 2019-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -19,7 +19,7 @@ requires "nim >= 2.2.14",
          "bearssl >= 0.2.13",
          "chronicles >= 0.12.4",
          "chronos >= 4.4.0",
-         "eth >= 0.9.0",
+         "eth >= 0.9.5",
          "faststreams >= 0.5.0",
          "json_rpc >= 0.7.0",
          "serialization >= 0.4.4",

@@ -196,6 +196,22 @@ suite "ABI decoding":
   test "decodes arrays with string":
     checkDecode(["hello", "world"])
 
+  test "decodes nested collections":
+    let a = @[@[1.u256, 2.u256], @[3.u256]]
+    checkDecode(a)
+    checkDecode([@[1'u16, 2'u16], @[3'u16]])
+    checkDecode([[1'u16, 2'u16], [3'u16, 4'u16]])
+    checkDecode(@[[1'u16, 2'u16], [3'u16, 4'u16]])
+    let encoded =
+      Abi.encode(64'u64) &  # offset to a
+      Abi.encode(7'u8) &
+      Abi.encode(2'u64) &   # a length
+      Abi.encode(64'u64) &  # offset to a[0]
+      Abi.encode(160'u64) & # offset to a[1]
+      Abi.encode(2'u64) & Abi.encode(a[0][0]) & Abi.encode(a[0][1]) &
+      Abi.encode(1'u64) & Abi.encode(a[1][0])
+    check Abi.decode(encoded, (seq[seq[UInt256]], uint8)) == (a, 7'u8)
+
   test "decodes strings":
     checkDecode("hello!☺")
 
@@ -230,6 +246,13 @@ suite "ABI decoding":
     let a = @[1'u8, 2'u8, 3'u8]
     let b = 0xAABBCCDD'u32
     checkDecode( (a, (b,)) )
+    checkDecode( (a, (b, [b, b])) )
+
+  test "reads static array inside dynamic tuple":
+    let a = @[1'u8, 2'u8, 3'u8]
+    let b = 0xAABBCCDD'u32
+    checkDecode( (a, [b, b]) )
+    checkDecode( ([b, b], a) )
 
   test "reads empty tuples":
     checkDecode( ((),) )

@@ -106,13 +106,20 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, txType: TxType): seq
     encodeTransactionEip4844(s, pk)
   of TxEip7702:
     encodeTransactionEip7702(s, pk)
+  of TxType5:
+    raiseAssert "Unsupported transaction type"
+  of TxEip8141:
+    # Frame Transaction is not using traditional signing mechanism
+    raiseAssert "Unsupported transaction type"
 
 func txType(s: TransactionArgs): TxType =
+  if s.frames.isSome or s.signatures.isSome:
+    return TxEip8141
   if s.authorizationList.isSome:
     return TxEip7702
   if s.blobVersionedHashes.isSome:
     return TxEip4844
-  if s.gasPrice.isNone:
+  if s.maxFeePerGas.isSome or s.maxPriorityFeePerGas.isSome:
     return TxEip1559
   if s.accessList.isSome:
     return TxEip2930

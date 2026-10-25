@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2022-2024 Status Research & Development GmbH
+# Copyright (c) 2022-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -21,16 +21,25 @@ createRpcSigsFromNim(RpcClient, EthJson):
   # https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.3/src/engine/shanghai.md#methods
   # https://github.com/ethereum/execution-apis/blob/ee3df5bc38f28ef35385cefc9d9ca18d5e502778/src/engine/cancun.md#methods
   # https://github.com/ethereum/execution-apis/tree/v1.0.0-beta.4/src/engine/openrpc/methods
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#methods
 
   proc engine_newPayloadV1(payload: ExecutionPayloadV1): PayloadStatusV1
   proc engine_newPayloadV2(payload: ExecutionPayloadV2): PayloadStatusV1
   proc engine_newPayloadV3(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32): PayloadStatusV1
   proc engine_newPayloadV4(payload: ExecutionPayloadV3, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
   proc engine_newPayloadV5(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]]): PayloadStatusV1
+
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_newpayloadv6
+  proc engine_newPayloadV6(payload: ExecutionPayloadV4, expectedBlobVersionedHashes: seq[VersionedHash], parentBeaconBlockRoot: Hash32, executionRequests: seq[seq[byte]], inclusionListTransactions: InclusionList): PayloadStatusV2
+
   proc engine_forkchoiceUpdatedV1(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV1]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV2(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV2]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV3(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV3]): ForkchoiceUpdatedResponseV1
   proc engine_forkchoiceUpdatedV4(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV4], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponseV1
+
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_forkchoiceupdatedv5
+  proc engine_forkchoiceUpdatedV5(forkchoiceState: ForkchoiceStateV1, payloadAttributes: Opt[PayloadAttributesV5], custodyColumns: Opt[FixedBytes[16]]): ForkchoiceUpdatedResponseV2
+
   proc engine_getPayloadV1(payloadId: Bytes8): ExecutionPayloadV1
   proc engine_getPayloadV2(payloadId: Bytes8): GetPayloadV2Response
   proc engine_getPayloadV2_exact(payloadId: Bytes8): GetPayloadV2ResponseExact
@@ -46,6 +55,9 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc engine_getBlobsV2(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV2Response
   proc engine_getBlobsV3(blob_versioned_hashes: seq[VersionedHash]): GetBlobsV3Response
   proc engine_getBlobsV4(blob_versioned_hashes: seq[VersionedHash], indices_bitarray: FixedBytes[16]): GetBlobsV4Response
+
+  # https://github.com/ethereum/execution-apis/blob/2ab543851a206ec2836cb387b3aa9cb33c646938/src/engine/bogota.md#engine_getinclusionlistv1
+  proc engine_getInclusionListV1(): InclusionList
 
   # https://github.com/ethereum/execution-apis/blob/9301c0697e4c7566f0929147112f6d91f65180f6/src/engine/common.md
   proc engine_exchangeCapabilities(methods: seq[string]): seq[string]
@@ -77,6 +89,13 @@ template forkchoiceUpdated*(
     payloadAttributes: Opt[PayloadAttributesV4],
     custodyColumns = Opt.none(FixedBytes[16])): Future[ForkchoiceUpdatedResponseV1] =
   engine_forkchoiceUpdatedV4(rpcClient, forkchoiceState, payloadAttributes, custodyColumns)
+
+template forkchoiceUpdated*(
+    rpcClient: RpcClient,
+    forkchoiceState: ForkchoiceStateV1,
+    payloadAttributes: Opt[PayloadAttributesV5],
+    custodyColumns = Opt.none(FixedBytes[16])): Future[ForkchoiceUpdatedResponseV2] =
+  engine_forkchoiceUpdatedV5(rpcClient, forkchoiceState, payloadAttributes, custodyColumns)
 
 template getPayload*(
     rpcClient: RpcClient,
@@ -120,20 +139,6 @@ template getPayload*(
     payloadId: Bytes8): Future[GetPayloadV6Response] =
   engine_getPayloadV6(rpcClient, payloadId)
 
-template getBlobs*(
-    rpcClient: RpcClient,
-    T: type GetBlobsV1Response,
-    blob_versioned_hashes: seq[VersionedHash]):
-    Future[GetBlobsV1Response] =
-  engine_getBlobsV1(rpcClient, blob_versioned_hashes)
-
-template getBlobs*(
-    rpcClient: RpcClient,
-    T: type GetBlobsV2Response,
-    blob_versioned_hashes: seq[VersionedHash]):
-    Future[GetBlobsV2Response] =
-  engine_getBlobsV2(rpcClient, blob_versioned_hashes)
-
 template newPayload*(
     rpcClient: RpcClient,
     payload: ExecutionPayloadV1): Future[PayloadStatusV1] =
@@ -160,6 +165,26 @@ template newPayload*(
     executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
   engine_newPayloadV4(
     rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
+
+template newPayload*(
+    rpcClient: RpcClient,
+    payload: ExecutionPayloadV4,
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: Hash32,
+    executionRequests: seq[seq[byte]]): Future[PayloadStatusV1] =
+  engine_newPayloadV5(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests)
+
+template newPayload*(
+    rpcClient: RpcClient,
+    payload: ExecutionPayloadV4,
+    versionedHashes: seq[VersionedHash],
+    parentBeaconBlockRoot: Hash32,
+    executionRequests: seq[seq[byte]],
+    inclusionListTransactions: InclusionList): Future[PayloadStatusV2] =
+  engine_newPayloadV6(
+    rpcClient, payload, versionedHashes, parentBeaconBlockRoot, executionRequests,
+    inclusionListTransactions)
 
 template exchangeCapabilities*(
     rpcClient: RpcClient,

@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/[typetraits, json],
+  std/[typetraits, json, strutils],
   stint,
   unittest2,
   nimcrypto,
@@ -218,17 +218,19 @@ suite "JSON-RPC Quantity":
     checkRandomObject(PayloadAttributesV2)
     checkRandomObject(PayloadAttributesV3)
     checkRandomObject(PayloadAttributesV4)
+    checkRandomObject(PayloadAttributesV5)
     checkRandomObject(PayloadAttributesV1OrV2)
     checkRandomObject(PayloadStatusV1)
+    checkRandomObject(PayloadStatusV2)
     checkRandomObject(ForkchoiceStateV1)
     checkRandomObject(ForkchoiceUpdatedResponseV1)
+    checkRandomObject(ForkchoiceUpdatedResponseV2)
     checkRandomObject(GetPayloadV2Response)
     checkRandomObject(GetPayloadV2ResponseExact)
     checkRandomObject(GetPayloadV3Response)
     checkRandomObject(GetPayloadV4Response)
     checkRandomObject(GetPayloadV5Response)
     checkRandomObject(GetPayloadV6Response)
-
     checkRandomObject(EthConfigObject)
     checkRandomObject(StorageValuesRequest)
 
@@ -303,7 +305,75 @@ suite "JSON-RPC Quantity":
   test "AccessListResult":
     let z = AccessListResult()
     let w = EthJson.encode(z)
-    check w == """{"accessList":[],"error":null,"gasUsed":"0x0"}"""
+    check w == """{"accessList":[],"gasUsed":"0x0"}"""
+
+  test "FeeHistoryResult omits unset reward":
+    let z = FeeHistoryResult(
+      oldestBlock: 1.Quantity,
+      baseFeePerGas: @[1000000000.u256],
+      baseFeePerBlobGas: @[0.u256],
+      gasUsedRatio: @[0.5],
+      blobGasUsedRatio: @[0.0])
+    check EthJson.encode(z) == """{"oldestBlock":"0x1","baseFeePerGas":["0x3b9aca00"],"baseFeePerBlobGas":["0x0"],"gasUsedRatio":[0.5],"blobGasUsedRatio":[0.0]}"""
+    let r = FeeHistoryResult(oldestBlock: 1.Quantity, reward: Opt.some(@[@[1.u256]]))
+    check EthJson.encode(r) == """{"oldestBlock":"0x1","baseFeePerGas":[],"baseFeePerBlobGas":[],"gasUsedRatio":[],"blobGasUsedRatio":[],"reward":[["0x1"]]}"""
+
+  test "BlockObject omits unset optional fields except nonce":
+    let blk = BlockObject(number: 1.Quantity)
+    let w = EthJson.encode(blk)
+    check w.contains(""""nonce":null""")
+    for key in ["totalDifficulty", "baseFeePerGas", "withdrawals", "withdrawalsRoot",
+                "blobGasUsed", "excessBlobGas", "parentBeaconBlockRoot", "requestsHash",
+                "blockAccessListHash", "slotNumber"]:
+      check not w.contains("\"" & key & "\"")
+    check EthJson.decode(w, BlockObject).number == 1.Quantity
+    let shanghai = BlockObject(
+      baseFeePerGas: Opt.some(7.u256), withdrawals: Opt.some(newSeq[Withdrawal]()))
+    let ws = EthJson.encode(shanghai)
+    check ws.contains(""""baseFeePerGas":"0x7"""")
+    check ws.contains(""""withdrawals":[]""")
+    check EthJson.encode(BlockObject(nil)) == "null"
+
+  test "ReceiptObject keeps to and contractAddress as null":
+    let rec = ReceiptObject(`type`: Opt.some(0.Quantity))
+    let w = EthJson.encode(rec)
+    check w.contains(""""to":null""")
+    check w.contains(""""contractAddress":null""")
+    check w.contains(""""type":"0x0"""")
+    for key in ["root", "status", "blobGasUsed", "blobGasPrice"]:
+      check not w.contains("\"" & key & "\"")
+    check not EthJson.encode(ReceiptObject()).contains(""""type"""")
+    let back = EthJson.decode(w, ReceiptObject)
+    check back.to.isNone and back.contractAddress.isNone and back.status.isNone
+    let blob = ReceiptObject(
+      status: Opt.some(1.Quantity), blobGasUsed: Opt.some(131072.Quantity),
+      blobGasPrice: Opt.some(1.u256))
+    let wb = EthJson.encode(blob)
+    check wb.contains(""""status":"0x1"""")
+    check wb.contains(""""blobGasUsed":"0x20000"""")
+    check wb.contains(""""blobGasPrice":"0x1"""")
+    check EthJson.encode(ReceiptObject(nil)) == "null"
+
+  test "TransactionObject omits unset typed fields and keeps pending fields null":
+    let legacy = TransactionObject(`type`: Opt.some(0.Quantity))
+    let wl = EthJson.encode(legacy)
+    check wl.contains(""""to":null""")
+    for key in ["chainId", "yParity", "accessList", "maxFeePerGas", "maxPriorityFeePerGas"]:
+      check not wl.contains("\"" & key & "\"")
+    let pending = TransactionObject(
+      `type`: Opt.some(2.Quantity), chainId: Opt.some(1.u256), yParity: Opt.some(1.Quantity),
+      accessList: Opt.some(newSeq[AccessPair]()), maxFeePerGas: Opt.some(2.Quantity),
+      maxPriorityFeePerGas: Opt.some(1.Quantity))
+    let wp = EthJson.encode(pending)
+    for key in ["blockHash", "blockNumber", "blockTimestamp", "transactionIndex"]:
+      check wp.contains("\"" & key & "\":null")
+    for key in ["chainId", "yParity", "accessList", "maxFeePerGas", "maxPriorityFeePerGas"]:
+      check wp.contains("\"" & key & "\":")
+    let blob = TransactionObject(`type`: Opt.some(3.Quantity), yParity: Opt.some(0.Quantity))
+    let wb = EthJson.encode(blob)
+    for key in ["maxFeePerBlobGas", "blobVersionedHashes", "accessList", "maxFeePerGas"]:
+      check not wb.contains("\"" & key & "\"")
+    check EthJson.decode(wb, TransactionObject).maxFeePerBlobGas.isNone
 
   test "AccessListResult with error":
     let z = AccessListResult(
@@ -338,4 +408,26 @@ suite "JSON-RPC Quantity":
       z.len == 2
       z[0].isSome
       z[1].isNone
+    check EthJson.encode(z) == json
+
+  test "PayloadStatusV2 inclusionListSatisfied":
+    # inclusionListSatisfied is `BOOLEAN|null` and must always be present
+    let syncing = PayloadStatusV2(status: PayloadExecutionStatus.syncing)
+    let w = EthJson.encode(syncing)
+    check w == """{"status":"SYNCING","latestValidHash":null,"validationError":null,"inclusionListSatisfied":null}"""
+    check EthJson.decode(w, PayloadStatusV2) == syncing
+
+    let json = """{"status":"VALID","latestValidHash":"0x0000000000000000000000000000000000000000000000000000000000000001","validationError":null,"inclusionListSatisfied":false}"""
+    let z = EthJson.decode(json, PayloadStatusV2)
+    check:
+      z.status == PayloadExecutionStatus.valid
+      z.inclusionListSatisfied == Opt.some(false)
+    check EthJson.encode(z) == json
+
+  test "InclusionList":
+    let json = """["0x02f8","0x01"]"""
+    let z = EthJson.decode(json, InclusionList)
+    check:
+      z.len == 2
+      z[0] == TypedTransaction(@[byte 0x02, 0xf8])
     check EthJson.encode(z) == json
