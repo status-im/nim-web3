@@ -68,7 +68,7 @@ func staticSize*(T: type): int {.compileTime.} =
       size += typeof(v).staticSize
     size
   elif T is distinct:
-    distinctBase(T).staticSize
+    distinctBase(T, recursive = false).staticSize
   else:
     abiSlotSize
 
