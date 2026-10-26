@@ -32,6 +32,11 @@ suite "ABI decoding":
     checkDecode(T.low)
     checkDecode(T.high)
 
+  proc checkDeprecatedDecode[T](value: T) =
+    var decoded: T
+    check decode(Abi.encode((value,)), 0, 0, decoded) == 32
+    check decoded == value
+
   test "decodes uint8, uint16, 32, 64":
     checkDecode(uint8)
     checkDecode(uint16)
@@ -143,6 +148,8 @@ suite "ABI decoding":
     checkDecode(UInt256)
     checkDecode(Int128)
     checkDecode(Int256)
+    checkDeprecatedDecode(UInt128.high)
+    checkDeprecatedDecode(Int128.low)
 
   test "decodes addresses":
     checkDecode(address(3))
@@ -151,11 +158,7 @@ suite "ABI decoding":
     checkDecode(FixedBytes[3]([1'u8, 2'u8, 3'u8]))
     checkDecode(FixedBytes[32](randomBytes[32]()))
     check not compiles(checkDecode(FixedBytes[33](randomBytes[33]())))
-
-    let value = FixedBytes[3]([1'u8, 2'u8, 3'u8])
-    var decoded: FixedBytes[3]
-    check decode(Abi.encode(value), 0, 0, decoded) == 32
-    check decoded == value
+    checkDeprecatedDecode(FixedBytes[3]([1'u8, 2'u8, 3'u8]))
 
     var bytes33: FixedBytes[33]
     check not compiles(decode(newSeq[byte](64), 0, 0, bytes33))
@@ -182,11 +185,7 @@ suite "ABI decoding":
     checkDecode(DynBytes(@[1'u8, 2'u8, 3'u8]))
     checkDecode(DynBytes(@(randomBytes[32]())))
     checkDecode(DynBytes(@(randomBytes[33]())))
-
-    let value = DynBytes(@[1'u8, 2'u8, 3'u8])
-    var decoded: DynBytes
-    check decode(Abi.encode((value,)), 0, 0, decoded) == 32
-    check decoded == value
+    checkDeprecatedDecode(DynBytes(@[1'u8, 2'u8, 3'u8]))
 
   test "fails to decode seq when padding does not consist of zeroes":
     var value = @(randomBytes[64]())

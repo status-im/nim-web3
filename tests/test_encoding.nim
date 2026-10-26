@@ -64,12 +64,14 @@ suite "ABI encoding":
     let uint128 = UInt128.fromBytes(randomBytes[32](), bigEndian)
     check Abi.encode(uint256) == @(uint256.toBytesBE)
     check Abi.encode(uint128) == 16.zeroes & @(uint128.toBytesBE)
+    check encode(uint128) == 16.zeroes & @(uint128.toBytesBE)
 
     check Abi.encode(1.i256) == 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
     check Abi.encode(1.i128) == 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
 
     check Abi.encode(-1.i256) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
     check Abi.encode(-1.i128) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
+    check encode(-1.i128) == 0xFF'u8.repeat(32)
 
   test "encodes addresses":
     let address = address(3)
@@ -95,13 +97,14 @@ suite "ABI encoding":
     # Only FixedBytes arrays are packed, not uint8 (or Nim byte) arrays
     let bytes3 = [1'u8, 2'u8, 3'u8]
     check Abi.encode(bytes3) == bytes3.mapIt(31.zeroes & it).concat()
+    check encode(bytes3) == bytes3.mapIt(31.zeroes & it).concat()
 
     let bytes32 = randomBytes[32]()
     check Abi.encode(bytes32) == bytes32.mapIt(31.zeroes & it).concat()
 
     let bytes33 = randomBytes[33]()
     check Abi.encode(bytes33) == bytes33.mapIt(31.zeroes & it).concat()
-    check not compiles(encode(bytes33))
+    check encode(bytes33) == bytes33.mapIt(31.zeroes & it).concat()
 
   test "encodes byte sequences":
     let bytes3 = DynBytes(@[1'u8, 2'u8, 3'u8])
@@ -260,6 +263,7 @@ suite "ABI encoding":
     let a, b = FixedBytes[32](randomBytes[32]())
     check Abi.encode([a, b]) ==
       Abi.encode((a, b)) # Encode as tuple because fixed arrays are static.
+    check encode([a, b]) == @(a.data) & @(b.data)
 
   test "encodes openArray":
     let a = [1'u8, 2'u8, 3'u8, 4'u8, 5'u8]

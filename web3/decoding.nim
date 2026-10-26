@@ -260,6 +260,7 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   let arity = type(res).arity
   var offsets = newSeq[uint64](arity + 1)
   var i = 0
+  let base {.used.} = decoder.input.pos()
 
   # Decode static fields first and get the offsets for dynamic fields.
   for field in res.fields:
@@ -302,7 +303,8 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
   ## | ...                        |
   ## +----------------------------+
   var resultObj: T
-  var offsets = newSeq[uint64](totalSerializedFields(T))
+  var offsets {.used.} = newSeq[uint64](totalSerializedFields(T))
+  let base {.used.} = decoder.input.pos()
 
   # Decode static fields first and get the offsets for dynamic fields.
   var i = 0
@@ -352,15 +354,15 @@ proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError
 # Keep the old encode functions for compatibility
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use Abi.decode instead"} =
   const meaningfulLen = to.bits div 8
-  let offset = offset + baseOffset
+  let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
+  abiSlotSize
 
 func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int {.deprecated: "use Abi.decode instead"} =
   const meaningfulLen = N div 8
-  let offset = offset + baseOffset
+  let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
+  abiSlotSize
 
 func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int {.deprecated: "use Abi.decode instead"} =
   let meaningfulLen = to.len
