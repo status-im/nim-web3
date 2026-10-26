@@ -52,10 +52,17 @@ proc padright(encoder: var AbiEncoder, bytes: openArray[byte], padding: byte = 0
     encoder.write(repeat(padding, padSize))
 
 proc encode(encoder: var AbiEncoder, value: AbiUnsignedInt | StUint) {.raises: [SerializationError]} =
+  when typeof(value) is StUint:
+    when typeof(value).bits > 256:
+      # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+      {.error: "uint<M> has to fit into a single slot".}
   encoder.padleft(value.toBytesBE)
 
 proc encode(encoder: var AbiEncoder, value: AbiSignedInt | StInt) {.raises: [SerializationError]} =
   when typeof(value) is StInt:
+    when typeof(value).bits > 256:
+      # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+      {.error: "int<M> has to fit into a single slot".}
     let unsignedValue = cast[StInt[(type value).bits]](value)
     let isNegative = value.isNegative
   else:
@@ -99,6 +106,8 @@ proc encode[T, I](encoder: var AbiEncoder, value: array[I, T])
     {.raises: [SerializationError].}
 proc encode[T](encoder: var AbiEncoder, value: seq[T]) {.raises: [SerializationError].}
 proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [SerializationError]}
+proc encode[T: object and not (StInt | StUint)](
+    encoder: var AbiEncoder, value: T) {.raises: [SerializationError]}
 
 proc encode(encoder: var AbiEncoder, value: distinct) {.raises: [SerializationError]} =
   type Base = distinctBase(typeof(value), recursive = false)
@@ -210,15 +219,12 @@ proc encode[T: tuple](encoder: var AbiEncoder, tupl: T) {.raises: [Serialization
 
     cursor.finalize()
 
-proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} =
-  var encoder = AbiEncoder(output: memoryOutput())
-  type StInts = StInt | StUint
-
-  when T is range:
-    when T.low is int or T.low is uint:
-      {.error: "Ranges with int or uint bounds are not supported. Use explicit types like int8, int16, uint8, etc.".}
-
-  when T is object and T is not StInts:
+proc encode[T: object and not (StInt | StUint)](
+    encoder: var AbiEncoder, value: T) {.raises: [SerializationError]} =
+  when isStatic(T):
+    value.enumInstanceSerializedFields(_, fieldValue):
+      encoder.encode(fieldValue)
+  else:
     const headSize = block:
       var size = 0
       default(T).enumInstanceSerializedFields(_, fieldValue):
@@ -241,16 +247,18 @@ proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} 
 
     cursor.finalize()
 
-    try:
-      w.write encoder.finish()
-    except IOError as e:
-      raise newException(SerializationError, "Failed to write value: " & e.msg)
-  else:
-    try:
-      encoder.encode(value)
-      w.write encoder.finish()
-    except IOError as e:
-      raise newException(SerializationError, "Failed to write value: " & e.msg)
+proc writeValue*[T](w: var AbiWriter, value: T) {.raises: [SerializationError]} =
+  var encoder = AbiEncoder(output: memoryOutput())
+
+  when T is range:
+    when T.low is int or T.low is uint:
+      {.error: "Ranges with int or uint bounds are not supported. Use explicit types like int8, int16, uint8, etc.".}
+
+  try:
+    encoder.encode(value)
+    w.write encoder.finish()
+  except IOError as e:
+    raise newException(SerializationError, "Failed to write value: " & e.msg)
 
 # Keep the old encode functions for compatibility
 template encodeAbi(x: untyped): seq[byte] =

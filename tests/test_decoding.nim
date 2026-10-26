@@ -16,6 +16,20 @@ type SomeDistinctType = distinct uint16
 func `==`*(a, b: SomeDistinctType): bool =
   uint16(a) == uint16(b)
 
+type
+  DistinctArray = distinct array[2, uint16]
+  DistinctTuple = distinct (uint8, DynBytes)
+  DistinctBytes = distinct DynBytes
+
+func `==`*(a, b: DistinctArray): bool =
+  array[2, uint16](a) == array[2, uint16](b)
+
+func `==`*(a, b: DistinctTuple): bool =
+  distinctBase(a) == distinctBase(b)
+
+func `==`*(a, b: DistinctBytes): bool =
+  distinctBase(a) == distinctBase(b)
+
 suite "ABI decoding":
   proc checkDecode[T](value: T) =
     let encoded = Abi.encode(value)
@@ -150,6 +164,13 @@ suite "ABI decoding":
     checkDecode(Int256)
     checkDeprecatedDecode(UInt128.high)
     checkDeprecatedDecode(Int128.low)
+    check not compiles(Abi.decode(newSeq[byte](64), StUint[512]))
+    check not compiles(Abi.decode(newSeq[byte](64), StInt[512]))
+
+    var uint512: StUint[512]
+    var int512: StInt[512]
+    check not compiles(decode(newSeq[byte](64), 0, 0, uint512))
+    check not compiles(decode(newSeq[byte](64), 0, 0, int512))
 
   test "decodes addresses":
     checkDecode(address(3))
@@ -237,6 +258,14 @@ suite "ABI decoding":
 
   test "decodes distinct types as their base type":
     checkDecode(SomeDistinctType(0xAABB'u16))
+
+    let a = [1'u16, 2'u16]
+    let b = (3'u8, DynBytes(@[4'u8]))
+    let c = DynBytes(@[5'u8])
+    let distinctTuple = (DistinctArray(a), DistinctTuple(b), DistinctBytes(c))
+    checkDecode(distinctTuple)
+    check Abi.decode(Abi.encode( (a, b, c) ), typeof(distinctTuple)) ==
+      distinctTuple
 
   test "decodes tuples":
     let a = true
