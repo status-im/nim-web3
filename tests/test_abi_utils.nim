@@ -38,6 +38,8 @@ suite "ABI utils":
       staticSize(uint8) == abiSlotSize
       staticSize(array[33, uint8]) == 33 * abiSlotSize
       staticSize(FixedBytes[32]) == abiSlotSize
+      staticSize(Address) == abiSlotSize
+      staticSize(Hash32) == abiSlotSize
       staticSize(array[2, array[2, uint16]]) == 4 * abiSlotSize
       staticSize((uint8, array[2, uint16])) == 3 * abiSlotSize
       staticSize(Struct[(uint8, bool)]) == 2 * abiSlotSize

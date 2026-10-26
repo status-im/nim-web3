@@ -152,6 +152,9 @@ suite "ABI decoding":
     checkDecode(FixedBytes[32](randomBytes[32]()))
     check not compiles(checkDecode(FixedBytes[33](randomBytes[33]())))
 
+    var bytes33: FixedBytes[33]
+    check not compiles(decode(newSeq[byte](64), 0, 0, bytes33))
+
   test "decodes uint8 arrays":
     # Only FixedBytes arrays are packed, not uint8 (or Nim byte) arrays
     checkDecode([1'u8, 2'u8, 3'u8])
@@ -174,6 +177,11 @@ suite "ABI decoding":
     checkDecode(DynBytes(@[1'u8, 2'u8, 3'u8]))
     checkDecode(DynBytes(@(randomBytes[32]())))
     checkDecode(DynBytes(@(randomBytes[33]())))
+
+    let value = DynBytes(@[1'u8, 2'u8, 3'u8])
+    var decoded: DynBytes
+    check decode(Abi.encode((value,)), 0, 0, decoded) == 32
+    check decoded == value
 
   test "fails to decode seq when padding does not consist of zeroes":
     var value = @(randomBytes[64]())

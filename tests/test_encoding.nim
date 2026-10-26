@@ -88,6 +88,7 @@ suite "ABI encoding":
 
     let bytes33 = FixedBytes[33](randomBytes[33]())
     check not compiles(Abi.encode(bytes33))
+    check not compiles(encode(bytes33))
 
   test "encodes uint8 arrays":
     # Only FixedBytes arrays are packed, not uint8 (or Nim byte) arrays
@@ -99,6 +100,7 @@ suite "ABI encoding":
 
     let bytes33 = randomBytes[33]()
     check Abi.encode(bytes33) == bytes33.mapIt(31.zeroes & it).concat()
+    check not compiles(encode(bytes33))
 
   test "encodes byte sequences":
     let bytes3 = DynBytes(@[1'u8, 2'u8, 3'u8])

@@ -260,18 +260,24 @@ func encode*[bits: static[int]](x: StInt[bits]): seq[byte] {.deprecated: "use Ab
   @(x.toBytesBE())
 
 func encodeFixed(a: openArray[byte]): seq[byte] =
-  if a.len notin 1 .. abiSlotSize:
-    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
-    raiseAssert "bytes<M> has to fit into a single slot"
-
   var padding = a.len mod 32
   if padding != 0: padding = 32 - padding
   result.setLen(padding) # Zero fill padding
   result.add(a)
 
-func encode*[N: static int](b: FixedBytes[N]): seq[byte] {.deprecated: "use Abi.encode instead" .} = encodeFixed(b.data)
+func encode*[N: static int](b: FixedBytes[N]): seq[byte] {.deprecated: "use Abi.encode instead" .} =
+  when N notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "bytes<M> has to fit into a single slot".}
+  encodeFixed(b.data)
+
 func encode*(b: Address): seq[byte] {.deprecated: "use Abi.encode instead" .} = encodeFixed(b.data)
-func encode*[N](b: array[N, byte]): seq[byte] {.inline, deprecated: "use Abi.encode instead".} = encodeFixed(b)
+
+func encode*[N](b: array[N, byte]): seq[byte] {.inline, deprecated: "use Abi.encode instead".} =
+  when b.len notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "bytes<M> has to fit into a single slot".}
+  encodeFixed(b)
 
 func encodeDynamic(v: openArray[byte]): seq[byte] =
   result = encode(v.len.u256)
