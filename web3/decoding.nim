@@ -67,6 +67,10 @@ proc decode(_: var AbiDecoder, _: type uint): uint {.error:
   "ABI: plain 'uint' is forbidden. Use uint8/16/32/64 or UInt256."}
 
 proc decode(decoder: var AbiDecoder, T: type UInt): T {.raises: [SerializationError].} =
+  when T is StUint:
+    when T.bits > 256:
+      # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+      {.error: "uint<M> has to fit into a single slot".}
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
@@ -75,6 +79,9 @@ proc decode(decoder: var AbiDecoder, T: type UInt): T {.raises: [SerializationEr
   return T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
 
 proc decode(decoder: var AbiDecoder, T: type StInt): T {.raises: [SerializationError].} =
+  when T.bits > 256:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "int<M> has to fit into a single slot".}
   var buf = decoder.read(sizeof(T))
 
   let padding = abiSlotSize - sizeof(T)
@@ -353,12 +360,18 @@ proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError
 
 # Keep the old encode functions for compatibility
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use Abi.decode instead"} =
+  when to.bits > 256:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "uint<M> has to fit into a single slot".}
   const meaningfulLen = to.bits div 8
   let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
   abiSlotSize
 
 func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int {.deprecated: "use Abi.decode instead"} =
+  when N > 256:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "int<M> has to fit into a single slot".}
   const meaningfulLen = N div 8
   let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))

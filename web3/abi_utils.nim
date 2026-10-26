@@ -32,6 +32,11 @@ func isDynamic*(T: type): bool =
       if typeof(v).isDynamic:
         return true
     false
+  elif T is StInt | StUint:
+    when T.bits > 256:
+      # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+      {.error: "uint<M> and int<M> have to fit into a single slot".}
+    false
   elif T is object:
     T.isDynamicObject
   elif T is distinct:
@@ -62,7 +67,12 @@ func staticSize*(T: type): int {.compileTime.} =
     for v in default(T).fields():
       size += typeof(v).staticSize
     size
-  elif T is object and T isnot StInt | StUint:
+  elif T is StInt | StUint:
+    when T.bits > 256:
+      # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+      {.error: "uint<M> and int<M> have to fit into a single slot".}
+    abiSlotSize
+  elif T is object:
     var size = 0
     default(T).enumInstanceSerializedFields(_, v):
       size += typeof(v).staticSize

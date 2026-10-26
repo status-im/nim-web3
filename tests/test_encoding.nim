@@ -73,6 +73,9 @@ suite "ABI encoding":
     check Abi.encode(-1.i128) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
     check encode(-1.i128) == 0xFF'u8.repeat(32)
 
+    check not compiles(Abi.encode(1.stuint(512)))
+    check not compiles(Abi.encode(1.stint(512)))
+
   test "encodes addresses":
     let address = address(3)
     check Abi.encode(address) == 12.zeroes & @(array[20, byte](address))
@@ -259,6 +262,25 @@ suite "ABI encoding":
       31.zeroes & 64'u8 & # offset to empty (static + offset)
       32.zeroes           # empty sequence
 
+  test "encodes objects inside tuples":
+    type
+      StaticObject = object
+        a: uint8
+        skipped {.dontSerialize.}: DynBytes
+      DynamicObject = object
+        a: (uint8, DynBytes)
+    let value = (
+      StaticObject(a: 1, skipped: DynBytes(@[9'u8])),
+      DynamicObject(a: (2'u8, DynBytes(@[3'u8]))))
+    check Abi.encode(value) ==
+      31.zeroes & 1'u8 &  # value[0].a
+      31.zeroes & 64'u8 & # offset to value[1] (2 * 32 bytes)
+      31.zeroes & 32'u8 & # offset to value[1].a
+      31.zeroes & 2'u8 &  # value[1].a[0]
+      31.zeroes & 64'u8 & # offset to value[1].a[1] (2 * 32 bytes)
+      31.zeroes & 1'u8 &  # value[1].a[1] length
+      3'u8 & 31.zeroes    # value[1].a[1] data
+
   test "encodes arrays":
     let a, b = FixedBytes[32](randomBytes[32]())
     check Abi.encode([a, b]) ==
@@ -370,6 +392,25 @@ suite "ABI encoding":
     type SomeDistinctType = distinct uint16
     let value = 0xAABB'u16
     check Abi.encode(SomeDistinctType(value)) == Abi.encode(value)
+
+    type
+      DistinctArray = distinct array[2, uint16]
+      DistinctTuple = distinct (uint8, DynBytes)
+      DistinctBytes = distinct DynBytes
+    let a = [1'u16, 2'u16]
+    let b = (3'u8, DynBytes(@[4'u8]))
+    let c = DynBytes(@[5'u8])
+    let distinctTuple = (DistinctArray(a), DistinctTuple(b), DistinctBytes(c))
+    check Abi.encode(distinctTuple) == Abi.encode( (a, b, c) )
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                    # a[0]
+      31.zeroes & 2'u8 &                    # a[1]
+      31.zeroes & 128'u8 &                  # offset to b (4 * 32 bytes)
+      30.zeroes & 1'u8 & 0'u8 &             # offset to c (8 * 32 bytes)
+      31.zeroes & 3'u8 &                    # b[0]
+      31.zeroes & 64'u8 &                   # offset to b[1] (2 * 32 bytes)
+      31.zeroes & 1'u8 & b[1] & 31.zeroes & # b[1] (length + data)
+      31.zeroes & 1'u8 & c & 31.zeroes      # c (length + data)
 
   test "encodes zero values":
     check Abi.encode(UInt256.zero) == 32.zeroes
