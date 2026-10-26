@@ -390,7 +390,7 @@ func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicByt
   let dataLen = dataLenBig.truncate(int)
   let actualDataOffset = baseOffset + dataOffset + 32
   # TODO: Check data len, and raise?
-  to = input[actualDataOffset ..< actualDataOffset + dataLen]
+  to = typeof(to)(input[actualDataOffset ..< actualDataOffset + dataLen])
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int {.deprecated: "use Abi.decode instead"} =
   var dataOffsetBig, dataLenBig: UInt256
