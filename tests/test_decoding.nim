@@ -25,12 +25,17 @@ suite "ABI decoding":
     var a: array[N, byte]
     for b in a.mitems:
         b = rand(byte)
-    return a
+    a
 
   proc checkDecode(T: type) =
     checkDecode(T.default)
     checkDecode(T.low)
     checkDecode(T.high)
+
+  proc checkDeprecatedDecode[T](value: T) =
+    var decoded: T
+    check decode(Abi.encode((value,)), 0, 0, decoded) == 32
+    check decoded == value
 
   test "decodes uint8, uint16, 32, 64":
     checkDecode(uint8)
@@ -143,20 +148,32 @@ suite "ABI decoding":
     checkDecode(UInt256)
     checkDecode(Int128)
     checkDecode(Int256)
+    checkDeprecatedDecode(UInt128.high)
+    checkDeprecatedDecode(Int128.low)
 
   test "decodes addresses":
     checkDecode(address(3))
 
-  test "decodes byte arrays":
+  test "decodes FixedBytes":
+    checkDecode(FixedBytes[3]([1'u8, 2'u8, 3'u8]))
+    checkDecode(FixedBytes[32](randomBytes[32]()))
+    check not compiles(checkDecode(FixedBytes[33](randomBytes[33]())))
+    checkDeprecatedDecode(FixedBytes[3]([1'u8, 2'u8, 3'u8]))
+
+    var bytes33: FixedBytes[33]
+    check not compiles(decode(newSeq[byte](64), 0, 0, bytes33))
+
+  test "decodes uint8 arrays":
+    # Only FixedBytes arrays are packed, not uint8 (or Nim byte) arrays
     checkDecode([1'u8, 2'u8, 3'u8])
     checkDecode(randomBytes[32]())
     checkDecode(randomBytes[33]())
     checkDecode(randomBytes[65]())
 
   test "fails to decode array when padding does not consist of zeroes":
-    var arr = randomBytes[33]()
+    var arr = FixedBytes[25](randomBytes[25]())
     var encoded = Abi.encode(arr)
-    encoded[62] = 42'u8
+    encoded[29] = 42'u8
 
     try:
       discard Abi.decode(encoded, type(arr))
@@ -165,32 +182,35 @@ suite "ABI decoding":
       check decoded.msg == "invalid padding found"
 
   test "decodes byte sequences":
-    checkDecode(@[1'u8, 2'u8, 3'u8])
-    checkDecode(@(randomBytes[32]()))
-    checkDecode(@(randomBytes[33]()))
+    checkDecode(DynBytes(@[1'u8, 2'u8, 3'u8]))
+    checkDecode(DynBytes(@(randomBytes[32]())))
+    checkDecode(DynBytes(@(randomBytes[33]())))
+    checkDeprecatedDecode(DynBytes(@[1'u8, 2'u8, 3'u8]))
 
   test "fails to decode seq when padding does not consist of zeroes":
     var value = @(randomBytes[64]())
     value[62] = 42'u8
 
     try:
-      discard Abi.decode(value, seq[byte])
+      discard Abi.decode(value, DynBytes)
       fail()
     except SerializationError as decoded:
       check decoded.msg == "invalid padding found"
 
   test "decodes sequences":
-    let seq1 = @(randomBytes[33]())
-    let seq2 = @(randomBytes[32]())
+    let seq1 = DynBytes(@(randomBytes[33]()))
+    let seq2 = DynBytes(@(randomBytes[32]()))
     let value = @[seq1, seq2]
     checkDecode(value)
 
   test "decodes arrays with static elements":
-    checkDecode([randomBytes[32](), randomBytes[32]()])
+    checkDecode([
+      FixedBytes[32](randomBytes[32]()),
+      FixedBytes[32](randomBytes[32]())])
 
   test "decodes arrays with dynamic elements":
-    let seq1 = @(randomBytes[32]())
-    let seq2 = @(randomBytes[32]())
+    let seq1 = DynBytes(@(randomBytes[32]()))
+    let seq2 = DynBytes(@(randomBytes[32]()))
     checkDecode([seq1, seq2])
 
   test "decodes arrays with string":
@@ -220,20 +240,20 @@ suite "ABI decoding":
 
   test "decodes tuples":
     let a = true
-    let b = @[1'u8, 2'u8, 3'u8]
+    let b = DynBytes(@[1'u8, 2'u8, 3'u8])
     let c = 0xAABBCCDD'u32
-    let d = @[4'u8, 5'u8, 6'u8]
+    let d = DynBytes(@[4'u8, 5'u8, 6'u8])
     checkDecode( (a, b, c, d) )
 
   test "decodes nested tuples":
     let a = true
-    let b = @[1'u8, 2'u8, 3'u8]
+    let b = DynBytes(@[1'u8, 2'u8, 3'u8])
     let c = 0xAABBCCDD'u32
-    let d = @[4'u8, 5'u8, 6'u8]
+    let d = DynBytes(@[4'u8, 5'u8, 6'u8])
     checkDecode( (a, b, (c, d)) )
 
   test "reads elements after dynamic tuple":
-    let a = @[1'u8, 2'u8, 3'u8]
+    let a = DynBytes(@[1'u8, 2'u8, 3'u8])
     let b = 0xAABBCCDD'u32
     checkDecode( ((a,), b) )
 
@@ -243,13 +263,13 @@ suite "ABI decoding":
     checkDecode( ((a,), b) )
 
   test "reads static tuple inside dynamic tuple":
-    let a = @[1'u8, 2'u8, 3'u8]
+    let a = DynBytes(@[1'u8, 2'u8, 3'u8])
     let b = 0xAABBCCDD'u32
     checkDecode( (a, (b,)) )
     checkDecode( (a, (b, [b, b])) )
 
   test "reads static array inside dynamic tuple":
-    let a = @[1'u8, 2'u8, 3'u8]
+    let a = DynBytes(@[1'u8, 2'u8, 3'u8])
     let b = 0xAABBCCDD'u32
     checkDecode( (a, [b, b]) )
     checkDecode( ([b, b], a) )
