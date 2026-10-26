@@ -1,12 +1,12 @@
 import
-    std/typetraits,
-    stint,
-    faststreams/inputs,
-    stew/[byteutils, endians2, assign2],
-    serialization,
-    ./abi_serialization,
-    ./eth_api_types,
-    ./abi_utils
+  std/typetraits,
+  stint,
+  faststreams/inputs,
+  stew/[byteutils, endians2, assign2],
+  serialization,
+  ./abi_serialization,
+  ./eth_api_types,
+  ./abi_utils
 
 {.push raises: [].}
 
@@ -129,28 +129,37 @@ proc decode(decoder: var AbiDecoder, T: type Address): T {.raises: [Serializatio
 
   T(bytes)
 
-proc decode[I](decoder: var AbiDecoder, T: type array[I, byte]): T {.raises: [SerializationError].} =
-  var arr: T
+proc decode[I](
+    decoder: var AbiDecoder,
+    T: type FixedBytes[I]): T {.raises: [SerializationError].} =
+  when I notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "bytes<M> has to fit into a single slot".}
+
+  var arr {.noinit.}: T
 
   let buf = decoder.read(arr.len)
-  arr[0..<arr.len] = buf[0..<arr.len]
+  distinctBase(arr)[0..<arr.len] = buf[0..<arr.len]
   checkRightPadding(buf, arr.len, buf.len)
 
   return arr
 
-proc decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [SerializationError].} =
+proc decode[T: DynamicBytes](
+    decoder: var AbiDecoder, t: type T): T {.raises: [SerializationError].} =
   let len = decoder.decode(uint64)
+  if len notin T.minLen.uint64 .. T.maxLen.uint64:
+    raise newException(SerializationError, "reading past end of bytes")
 
   if len == 0:
-    return T.default
+    return T(@[])
 
   let buf = decoder.read(len.int)
   checkRightPadding(buf, len.int, buf.len)
 
-  return buf[0 ..< len]
+  return T(buf[0 ..< len])
 
 proc decode(decoder: var AbiDecoder, T: type string): T {.raises: [SerializationError].} =
-  string.fromBytes(decoder.decode(seq[byte]))
+  string.fromBytes(distinctBase(decoder.decode(DynamicBytes[0])))
 
 proc decode[T](decoder: var AbiDecoder, _: type seq[T]): seq[T]
     {.raises: [SerializationError].}
@@ -159,7 +168,7 @@ proc decode[I, T](decoder: var AbiDecoder, _: type array[I, T]): array[I, T]
 proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [SerializationError].}
 
 proc decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [SerializationError].} =
-  T(decoder.decode(distinctBase T))
+  T(decoder.decode(distinctBase(T, recursive = false)))
 
 
 proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.raises: [SerializationError].} =
@@ -251,6 +260,7 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   let arity = type(res).arity
   var offsets = newSeq[uint64](arity + 1)
   var i = 0
+  let base {.used.} = decoder.input.pos()
 
   # Decode static fields first and get the offsets for dynamic fields.
   for field in res.fields:
@@ -293,7 +303,8 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
   ## | ...                        |
   ## +----------------------------+
   var resultObj: T
-  var offsets = newSeq[uint64](totalSerializedFields(T))
+  var offsets {.used.} = newSeq[uint64](totalSerializedFields(T))
+  let base {.used.} = decoder.input.pos()
 
   # Decode static fields first and get the offsets for dynamic fields.
   var i = 0
@@ -343,15 +354,15 @@ proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError
 # Keep the old encode functions for compatibility
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use Abi.decode instead"} =
   const meaningfulLen = to.bits div 8
-  let offset = offset + baseOffset
+  let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
+  abiSlotSize
 
 func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int {.deprecated: "use Abi.decode instead"} =
   const meaningfulLen = N div 8
-  let offset = offset + baseOffset
+  let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
+  abiSlotSize
 
 func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int {.deprecated: "use Abi.decode instead"} =
   let meaningfulLen = to.len
@@ -364,19 +375,25 @@ func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openAr
   meaningfulLen + padding
 
 func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline, deprecated: "use Abi.decode instead".} =
-  decodeFixed(input, baseOffset, offset, array[N, byte](to))
+  when N notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "bytes<M> has to fit into a single slot".}
+  let offset = baseOffset + offset
+  assign(array[N, byte](to), input.toOpenArray(offset, offset + N - 1))
+  abiSlotSize
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline, deprecated: "use Abi.decode instead".} =
   decodeFixed(input, baseOffset, offset, array[20, byte](to))
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int {.deprecated: "use Abi.decode instead"} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.deprecated: "use Abi.decode instead"} =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
   discard decode(input, baseOffset, dataOffset, dataLenBig)
   let dataLen = dataLenBig.truncate(int)
   let actualDataOffset = baseOffset + dataOffset + 32
-  to = input[actualDataOffset ..< actualDataOffset + dataLen]
+  # TODO: Check data len, and raise?
+  to = typeof(to)(input[actualDataOffset ..< actualDataOffset + dataLen])
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int {.deprecated: "use Abi.decode instead"} =
   var dataOffsetBig, dataLenBig: UInt256
@@ -386,12 +403,6 @@ func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): i
   let dataLen = dataLenBig.truncate(int)
   let actualDataOffset = baseOffset + dataOffset + 32
   to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline, deprecated: "use Abi.decode instead".} =
-  var s: seq[byte]
-  result = decode(input, baseOffset, offset, s)
-  # TODO: Check data len, and raise?
-  to = typeof(to)(move(s))
 
 func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use Abi.decode instead"}
 
