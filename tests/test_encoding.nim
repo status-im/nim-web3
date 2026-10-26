@@ -82,6 +82,7 @@ suite "ABI encoding":
   test "encodes FixedBytes":
     let bytes3 = FixedBytes[3]([1'u8, 2'u8, 3'u8])
     check Abi.encode(bytes3) == @[1'u8, 2'u8, 3'u8] & 29.zeroes # Fixed array are right-padded with zeroes
+    check encode(bytes3) == @[1'u8, 2'u8, 3'u8] & 29.zeroes
 
     let bytes32 = FixedBytes[32](randomBytes[32]())
     check Abi.encode(bytes32) == @(bytes32.data)

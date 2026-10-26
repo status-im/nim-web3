@@ -35,7 +35,7 @@ func isDynamic*(T: type): bool =
   elif T is object:
     T.isDynamicObject
   elif T is distinct:
-    distinctBase(T).isDynamic
+    distinctBase(T, recursive = false).isDynamic
   else:
     false
 

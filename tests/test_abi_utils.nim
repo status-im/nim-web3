@@ -14,6 +14,8 @@ type DistinctBytes = distinct DynBytes
 
 type DistinctTuple = distinct (uint8, DynBytes)
 
+type DistinctFixedBytes = distinct FixedBytes[33]
+
 suite "ABI utils":
   staticTest "can determine whether types are dynamic or static":
     check:
@@ -32,6 +34,8 @@ suite "ABI utils":
       not compiles(isStatic(FixedBytes[33]))
       not compiles(isDynamic(FixedBytes[0]))
       not compiles(isDynamic(FixedBytes[33]))
+      not compiles(isStatic(DistinctFixedBytes))
+      not compiles(isDynamic(DistinctFixedBytes))
 
   staticTest "can determine encoded sizes":
     check:

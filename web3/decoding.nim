@@ -376,7 +376,9 @@ func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBy
   when N notin 1 .. abiSlotSize:
     # https://docs.soliditylang.org/en/latest/abi-spec.html#types
     {.error: "bytes<M> has to fit into a single slot".}
-  decodeFixed(input, baseOffset, offset, array[N, byte](to))
+  let offset = baseOffset + offset
+  assign(array[N, byte](to), input.toOpenArray(offset, offset + N - 1))
+  abiSlotSize
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline, deprecated: "use Abi.decode instead".} =
   decodeFixed(input, baseOffset, offset, array[20, byte](to))

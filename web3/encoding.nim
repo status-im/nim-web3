@@ -269,7 +269,9 @@ func encode*[N: static int](b: FixedBytes[N]): seq[byte] {.deprecated: "use Abi.
   when N notin 1 .. abiSlotSize:
     # https://docs.soliditylang.org/en/latest/abi-spec.html#types
     {.error: "bytes<M> has to fit into a single slot".}
-  encodeFixed(b.data)
+  var res = @(b.data)
+  res.setLen(abiSlotSize)
+  res
 
 func encode*(b: Address): seq[byte] {.deprecated: "use Abi.encode instead" .} = encodeFixed(b.data)
 

@@ -152,6 +152,11 @@ suite "ABI decoding":
     checkDecode(FixedBytes[32](randomBytes[32]()))
     check not compiles(checkDecode(FixedBytes[33](randomBytes[33]())))
 
+    let value = FixedBytes[3]([1'u8, 2'u8, 3'u8])
+    var decoded: FixedBytes[3]
+    check decode(Abi.encode(value), 0, 0, decoded) == 32
+    check decoded == value
+
     var bytes33: FixedBytes[33]
     check not compiles(decode(newSeq[byte](64), 0, 0, bytes33))
 
