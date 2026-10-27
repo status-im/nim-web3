@@ -303,6 +303,25 @@ suite "ABI decoding":
     checkDecode( (a, [b, b]) )
     checkDecode( ([b, b], a) )
 
+  test "decodes offsets relative to the enclosing tuple":
+    let a = DynBytes(@[1'u8])
+    let encoded =
+      Abi.encode(1'u8) &
+      Abi.encode(64'u64) & # offset to inner tuple
+      Abi.encode(2'u8) &
+      Abi.encode(96'u64) & # offset to a, relative to inner tuple
+      Abi.encode(32'u64) & # unused
+      Abi.encode(a)
+    check Abi.decode(
+      encoded, (uint8, (uint8, DynBytes))) == (1'u8, (2'u8, a))
+    let encodedSeq =
+      Abi.encode(32'u64) & # offset to sequence
+      Abi.encode(1'u64) &  # sequence length
+      Abi.encode(64'u64) & # offset to a, relative to sequence items
+      Abi.encode(32'u64) & # unused
+      Abi.encode(a)
+    check Abi.decode(encodedSeq, (seq[DynBytes],)) == (@[a],)
+
   test "reads empty tuples":
     checkDecode( ((),) )
 

@@ -60,6 +60,11 @@ template checkRightPadding(buf: openArray[byte], paddingStart: int, paddingEnd: 
     if buf[i] != 0x00'u8:
       raise newException(SerializationError, "invalid padding found")
 
+proc skipTo(decoder: var AbiDecoder, base: int, offset: uint64) =
+  let consumed = uint64(decoder.input.pos() - base)
+  if offset > consumed:
+    decoder.input.advance(int(offset - consumed))
+
 proc decode(_: var AbiDecoder, _: type int): int {.error:
   "ABI: plain 'int' is forbidden. Use int8/16/32/64 or Int256."}
 
@@ -202,6 +207,7 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
     # For the dynamic array, the size is should be None,
     # and the decoder will read the size from the input stream.
     var len = if size.isNone: decoder.decode(uint64) else: size.get()
+    let base = decoder.input.pos()
 
     var offsets = newSeq[uint64](len)
     for i in 0..<len:
@@ -209,9 +215,7 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
 
     res = newSeq[T](len)
     for i in 0..<len:
-      let pos = decoder.input.pos()
-      if offsets[i].int > pos:
-        decoder.input.advance(offsets[i].int - pos)
+      decoder.skipTo(base, offsets[i])
       res[i] = decoder.decode(T)
 
     return res
@@ -281,9 +285,7 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   # Decode dynamic fields using the offsets.
   for field in res.fields:
     when isDynamic(typeof(field)):
-      let pos = decoder.input.pos()
-      if offsets[i].int > pos:
-        decoder.input.advance(offsets[i].int - pos)
+      decoder.skipTo(base, offsets[i])
       field = decoder.decode(typeof(field))
 
     inc i
@@ -326,9 +328,7 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
   i = 0
   resultObj.enumInstanceSerializedFields(_, fieldValue):
     when isDynamic(typeof(fieldValue)):
-      let pos = decoder.input.pos()
-      if offsets[i].int > pos:
-        decoder.input.advance(offsets[i].int - pos)
+      decoder.skipTo(base, offsets[i])
       fieldValue = decoder.decode(typeof(fieldValue))
     inc i
 
