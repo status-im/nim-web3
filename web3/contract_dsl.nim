@@ -4,7 +4,7 @@ import
   ./[encoding, decoding, eth_api_types],
   ./conversions,
   stint,
-  stew/byteutils
+  stew/[byteutils, shims/macros]
 
 type
   ContractInstance*[TContract, TSender] = object
@@ -80,41 +80,37 @@ proc getSignature(function: FunctionObject | EventObject): NimNode =
       result.add(newLit(","))
   result.add(newLit(")"))
 
-proc parseContract(body: NimNode): seq[InterfaceObject] =
+func parseContract(body: NimNode): seq[InterfaceObject] =
   proc parseOutputs(outputNode: NimNode): seq[FunctionInputOutput] =
     result.add FunctionInputOutput(typ: (if outputNode.kind == nnkEmpty: ident"void" else: outputNode))
 
-  proc parseInputs(inputNodes: NimNode): seq[FunctionInputOutput] =
-    for i in 1..<inputNodes.len:
-      let input = inputNodes[i]
-      input.expectKind(nnkIdentDefs)
-      let typ = input[^2]
-      for j in 0 .. input.len - 3:
-        let arg = input[j]
-        result.add(FunctionInputOutput(
-          name: $arg,
-          typ: typ,
-        ))
+  func parseInputs(inputNodes: NimNode): seq[FunctionInputOutput] =
+    var inputs: seq[FunctionInputOutput]
+    for param in inputNodes.routineParams():
+      inputs.add(FunctionInputOutput(
+        name: param.name.identName,
+        typ: param.typ,
+      ))
+    inputs
 
-  proc parseEventInputs(inputNodes: NimNode): seq[EventInput] =
-    for i in 1..<inputNodes.len:
-      let input = inputNodes[i]
-      input.expectKind(nnkIdentDefs)
-      let typ = input[^2]
-      for j in 0 .. input.len - 3:
-        let arg = input[j]
-        case typ.kind:
-        of nnkBracketExpr:
-          if $typ[0] == "indexed":
-            result.add EventInput(
-              name: $arg,
-              typ: typ[1],
-              indexed: true
-            )
-          else:
-            result.add EventInput(name: $arg, typ: typ)
+  func parseEventInputs(inputNodes: NimNode): seq[EventInput] =
+    var inputs: seq[EventInput]
+    for param in inputNodes.routineParams():
+      let typ = param.typ.bracketExpr
+      let name = param.name.identName
+      case typ.kind:
+      of nnkBracketExpr:
+        if typ[0].eqIdent("indexed"):
+          inputs.add EventInput(
+            name: name,
+            typ: typ[1],
+            indexed: true
+          )
         else:
-          result.add EventInput(name: $arg, typ: typ)
+          inputs.add EventInput(name: name, typ: typ)
+      else:
+        inputs.add EventInput(name: name, typ: typ)
+    inputs
 
   var
     constructor: Opt[ConstructorObject]
@@ -124,17 +120,17 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
     doAssert(procdef.kind == nnkProcDef,
       "Contracts can only be built with procedures")
     let
-      isconstructor = procdef[4].findChild(it.strVal == "constructor") != nil
-      isevent = procdef[4].findChild(it.strVal == "event") != nil
+      isconstructor = procdef[4].hasPragma("constructor")
+      isevent = procdef[4].hasPragma("event")
     doAssert(not (isconstructor and constructor.isSome),
       "Contract can only have a single constructor")
     doAssert(not (isconstructor and isevent),
       "Can't be both event and constructor")
     if not isevent:
       let
-        ispure = procdef[4].findChild(it.strVal == "pure") != nil
-        isview = procdef[4].findChild(it.strVal == "view") != nil
-        ispayable = procdef[4].findChild(it.strVal == "payable") != nil
+        ispure = procdef[4].hasPragma("pure")
+        isview = procdef[4].hasPragma("view")
+        ispayable = procdef[4].hasPragma("payable")
       doAssert(not (ispure and isview),
         "can't be both `pure` and `view`")
       doAssert(not ((ispure or isview) and ispayable),
@@ -147,17 +143,17 @@ proc parseContract(body: NimNode): seq[InterfaceObject] =
         ))
       else:
         functions.add FunctionObject(
-          name: procdef[0].strVal,
+          name: procdef[0].identName,
           stateMutability: if ispure: pure elif isview: view elif ispayable: payable else: nonpayable,
           inputs: parseInputs(procdef[3]),
           outputs: parseOutputs(procdef[3][0])
         )
     else:
-      let isanonymous = procdef[4].findChild(it.strVal == "anonymous") != nil
+      let isanonymous = procdef[4].hasPragma("anonymous")
       doAssert(procdef[3][0].kind == nnkEmpty,
         "Events can't have return values")
       events.add EventObject(
-        name: procdef[0].strVal,
+        name: procdef[0].identName,
         inputs: parseEventInputs(procdef[3]),
         anonymous: isanonymous
       )
@@ -184,7 +180,9 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
     funcParamsTuple.add(ident input.name)
 
   result = quote do:
-    proc `procName`*[TSender](`senderName`: ContractInstance[`cname`, TSender]): auto {.raises: [SerializationError].} =
+    proc `procName`*[TSender](
+        `senderName`: ContractInstance[`cname`, TSender]
+    ): auto {.raises: [SerializationError].} =
       discard
   for input in functionObject.inputs:
     result[3].add nnkIdentDefs.newTree(
@@ -196,14 +194,16 @@ proc genFunction(cname: NimNode, functionObject: FunctionObject): NimNode =
     result[6] = quote do:
       mixin createImmutableContractInvocation
       return createImmutableContractInvocation(
-          `senderName`.sender, `output`,
-          static(keccak256(`signature`).data[0..<4]) & Abi.encode(`funcParamsTuple`))
+        `senderName`.sender, `output`,
+        static(keccak256(`signature`).data[0..<4]) &
+        Abi.encode(`funcParamsTuple`))
   else:
     result[6] = quote do:
       mixin createMutableContractInvocation
       return createMutableContractInvocation(
-          `senderName`.sender, `output`,
-          static(keccak256(`signature`).data[0..<4]) & Abi.encode(`funcParamsTuple`))
+        `senderName`.sender, `output`,
+        static(keccak256(`signature`).data[0..<4]) &
+        Abi.encode(`funcParamsTuple`))
 
 proc `&`(a, b: openArray[byte]): seq[byte] =
   let sza = a.len
@@ -224,7 +224,10 @@ proc genConstructor(cname: NimNode, constructorObject: ConstructorObject): NimNo
     funcParamsTuple.add(ident input.name)
 
   result = quote do:
-    proc deployContract*[TSender](`sender`: TSender, contractType: typedesc[`cname`], `contractCode`: openArray[byte]): auto =
+    proc deployContract*[TSender](
+        `sender`: TSender,
+        contractType: typedesc[`cname`],
+        `contractCode`: openArray[byte]): auto =
       discard
   for input in constructorObject.inputs:
     result[3].add nnkIdentDefs.newTree(
