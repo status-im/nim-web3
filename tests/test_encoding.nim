@@ -292,6 +292,30 @@ suite "ABI encoding":
     check encode(DynBytes(a[1..3])) ==
       Abi.encode(3'u64) & @[2'u8, 3'u8, 4'u8] & 29.zeroes # [2, 3, 4, ..., 0, 0]
 
+    check encode(a[1..3]) ==
+      Abi.encode(3'u64) &
+      31.zeroes & 2'u8 &
+      31.zeroes & 3'u8 &
+      31.zeroes & 4'u8
+
+  test "encodes dynamic tuples with the deprecated API":
+    let a = 1.u256
+    let b = (DynBytes(@[2'u8]),)
+    check encode( (a, b) ) ==
+      31.zeroes & 1'u8 &                    # a
+      31.zeroes & 64'u8 &                   # offset to b (2 * 32 bytes)
+      31.zeroes & 32'u8 &                   # offset to b[0]
+      31.zeroes & 1'u8 & 2'u8 & 31.zeroes   # b[0] (length + data)
+    let c = @[(DynBytes(@[3'u8]),), (DynBytes(@[4'u8]),)]
+    check encode(c) ==
+      31.zeroes & 2'u8 &                    # c length
+      31.zeroes & 64'u8 &                   # offset to c[0] (2 * 32 bytes)
+      31.zeroes & 160'u8 &                  # offset to c[1] (5 * 32 bytes)
+      31.zeroes & 32'u8 &                   # offset to c[0][0]
+      31.zeroes & 1'u8 & 3'u8 & 31.zeroes & # c[0][0] (length + data)
+      31.zeroes & 32'u8 &                   # offset to c[1][0]
+      31.zeroes & 1'u8 & 4'u8 & 31.zeroes   # c[1][0] (length + data)
+
   test "encodes sequences":
     let a, b = @[FixedBytes[32](randomBytes[32]())]
     #

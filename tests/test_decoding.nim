@@ -48,8 +48,16 @@ suite "ABI decoding":
 
   proc checkDeprecatedDecode[T](value: T) =
     var decoded: T
-    check decode(Abi.encode((value,)), 0, 0, decoded) == 32
-    check decoded == value
+    check:
+      decode(Abi.encode((value,)), 0, 0, decoded) == 32
+      decoded == value
+
+  template checkPastEnd(encoded: seq[byte], T: type) =
+    try:
+      discard Abi.decode(encoded, T)
+      fail()
+    except SerializationError as decoded:
+      check decoded.msg == "reading past end of bytes"
 
   test "decodes uint8, uint16, 32, 64":
     checkDecode(uint8)
@@ -81,15 +89,21 @@ suite "ABI decoding":
     except SerializationError as decoded:
       check decoded.msg == "reading past end of bytes"
 
-  test "fails to decode when trailing bytes remain":
-    var encoded = Abi.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
-    encoded.add(uint8.fromBytes(randomBytes[8](), bigEndian))
+  test "fails to decode offsets and lengths past end":
+    let tail = Abi.encode(DistinctBytes(@[1'u8]))
+    checkPastEnd(Abi.encode(4096'u64) & tail, (DistinctBytes,))
+    checkPastEnd(Abi.encode(uint64.high) & tail, (DistinctBytes,))
+    for length in [1'u64 shl 62, uint64.high]:
+      let encoded = Abi.encode(32'u64) & Abi.encode(length)
+      checkPastEnd(encoded, (DistinctBytes,))
+      checkPastEnd(encoded, (seq[UInt256],))
+      checkPastEnd(encoded, (seq[DistinctBytes],))
 
-    try:
-      discard Abi.decode(encoded, uint8)
-      fail()
-    except SerializationError as decoded:
-      check decoded.msg == "unread trailing bytes found"
+  test "ignores trailing bytes":
+    let
+      value = uint8.fromBytes(randomBytes[8](), bigEndian)
+      encoded = Abi.encode(value) & @(randomBytes[8]())
+    check Abi.decode(encoded, uint8) == value
 
   test "fails to decode when padding does not consist of zeroes with unsigned value":
     var encoded = Abi.encode(uint8.fromBytes(randomBytes[8](), bigEndian))
@@ -164,13 +178,15 @@ suite "ABI decoding":
     checkDecode(Int256)
     checkDeprecatedDecode(UInt128.high)
     checkDeprecatedDecode(Int128.low)
-    check not compiles(Abi.decode(newSeq[byte](64), StUint[512]))
-    check not compiles(Abi.decode(newSeq[byte](64), StInt[512]))
+    check:
+      not compiles(Abi.decode(newSeq[byte](64), StUint[512]))
+      not compiles(Abi.decode(newSeq[byte](64), StInt[512]))
 
     var uint512: StUint[512]
     var int512: StInt[512]
-    check not compiles(decode(newSeq[byte](64), 0, 0, uint512))
-    check not compiles(decode(newSeq[byte](64), 0, 0, int512))
+    check:
+      not compiles(decode(newSeq[byte](64), 0, 0, uint512))
+      not compiles(decode(newSeq[byte](64), 0, 0, int512))
 
   test "decodes addresses":
     checkDecode(address(3))
@@ -219,9 +235,10 @@ suite "ABI decoding":
       check decoded.msg == "invalid padding found"
 
   test "decodes sequences":
-    let seq1 = DynBytes(@(randomBytes[33]()))
-    let seq2 = DynBytes(@(randomBytes[32]()))
-    let value = @[seq1, seq2]
+    let
+      seq1 = DynBytes(@(randomBytes[33]()))
+      seq2 = DynBytes(@(randomBytes[32]()))
+      value = @[seq1, seq2]
     checkDecode(value)
 
   test "decodes arrays with static elements":
@@ -230,8 +247,9 @@ suite "ABI decoding":
       FixedBytes[32](randomBytes[32]())])
 
   test "decodes arrays with dynamic elements":
-    let seq1 = DynBytes(@(randomBytes[32]()))
-    let seq2 = DynBytes(@(randomBytes[32]()))
+    let
+      seq1 = DynBytes(@(randomBytes[32]()))
+      seq2 = DynBytes(@(randomBytes[32]()))
     checkDecode([seq1, seq2])
 
   test "decodes arrays with string":
@@ -259,59 +277,67 @@ suite "ABI decoding":
   test "decodes distinct types as their base type":
     checkDecode(SomeDistinctType(0xAABB'u16))
 
-    let a = [1'u16, 2'u16]
-    let b = (3'u8, DynBytes(@[4'u8]))
-    let c = DynBytes(@[5'u8])
-    let distinctTuple = (DistinctArray(a), DistinctTuple(b), DistinctBytes(c))
+    let
+      a = [1'u16, 2'u16]
+      b = (3'u8, DynBytes(@[4'u8]))
+      c = DynBytes(@[5'u8])
+      distinctTuple = (DistinctArray(a), DistinctTuple(b), DistinctBytes(c))
     checkDecode(distinctTuple)
     check Abi.decode(Abi.encode( (a, b, c) ), typeof(distinctTuple)) ==
       distinctTuple
 
   test "decodes tuples":
-    let a = true
-    let b = DynBytes(@[1'u8, 2'u8, 3'u8])
-    let c = 0xAABBCCDD'u32
-    let d = DynBytes(@[4'u8, 5'u8, 6'u8])
+    let
+      a = true
+      b = DynBytes(@[1'u8, 2'u8, 3'u8])
+      c = 0xAABBCCDD'u32
+      d = DynBytes(@[4'u8, 5'u8, 6'u8])
     checkDecode( (a, b, c, d) )
 
   test "decodes nested tuples":
-    let a = true
-    let b = DynBytes(@[1'u8, 2'u8, 3'u8])
-    let c = 0xAABBCCDD'u32
-    let d = DynBytes(@[4'u8, 5'u8, 6'u8])
+    let
+      a = true
+      b = DynBytes(@[1'u8, 2'u8, 3'u8])
+      c = 0xAABBCCDD'u32
+      d = DynBytes(@[4'u8, 5'u8, 6'u8])
     checkDecode( (a, b, (c, d)) )
 
   test "reads elements after dynamic tuple":
-    let a = DynBytes(@[1'u8, 2'u8, 3'u8])
-    let b = 0xAABBCCDD'u32
+    let
+      a = DynBytes(@[1'u8, 2'u8, 3'u8])
+      b = 0xAABBCCDD'u32
     checkDecode( ((a,), b) )
 
   test "reads elements after static tuple":
-    let a = 0x123'u16
-    let b = 0xAABBCCDD'u32
+    let
+      a = 0x123'u16
+      b = 0xAABBCCDD'u32
     checkDecode( ((a,), b) )
 
   test "reads static tuple inside dynamic tuple":
-    let a = DynBytes(@[1'u8, 2'u8, 3'u8])
-    let b = 0xAABBCCDD'u32
+    let
+      a = DynBytes(@[1'u8, 2'u8, 3'u8])
+      b = 0xAABBCCDD'u32
     checkDecode( (a, (b,)) )
     checkDecode( (a, (b, [b, b])) )
 
   test "reads static array inside dynamic tuple":
-    let a = DynBytes(@[1'u8, 2'u8, 3'u8])
-    let b = 0xAABBCCDD'u32
+    let
+      a = DynBytes(@[1'u8, 2'u8, 3'u8])
+      b = 0xAABBCCDD'u32
     checkDecode( (a, [b, b]) )
     checkDecode( ([b, b], a) )
 
   test "decodes offsets relative to the enclosing tuple":
-    let a = DynBytes(@[1'u8])
-    let encoded =
-      Abi.encode(1'u8) &
-      Abi.encode(64'u64) & # offset to inner tuple
-      Abi.encode(2'u8) &
-      Abi.encode(96'u64) & # offset to a, relative to inner tuple
-      Abi.encode(32'u64) & # unused
-      Abi.encode(a)
+    let
+      a = DynBytes(@[1'u8])
+      encoded =
+        Abi.encode(1'u8) &
+        Abi.encode(64'u64) & # offset to inner tuple
+        Abi.encode(2'u8) &
+        Abi.encode(96'u64) & # offset to a, relative to inner tuple
+        Abi.encode(32'u64) & # unused
+        Abi.encode(a)
     check Abi.decode(
       encoded, (uint8, (uint8, DynBytes))) == (1'u8, (2'u8, a))
     let encodedSeq =
@@ -321,6 +347,54 @@ suite "ABI decoding":
       Abi.encode(32'u64) & # unused
       Abi.encode(a)
     check Abi.decode(encodedSeq, (seq[DynBytes],)) == (@[a],)
+
+  test "decodes out-of-order and shared offsets":
+    let
+      a = DynBytes(@[10'u8])
+      b = DynBytes(@[11'u8])
+      reversed =
+        Abi.encode(1'u8) &
+        Abi.encode(64'u64) &  # offset to inner tuple
+        Abi.encode(128'u64) & # offset to a, relative to inner tuple
+        Abi.encode(64'u64) &  # offset to b, relative to inner tuple
+        Abi.encode(b) &
+        Abi.encode(a)
+    check Abi.decode(reversed, (uint8, (DynBytes, DynBytes))) == (1'u8, (a, b))
+    let shared =
+      Abi.encode(1'u8) &
+      Abi.encode(64'u64) & # offset to inner tuple
+      Abi.encode(64'u64) & # offset to a, relative to inner tuple
+      Abi.encode(64'u64) & # offset to a, relative to inner tuple
+      Abi.encode(a) &
+      Abi.encode(b)
+    check Abi.decode(shared, (uint8, (DynBytes, DynBytes))) == (1'u8, (a, a))
+    let reversedSeq =
+      Abi.encode(32'u64) &  # offset to sequence
+      Abi.encode(2'u64) &   # sequence length
+      Abi.encode(128'u64) & # offset to a, relative to sequence items
+      Abi.encode(64'u64) &  # offset to b, relative to sequence items
+      Abi.encode(b) &
+      Abi.encode(a)
+    check Abi.decode(reversedSeq, (seq[DynBytes],)) == (@[a, b],)
+
+  test "limits memory used by decoding":
+    let a = DynBytes(@(randomBytes[256]()))
+    var shared = Abi.encode(32'u64) & Abi.encode(8'u64)
+    for _ in 0 ..< 8:
+      shared &= Abi.encode(256'u64) # offset to a, relative to sequence items
+    shared &= Abi.encode(a)
+    expect(SerializationError):
+      discard Abi.decode(shared, (seq[DynBytes],))
+    let decoded = (@[a, a, a, a, a, a, a, a],)
+    check:
+      Abi.decode(shared, (seq[DynBytes],), maxMemoryFactor = 5'u) == decoded
+      Abi.decode(shared, (seq[DynBytes],), maxMemoryFactor = 0'u) == decoded
+
+    let empty = Abi.encode(32'u64) & Abi.encode(1'u64 shl 24)
+    expect(SerializationError):
+      discard Abi.decode(empty, (seq[tuple[]],))
+    check Abi.decode(
+      Abi.encode(32'u64) & Abi.encode(2'u64), (seq[tuple[]],)) == (@[(), ()],)
 
   test "reads empty tuples":
     checkDecode( ((),) )
@@ -333,7 +407,9 @@ suite "ABI decoding":
     check Abi.decode(encoded, string) == "hello"
 
   test "encodes empty strings":
-    let encoded = Abi.encode("")
-    let decoded = Abi.decode(encoded, string)
-    check decoded == ""
-    check len(decoded) == 0
+    let
+      encoded = Abi.encode("")
+      decoded = Abi.decode(encoded, string)
+    check:
+      decoded == ""
+      len(decoded) == 0
