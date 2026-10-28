@@ -26,7 +26,7 @@ requires "nim >= 2.2.12",
          "json_serialization >= 0.5.0",
          "nimcrypto >= 0.7.0",
          "results >= 0.5.0",
-         "stew >= 0.5.0",
+         "stew >= 0.6.4",
          "stint >= 0.9.0"
 
 let nimc = getEnv("NIMC", "nim") # Which nim compiler to use
