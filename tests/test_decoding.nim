@@ -173,8 +173,10 @@ suite "ABI decoding":
 
   test "decodes stints":
     checkDecode(UInt128)
+    checkDecode(StUint[160])
     checkDecode(UInt256)
     checkDecode(Int128)
+    checkDecode(StInt[160])
     checkDecode(Int256)
     checkDeprecatedDecode(UInt128.high)
     checkDeprecatedDecode(Int128.low)
@@ -190,6 +192,16 @@ suite "ABI decoding":
 
   test "decodes addresses":
     checkDecode(address(3))
+
+  test "fails to decode address when padding does not consist of zeroes":
+    var encoded = Abi.encode(address(3))
+    encoded[11] = 42'u8
+
+    try:
+      discard Abi.decode(encoded, Address)
+      fail()
+    except SerializationError as decoded:
+      check decoded.msg == "invalid padding found"
 
   test "decodes FixedBytes":
     checkDecode(FixedBytes[3]([1'u8, 2'u8, 3'u8]))

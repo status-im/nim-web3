@@ -185,13 +185,14 @@ proc decode(
 proc decode(
     decoder: var AbiDecoder,
     T: type Address): T {.raises: [SerializationError].} =
-  var bytes: array[sizeof(T), byte]
+  func doDecode(buf: openArray[byte]): T =
   let padding = abiSlotSize - sizeof(T)
-
-  bytes[0 ..< sizeof(T)] =
-    decoder.read(sizeof(T)).toOpenArray(padding, abiSlotSize-1)
-
+    checkLeftPadding(buf, padding, 0x00'u8)
+    var bytes: array[sizeof(T), byte]
+    bytes[0 ..< sizeof(T)] = buf.toOpenArray(padding, abiSlotSize-1)
   T(bytes)
+
+  decoder.read(sizeof(T)).doDecode()
 
 proc decode[I](
     decoder: var AbiDecoder,
