@@ -236,15 +236,29 @@ suite "ABI decoding":
     checkDecode(DynBytes(@(randomBytes[33]())))
     checkDeprecatedDecode(DynBytes(@[1'u8, 2'u8, 3'u8]))
 
-  test "fails to decode seq when padding does not consist of zeroes":
-    var value = @(randomBytes[64]())
-    value[62] = 42'u8
+  test "ignores padding of byte sequences and strings":
+    let
+      bytes = DynBytes(@[1'u8, 2'u8, 3'u8])
+      encodedBytes = Abi.encode(bytes)
+      encodedString = Abi.encode("hello")
+    var
+      dirtyBytes = encodedBytes
+      dirtyString = encodedString
+    dirtyBytes[^1] = 42'u8
+    dirtyString[^1] = 42'u8
+    check:
+      Abi.decode(dirtyBytes, DynBytes) == bytes
+      Abi.decode(encodedBytes[0 ..< 35], DynBytes) == bytes
+      Abi.decode(dirtyString, string) == "hello"
+      Abi.decode(encodedString[0 ..< 37], string) == "hello"
 
-    try:
-      discard Abi.decode(value, DynBytes)
-      fail()
-    except SerializationError as decoded:
-      check decoded.msg == "invalid padding found"
+    let
+      first = DynBytes(@[1'u8])
+      second = DynBytes(@(randomBytes[300]()))
+      unpadded =
+        Abi.encode((64'u64, 97'u64, 1'u64)) & @[1'u8] &
+        Abi.encode(300'u64) & distinctBase(second)
+    check Abi.decode(unpadded, (DynBytes, DynBytes)) == (first, second)
 
   test "decodes sequences":
     let

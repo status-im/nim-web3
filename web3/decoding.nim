@@ -218,15 +218,13 @@ proc decode[T: DynamicBytes](
   if len notin T.minLen.uint64 .. T.maxLen.uint64:
     raise newException(SerializationError, "reading past end of bytes")
 
-  if len == 0:
-    return T(@[])
-
-  func doDecode(buf: openArray[byte]): T =
-    checkRightPadding(buf, len.int, buf.len)
-    T(buf[0 ..< len.int])
-
+  # Padding is ignored, as by the Solidity ABI decoder:
+  # https://github.com/ethereum/eth-abi/blob/v6.0.0/eth_abi/codec.py#L138-L141
   decoder.checkReadable(len, 1)
-  decoder.read(len.int).doDecode()
+  decoder.charge(len)
+  let start = decoder.pos
+  decoder.pos += len.int
+  T(decoder.data[start ..< decoder.pos])
 
 proc decode(decoder: var AbiDecoder, T: type string): T {.raises: [SerializationError].} =
   string.fromBytes(distinctBase(decoder.decode(DynamicBytes[0])))
