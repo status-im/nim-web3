@@ -8,7 +8,7 @@
 # those terms.
 
 import
-  std/[sequtils, macros],
+  std/sequtils,
   faststreams/outputs,
   stint,
   stew/[byteutils, endians2],
@@ -291,12 +291,6 @@ func encode*(x: bool|uint8): seq[byte] {.deprecated: "use Abi.encode instead" .}
 
 func encode*[T](x: openArray[T]): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   encodeAbi(@x)
-
-func getTupleImpl(t: NimNode): NimNode =
-  getTypeImpl(t)[1].getTypeImpl()
-
-macro typeListLen*(t: typedesc[tuple]): int =
-  newLit(t.getTupleImpl().len)
 
 func encode*(x: tuple): seq[byte] {.deprecated: "use Abi.encode instead" .} =
   encodeAbi(x)
