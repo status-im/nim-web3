@@ -116,13 +116,16 @@ proc decode(
     when T.bits > 256:
       # https://docs.soliditylang.org/en/latest/abi-spec.html#types
       {.error: "uint<M> has to fit into a single slot".}
+    const size = T.bits div 8
+  else:
+    const size = sizeof(T)
 
   func doDecode(buf: openArray[byte]): T =
-    let padding = abiSlotSize - sizeof(T)
+    let padding = abiSlotSize - size
     checkLeftPadding(buf, padding, 0x00'u8)
     T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
 
-  decoder.read(sizeof(T)).doDecode()
+  decoder.read(size).doDecode()
 
 proc decode(
     decoder: var AbiDecoder,
@@ -133,13 +136,13 @@ proc decode(
 
   func doDecode(buf: openArray[byte]): T =
     let
-      padding = abiSlotSize - sizeof(T)
+      padding = abiSlotSize - T.bits div 8
       value = T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
       b = if value.isNegative: 0xFF'u8 else: 0x00'u8
     checkLeftPadding(buf, padding, b)
     value
 
-  decoder.read(sizeof(T)).doDecode()
+  decoder.read(T.bits div 8).doDecode()
 
 proc decode(
     decoder: var AbiDecoder,
@@ -186,11 +189,11 @@ proc decode(
     decoder: var AbiDecoder,
     T: type Address): T {.raises: [SerializationError].} =
   func doDecode(buf: openArray[byte]): T =
-  let padding = abiSlotSize - sizeof(T)
+    let padding = abiSlotSize - sizeof(T)
     checkLeftPadding(buf, padding, 0x00'u8)
     var bytes: array[sizeof(T), byte]
     bytes[0 ..< sizeof(T)] = buf.toOpenArray(padding, abiSlotSize-1)
-  T(bytes)
+    T(bytes)
 
   decoder.read(sizeof(T)).doDecode()
 
