@@ -39,6 +39,8 @@ type
     minLen: static[int] = 0,
     maxLen: static[int] = high(int)] = distinct seq[byte]
 
+  DynBytes* = DynamicBytes[0]
+
   Quantity* = distinct uint64
     # Quantity is use in lieu of an ordinary `uint64` to avoid the default
     # format that comes with json_serialization
@@ -49,8 +51,14 @@ type
 
   Blob* = FixedBytes[FIELD_ELEMENTS_PER_BLOB * 32]
 
-template `==`*[minLen, maxLen](a, b: DynamicBytes[minLen, maxLen]): bool =
+template `==`*[minLenA, maxLenA, minLenB, maxLenB](
+    a: DynamicBytes[minLenA, maxLenA],
+    b: DynamicBytes[minLenB, maxLenB]): bool =
   distinctBase(a) == distinctBase(b)
+
+template `&`*[minLen, maxLen](
+    a: seq[byte], b: DynamicBytes[minLen, maxLen]): seq[byte] =
+  a & distinctBase(b)
 
 template ethQuantity(typ: type) {.dirty.} =
   func `+`*(a: typ, b: distinctBase(typ)): typ {.borrow.}

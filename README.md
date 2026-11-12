@@ -56,8 +56,8 @@ Abi.encode(42'u8)
 Abi.encode(42.u256)
 
 # encode byte arrays and sequences
-Abi.encode([1'u8, 2'u8, 3'u8])
-Abi.encode(@[1'u8, 2'u8, 3'u8])
+Abi.encode(FixedBytes[3]([1'u8, 2'u8, 3'u8]))
+Abi.encode(DynBytes(@[1'u8, 2'u8, 3'u8]))
 
 # encode tuples
 Abi.encode( (42'u8, @[1'u8, 2'u8, 3'u8], true) )
@@ -65,11 +65,11 @@ Abi.encode( (42'u8, @[1'u8, 2'u8, 3'u8], true) )
 # decode values of different types
 Abi.decode(bytes, uint8)
 Abi.decode(bytes, UInt256)
-Abi.decode(bytes, array[3, uint8])
-Abi.decode(bytes, seq[uint8])
+Abi.decode(bytes, FixedBytes[3])
+Abi.decode(bytes, DynBytes)
 
 # decode tuples
-Abi.decode(bytes, (uint32, bool, seq[byte]))
+Abi.decode(bytes, (uint32, bool, DynBytes))
 
 # custom type
 type Contract = object

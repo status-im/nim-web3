@@ -1,12 +1,12 @@
 import
-    std/typetraits,
-    stint,
-    faststreams/inputs,
-    stew/[byteutils, endians2, assign2],
-    serialization,
-    ./abi_serialization,
-    ./eth_api_types,
-    ./abi_utils
+  std/typetraits,
+  stint,
+  faststreams/inputs,
+  stew/[byteutils, endians2, assign2],
+  serialization,
+  ./abi_serialization,
+  ./eth_api_types,
+  ./abi_utils
 
 {.push raises: [].}
 
@@ -14,7 +14,10 @@ export abi_serialization, abi_utils
 
 type
   AbiDecoder* = object
-    input: InputStream
+    data: seq[byte]
+    pos: int
+    maxMemoryFactor: uint64
+    remainingMemory: uint64
 
   UInt = AbiUnsignedInt | StUint
 
@@ -27,38 +30,78 @@ template basetype(Range: type range): untyped =
   else:
     {.error "unsupported range type".}
 
-proc finish(decoder: var AbiDecoder) {.raises: [SerializationError].} =
+proc init(
+    T: type AbiDecoder, input: InputStream,
+    maxMemoryFactor: uint64): T {.raises: [SerializationError].} =
+  var data: seq[byte]
   try:
-    if decoder.input.readable:
-      raise newException(SerializationError, "unread trailing bytes found")
+    if input.len.isSome:
+      data.setLenUninit(input.len.get)
+      data.setLen(input.readIntoEx(data))
+    while input.readable:
+      data.add input.read
   except IOError as e:
-    raise newException(SerializationError, "Failed to finish decoding: " & e.msg)
+    raise newException(SerializationError, "Failed to read bytes: " & e.msg)
 
-proc read(decoder: var AbiDecoder, size = abiSlotSize): seq[byte] {.raises: [SerializationError].} =
-  ## We want to make sure that even if the data is smaller than the ABI slot size,
+  let remainingMemory =
+    if maxMemoryFactor == 0 or
+        data.len.uint64 > uint64.high div maxMemoryFactor:
+      uint64.high
+    else:
+      maxMemoryFactor * data.len.uint64
+  T(data: data,
+    maxMemoryFactor: maxMemoryFactor,
+    remainingMemory: remainingMemory)
+
+func charge(
+    decoder: var AbiDecoder,
+    count: uint64, size = 1) {.raises: [SerializationError].} =
+  if count > decoder.remainingMemory div size.uint64:
+    raise newException(SerializationError,
+      "decoded data exceeds maxMemoryFactor " & $decoder.maxMemoryFactor &
+      " times the input size " & $decoder.data.len)
+  decoder.remainingMemory -= count * size.uint64
+
+template read(
+    decoder: var AbiDecoder, size = abiSlotSize): openArray[byte] =
+  ## We want to ensure that even if the data is smaller than the ABI slot size,
   ## it will occupy at least one slot size. That's why we have:
   ## size + abiSlotSize - 1
   ## Then we divide it by abiSlotSize to get the number of slots needed.
   ## And finally, we multiply it by abiSlotSize to get the total size in bytes.
-  var buf = newSeq[byte]((size + abiSlotSize - 1) div abiSlotSize * abiSlotSize)
+  let len = (size + abiSlotSize - 1) div abiSlotSize * abiSlotSize
+  if len > decoder.data.len - decoder.pos:
+    raise newException(SerializationError, "reading past end of bytes")
+  decoder.charge(len.uint64)
 
-  try:
-    if not decoder.input.readInto(buf):
-      raise newException(SerializationError, "reading past end of bytes")
-  except IOError as e:
-    raise newException(SerializationError, "Failed to read bytes: " & e.msg)
+  decoder.pos += len
+  decoder.data.toOpenArray(decoder.pos - len, decoder.pos - 1)
 
-  return buf
-
-template checkLeftPadding(buf: openArray[byte], padding: int, expected: uint8) =
+template checkLeftPadding(
+    buf: openArray[byte], padding: int, expected: uint8) =
   for i in 0 ..< padding:
     if buf[i] != expected:
       raise newException(SerializationError, "invalid padding found")
 
-template checkRightPadding(buf: openArray[byte], paddingStart: int, paddingEnd: int) =
+template checkRightPadding(
+    buf: openArray[byte], paddingStart: int, paddingEnd: int) =
   for i in paddingStart ..< paddingEnd:
     if buf[i] != 0x00'u8:
       raise newException(SerializationError, "invalid padding found")
+
+proc checkReadable(
+    decoder: var AbiDecoder,
+    len: uint64, size: int) {.raises: [SerializationError].} =
+  if len > uint64(int.high div max(size, 1)) or
+      int(len) * size > decoder.data.len - decoder.pos:
+    raise newException(SerializationError, "reading past end of bytes")
+
+proc seekTo(
+    decoder: var AbiDecoder,
+    base: int, offset: uint64) {.raises: [SerializationError].} =
+  if offset > uint64(decoder.data.len - base):
+    raise newException(SerializationError, "reading past end of bytes")
+  decoder.pos = base + int(offset)
 
 proc decode(_: var AbiDecoder, _: type int): int {.error:
   "ABI: plain 'int' is forbidden. Use int8/16/32/64 or Int256."}
@@ -66,96 +109,134 @@ proc decode(_: var AbiDecoder, _: type int): int {.error:
 proc decode(_: var AbiDecoder, _: type uint): uint {.error:
   "ABI: plain 'uint' is forbidden. Use uint8/16/32/64 or UInt256."}
 
-proc decode(decoder: var AbiDecoder, T: type UInt): T {.raises: [SerializationError].} =
-  var buf = decoder.read(sizeof(T))
+proc decode(
+    decoder: var AbiDecoder,
+    T: type UInt): T {.raises: [SerializationError].} =
+  when T is StUint:
+    when T.bits > 256:
+      # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+      {.error: "uint<M> has to fit into a single slot".}
+    const size = T.bits div 8
+  else:
+    const size = sizeof(T)
 
-  let padding = abiSlotSize - sizeof(T)
-  checkLeftPadding(buf, padding, 0x00'u8)
+  func doDecode(buf: openArray[byte]): T =
+    let padding = abiSlotSize - size
+    checkLeftPadding(buf, padding, 0x00'u8)
+    T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
 
-  return T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
+  decoder.read(size).doDecode()
 
-proc decode(decoder: var AbiDecoder, T: type StInt): T {.raises: [SerializationError].} =
-  var buf = decoder.read(sizeof(T))
+proc decode(
+    decoder: var AbiDecoder,
+    T: type StInt): T {.raises: [SerializationError].} =
+  when T.bits > 256:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "int<M> has to fit into a single slot".}
 
-  let padding = abiSlotSize - sizeof(T)
-  let value = T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
+  func doDecode(buf: openArray[byte]): T =
+    let
+      padding = abiSlotSize - T.bits div 8
+      value = T.fromBytesBE(buf.toOpenArray(padding, abiSlotSize-1))
+      b = if value.isNegative: 0xFF'u8 else: 0x00'u8
+    checkLeftPadding(buf, padding, b)
+    value
 
-  let b = if value.isNegative: 0xFF'u8 else: 0x00'u8
-  checkLeftPadding(buf, padding, b)
+  decoder.read(T.bits div 8).doDecode()
 
-  return value
+proc decode(
+    decoder: var AbiDecoder,
+    T: type AbiSignedInt): T {.raises: [SerializationError].} =
+  func doDecode(buf: openArray[byte]): T =
+    let
+      padding = abiSlotSize - sizeof(T)
+      unsigned = T.toUnsigned.fromBytesBE(
+        buf.toOpenArray(padding, abiSlotSize - 1))
+      value = cast[T](unsigned)
+      expectedPadding = if value < 0: 0xFF'u8 else: 0x00'u8
+    checkLeftPadding(buf, padding, expectedPadding)
+    value
 
-proc decode(decoder: var AbiDecoder, T: type AbiSignedInt): T {.raises: [SerializationError].} =
-  var buf = decoder.read(sizeof(T))
+  decoder.read(sizeof(T)).doDecode()
 
-  let padding = abiSlotSize - sizeof(T)
-
-  let unsigned =  T.toUnsigned.fromBytesBE(buf.toOpenArray(padding, abiSlotSize - 1))
-  let value = cast[T](unsigned)
-
-  let expectedPadding = if value < 0: 0xFF'u8 else: 0x00'u8
-  checkLeftPadding(buf, padding, expectedPadding)
-
-  return value
-
-proc decode(decoder: var AbiDecoder, T: type bool): T {.raises: [SerializationError].} =
+proc decode(
+    decoder: var AbiDecoder,
+    T: type bool): T {.raises: [SerializationError].} =
   case decoder.decode(uint8)
     of 0: false
     of 1: true
     else: raise newException(SerializationError, "invalid boolean value")
 
-proc decode(decoder: var AbiDecoder, T: type range): T {.raises: [SerializationError].} =
+proc decode(
+    decoder: var AbiDecoder,
+    T: type range): T {.raises: [SerializationError].} =
   let value = decoder.decode(basetype(T))
   if value in T.low..T.high:
     T(value)
   else:
     raise newException(SerializationError, "value not in range")
 
-proc decode(decoder: var AbiDecoder, T: type enum): T {.raises: [SerializationError].}=
+proc decode(
+    decoder: var AbiDecoder,
+    T: type enum): T {.raises: [SerializationError].} =
   let value = decoder.decode(uint64)
   if value in T.low.uint64..T.high.uint64:
     T(value)
   else:
     raise newException(SerializationError, "invalid enum value")
 
-proc decode(decoder: var AbiDecoder, T: type Address): T {.raises: [SerializationError].} =
-  var bytes: array[sizeof(T), byte]
-  let padding = abiSlotSize - sizeof(T)
+proc decode(
+    decoder: var AbiDecoder,
+    T: type Address): T {.raises: [SerializationError].} =
+  func doDecode(buf: openArray[byte]): T =
+    let padding = abiSlotSize - sizeof(T)
+    checkLeftPadding(buf, padding, 0x00'u8)
+    var bytes: array[sizeof(T), byte]
+    bytes[0 ..< sizeof(T)] = buf.toOpenArray(padding, abiSlotSize-1)
+    T(bytes)
 
-  try:
-    bytes[0..<sizeof(T)] =(decoder.read(sizeof(T))).toOpenArray(padding, abiSlotSize-1)
-  except IOError as e:
-    raise newException(SerializationError, "Failed to read address: " & e.msg)
+  decoder.read(sizeof(T)).doDecode()
 
-  T(bytes)
+proc decode[I](
+    decoder: var AbiDecoder,
+    T: type FixedBytes[I]): T {.raises: [SerializationError].} =
+  when I notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "bytes<M> has to fit into a single slot".}
 
-proc decode[I](decoder: var AbiDecoder, T: type array[I, byte]): T {.raises: [SerializationError].} =
-  var arr: T
+  func doDecode(buf: openArray[byte]): T =
+    var arr {.noinit.}: T
+    distinctBase(arr)[0..<arr.len] = buf.toOpenArray(0, arr.len - 1)
+    checkRightPadding(buf, arr.len, buf.len)
+    arr
 
-  let buf = decoder.read(arr.len)
-  arr[0..<arr.len] = buf[0..<arr.len]
-  checkRightPadding(buf, arr.len, buf.len)
+  decoder.read(I).doDecode()
 
-  return arr
-
-proc decode(decoder: var AbiDecoder, T: type seq[byte]): T {.raises: [SerializationError].} =
+proc decode[T: DynamicBytes](
+    decoder: var AbiDecoder, t: type T): T {.raises: [SerializationError].} =
   let len = decoder.decode(uint64)
+  if len notin T.minLen.uint64 .. T.maxLen.uint64:
+    raise newException(SerializationError, "reading past end of bytes")
 
-  if len == 0:
-    return T.default
-
-  let buf = decoder.read(len.int)
-  checkRightPadding(buf, len.int, buf.len)
-
-  return buf[0 ..< len]
+  # Padding is ignored, as by the Solidity ABI decoder:
+  # https://github.com/ethereum/eth-abi/blob/v6.0.0/eth_abi/codec.py#L138-L141
+  decoder.checkReadable(len, 1)
+  decoder.charge(len)
+  let start = decoder.pos
+  decoder.pos += len.int
+  T(decoder.data[start ..< decoder.pos])
 
 proc decode(decoder: var AbiDecoder, T: type string): T {.raises: [SerializationError].} =
-  string.fromBytes(decoder.decode(seq[byte]))
+  string.fromBytes(distinctBase(decoder.decode(DynamicBytes[0])))
 
+proc decode[T](decoder: var AbiDecoder, _: type seq[T]): seq[T]
+    {.raises: [SerializationError].}
+proc decode[I, T](decoder: var AbiDecoder, _: type array[I, T]): array[I, T]
+    {.raises: [SerializationError].}
 proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [SerializationError].}
 
 proc decode[T: distinct](decoder: var AbiDecoder, _: type T): T {.raises: [SerializationError].} =
-  T(decoder.decode(distinctBase T))
+  T(decoder.decode(distinctBase(T, recursive = false)))
 
 
 proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.raises: [SerializationError].} =
@@ -182,6 +263,8 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
     # For the dynamic array, the size is should be None,
     # and the decoder will read the size from the input stream.
     var len = if size.isNone: decoder.decode(uint64) else: size.get()
+    let base = decoder.pos
+    decoder.checkReadable(len, abiSlotSize)
 
     var offsets = newSeq[uint64](len)
     for i in 0..<len:
@@ -189,9 +272,7 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
 
     res = newSeq[T](len)
     for i in 0..<len:
-      let pos = decoder.input.pos()
-      if offsets[i].int > pos:
-        decoder.input.advance(offsets[i].int - pos)
+      decoder.seekTo(base, offsets[i])
       res[i] = decoder.decode(T)
 
     return res
@@ -209,6 +290,10 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
     ## | element N-1               |
     ## +----------------------------+
     let len = if size.isNone: decoder.decode(uint64) else: size.get()
+    const encodedSize = staticSize(T)
+    decoder.checkReadable(len, encodedSize)
+    when encodedSize == 0:
+      decoder.charge(len, static(max(sizeof(T), 1)))
     result = newSeq[T](len)
     for i in 0..<len:
       result[i] = decoder.decode(T)
@@ -216,7 +301,7 @@ proc decodeCollection[T](decoder: var AbiDecoder, size: Opt[uint64]): seq[T] {.r
     return result
 
 proc decode[T](decoder: var AbiDecoder, _: type seq[T]): seq[T] {.raises: [SerializationError].} =
-  return decodeCollection[T](decoder, Opt.none(uint64))
+  decodeCollection[T](decoder, Opt.none(uint64))
 
 proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.raises: [SerializationError].} =
   var res: array[I, T]
@@ -224,7 +309,7 @@ proc decode[I,T](decoder: var AbiDecoder, _: type array[I,T]): array[I,T] {.rais
   for i in 0..<res.len:
     res[i] = data[i]
 
-  return res
+  res
 
 proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [SerializationError].} =
   ## When T is a tuple, ABI layout looks like:
@@ -244,9 +329,10 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   ## | ...                        |
   ## +----------------------------+
   var res: T
-  let arity = type(res).arity
+  let arity = type(res).tupleLen
   var offsets = newSeq[uint64](arity + 1)
   var i = 0
+  let base {.used.} = decoder.pos
 
   # Decode static fields first and get the offsets for dynamic fields.
   for field in res.fields:
@@ -260,16 +346,14 @@ proc decode[T: tuple](decoder: var AbiDecoder, _: typedesc[T]): T {.raises: [Ser
   # Decode dynamic fields using the offsets.
   for field in res.fields:
     when isDynamic(typeof(field)):
-      let pos = decoder.input.pos()
-      if offsets[i].int > pos:
-        decoder.input.advance(offsets[i].int - pos)
+      decoder.seekTo(base, offsets[i])
       field = decoder.decode(typeof(field))
 
     inc i
 
   discard offsets
 
-  return res
+  res
 
 proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError].} =
   ## When T is a object, ABI layout looks like the typle:
@@ -289,7 +373,8 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
   ## | ...                        |
   ## +----------------------------+
   var resultObj: T
-  var offsets = newSeq[uint64](totalSerializedFields(T))
+  var offsets {.used.} = newSeq[uint64](totalSerializedFields(T))
+  let base {.used.} = decoder.pos
 
   # Decode static fields first and get the offsets for dynamic fields.
   var i = 0
@@ -304,29 +389,26 @@ proc decodeObject(decoder: var AbiDecoder, T: type): T {.raises: [SerializationE
   i = 0
   resultObj.enumInstanceSerializedFields(_, fieldValue):
     when isDynamic(typeof(fieldValue)):
-      let pos = decoder.input.pos()
-      if offsets[i].int > pos:
-        decoder.input.advance(offsets[i].int - pos)
+      decoder.seekTo(base, offsets[i])
       fieldValue = decoder.decode(typeof(fieldValue))
     inc i
 
-  return resultObj
+  resultObj
 
-proc decode*(decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]} =
+proc decode*(
+    decoder: var AbiDecoder, T: type): T {.raises: [SerializationError]} =
   ## This method should not be used directly.
   ## It is needed because `genFunction` create tuple
   ## with object instead of creating a flat tuple with
   ## object fields.
   when T is object:
-    let value = decoder.decodeObject(T)
-    return value
+    decoder.decodeObject(T)
   else:
-    let value = decoder.decode(T)
-    decoder.finish()
-    return value
+    decoder.decode(T)
 
-proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError]} =
-  var decoder = AbiDecoder(input: r.getStream)
+proc readValue*[T](
+    r: var AbiReader, value: var T) {.raises: [SerializationError]} =
+  var decoder = AbiDecoder.init(r.getStream, r.maxMemoryFactor)
   type StInts = StInt | StUint
 
   when T is object and T is not StInts:
@@ -334,20 +416,24 @@ proc readValue*[T](r: var AbiReader, value: var T) {.raises: [SerializationError
   else:
     value = decoder.decode(T)
 
-  decoder.finish()
-
 # Keep the old encode functions for compatibility
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var StUint): int {.deprecated: "use Abi.decode instead"} =
+  when to.bits > 256:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "uint<M> has to fit into a single slot".}
   const meaningfulLen = to.bits div 8
-  let offset = offset + baseOffset
+  let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
+  abiSlotSize
 
 func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var StInt[N]): int {.deprecated: "use Abi.decode instead"} =
+  when N > 256:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "int<M> has to fit into a single slot".}
   const meaningfulLen = N div 8
-  let offset = offset + baseOffset
+  let offset = offset + baseOffset + abiSlotSize - meaningfulLen
   to = type(to).fromBytesBE(input.toOpenArray(offset, offset + meaningfulLen - 1))
-  meaningfulLen
+  abiSlotSize
 
 func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openArray[byte]): int {.deprecated: "use Abi.decode instead"} =
   let meaningfulLen = to.len
@@ -360,19 +446,25 @@ func decodeFixed(input: openArray[byte], baseOffset, offset: int, to: var openAr
   meaningfulLen + padding
 
 func decode*[N](input: openArray[byte], baseOffset, offset: int, to: var FixedBytes[N]): int {.inline, deprecated: "use Abi.decode instead".} =
-  decodeFixed(input, baseOffset, offset, array[N, byte](to))
+  when N notin 1 .. abiSlotSize:
+    # https://docs.soliditylang.org/en/latest/abi-spec.html#types
+    {.error: "bytes<M> has to fit into a single slot".}
+  let offset = baseOffset + offset
+  assign(array[N, byte](to), input.toOpenArray(offset, offset + N - 1))
+  abiSlotSize
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var Address): int {.inline, deprecated: "use Abi.decode instead".} =
   decodeFixed(input, baseOffset, offset, array[20, byte](to))
 
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var seq[byte]): int {.deprecated: "use Abi.decode instead"} =
+func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.deprecated: "use Abi.decode instead"} =
   var dataOffsetBig, dataLenBig: UInt256
   result = decode(input, baseOffset, offset, dataOffsetBig)
   let dataOffset = dataOffsetBig.truncate(int)
   discard decode(input, baseOffset, dataOffset, dataLenBig)
   let dataLen = dataLenBig.truncate(int)
   let actualDataOffset = baseOffset + dataOffset + 32
-  to = input[actualDataOffset ..< actualDataOffset + dataLen]
+  # TODO: Check data len, and raise?
+  to = typeof(to)(input[actualDataOffset ..< actualDataOffset + dataLen])
 
 func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): int {.deprecated: "use Abi.decode instead"} =
   var dataOffsetBig, dataLenBig: UInt256
@@ -382,12 +474,6 @@ func decode*(input: openArray[byte], baseOffset, offset: int, to: var string): i
   let dataLen = dataLenBig.truncate(int)
   let actualDataOffset = baseOffset + dataOffset + 32
   to = string.fromBytes(input.toOpenArray(actualDataOffset, actualDataOffset + dataLen - 1))
-
-func decode*(input: openArray[byte], baseOffset, offset: int, to: var DynamicBytes): int {.inline, deprecated: "use Abi.decode instead".} =
-  var s: seq[byte]
-  result = decode(input, baseOffset, offset, s)
-  # TODO: Check data len, and raise?
-  to = typeof(to)(move(s))
 
 func decode*(input: openArray[byte], baseOffset, offset: int, obj: var object): int {.deprecated: "use Abi.decode instead"}
 

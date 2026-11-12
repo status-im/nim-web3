@@ -18,14 +18,14 @@ import
 type
   Data1 = object
     a: UInt256
-    data: seq[byte]
+    data: DynBytes
 
 contract(EncodingTest):
   proc setBool(val: bool)
   proc getBool(): bool {.view.}
   proc setString(a: string)
   proc getString(): string {.view.}
-  proc setData1(a: UInt256, d: seq[byte])
+  proc setData1(a: UInt256, d: DynBytes)
   proc getData1(): Data1 {.view.}
   proc getManyData1(): seq[Data1] {.view.}
 
@@ -177,7 +177,7 @@ suite "Contracts":
       s = await ns.getString()
       assert(s == "hello")
 
-      let data1data = @[1.byte, 2, 3, 4, 5]
+      let data1data = DynBytes(@[1.byte, 2, 3, 4, 5])
       await ns.setData1(123.u256, data1data)
 
       let data1 = await ns.getData1()

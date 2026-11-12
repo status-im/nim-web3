@@ -1,14 +1,14 @@
 import
-    std/unittest,
-    std/sequtils,
-    std/random,
-    stint,
-    stew/[byteutils],
-    serialization,
-    ../web3/encoding,
-    ../web3/eth_api_types,
-    ../web3/abi_serialization,
-    ./helpers/primitives_utils
+  std/unittest,
+  std/sequtils,
+  std/random,
+  stint,
+  stew/[byteutils],
+  serialization,
+  ../web3/encoding,
+  ../web3/eth_api_types,
+  ../web3/abi_serialization,
+  ./helpers/primitives_utils
 
 suite "ABI encoding":
   proc zeroes(amount: int): seq[byte] =
@@ -17,8 +17,8 @@ suite "ABI encoding":
   proc randomBytes[N: static int](): array[N, byte] =
     var a: array[N, byte]
     for b in a.mitems:
-        b = rand(byte)
-    return a
+      b = rand(byte)
+    a
 
   test "encodes uint8":
     check Abi.encode(42'u8) == 31.zeroes & 42'u8 # [0, 0, ..., 0, 2a] (2a = 42)
@@ -64,12 +64,17 @@ suite "ABI encoding":
     let uint128 = UInt128.fromBytes(randomBytes[32](), bigEndian)
     check Abi.encode(uint256) == @(uint256.toBytesBE)
     check Abi.encode(uint128) == 16.zeroes & @(uint128.toBytesBE)
+    check encode(uint128) == 16.zeroes & @(uint128.toBytesBE)
 
     check Abi.encode(1.i256) == 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
     check Abi.encode(1.i128) == 31.zeroes & 0x01'u8 # [0, 0, ..., 0, 1]
 
     check Abi.encode(-1.i256) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
     check Abi.encode(-1.i128) == 0xFF'u8.repeat(32) # [255, 255, ..., 255] (signed value)
+    check encode(-1.i128) == 0xFF'u8.repeat(32)
+
+    check not compiles(Abi.encode(1.stuint(512)))
+    check not compiles(Abi.encode(1.stint(512)))
 
   test "encodes addresses":
     let address = address(3)
@@ -82,36 +87,41 @@ suite "ABI encoding":
   test "encodes FixedBytes":
     let bytes3 = FixedBytes[3]([1'u8, 2'u8, 3'u8])
     check Abi.encode(bytes3) == @[1'u8, 2'u8, 3'u8] & 29.zeroes # Fixed array are right-padded with zeroes
+    check encode(bytes3) == @[1'u8, 2'u8, 3'u8] & 29.zeroes
 
     let bytes32 = FixedBytes[32](randomBytes[32]())
     check Abi.encode(bytes32) == @(bytes32.data)
 
     let bytes33 = FixedBytes[33](randomBytes[33]())
-    check Abi.encode(bytes33) == @(bytes33.data) & 31.zeroes # Right-padded with another 32 zeroes
+    check not compiles(Abi.encode(bytes33))
+    check not compiles(encode(bytes33))
 
-  test "encodes byte arrays":
+  test "encodes uint8 arrays":
+    # Only FixedBytes arrays are packed, not uint8 (or Nim byte) arrays
     let bytes3 = [1'u8, 2'u8, 3'u8]
-    check Abi.encode(bytes3) == @bytes3 & 29.zeroes # Fixed array are right-padded with zeroes.
+    check Abi.encode(bytes3) == bytes3.mapIt(31.zeroes & it).concat()
+    check encode(bytes3) == bytes3.mapIt(31.zeroes & it).concat()
 
     let bytes32 = randomBytes[32]()
-    check Abi.encode(bytes32) == @bytes32
+    check Abi.encode(bytes32) == bytes32.mapIt(31.zeroes & it).concat()
 
-    let bytes33 =randomBytes[33]()
-    check Abi.encode(bytes33) == @bytes33 & 31.zeroes # Right-padded with another 32 zeroes
+    let bytes33 = randomBytes[33]()
+    check Abi.encode(bytes33) == bytes33.mapIt(31.zeroes & it).concat()
+    check encode(bytes33) == bytes33.mapIt(31.zeroes & it).concat()
 
   test "encodes byte sequences":
-    let bytes3 = @[1'u8, 2'u8, 3'u8]
+    let bytes3 = DynBytes(@[1'u8, 2'u8, 3'u8])
     let bytes3len = Abi.encode(bytes3.len.uint64)
     check Abi.encode(bytes3) == bytes3len & bytes3 & 29.zeroes
     check Abi.encode(bytes3) ==
       31.zeroes & 3'u8 & # [0, 0, ..., 0, 3] (length)
       bytes3 & 29.zeroes # [1, 2, 3, 0, ..., 0] (data)
 
-    let bytes32 = @(randomBytes[32]())
+    let bytes32 = DynBytes(@(randomBytes[32]()))
     let bytes32len = Abi.encode(bytes32.len.uint64)
     check Abi.encode(bytes32) == bytes32len & bytes32
 
-    let bytes33 = @(randomBytes[33]())
+    let bytes33 = DynBytes(@(randomBytes[33]()))
     let bytes33len = Abi.encode(bytes33.len.uint64)
     check Abi.encode(bytes33) == bytes33len & bytes33 & 31.zeroes
 
@@ -122,9 +132,9 @@ suite "ABI encoding":
 
   test "encodes tuples":
     let a = true
-    let b = @[1'u8, 2'u8, 3'u8]
+    let b = DynBytes(@[1'u8, 2'u8, 3'u8])
     let c = 0xAABBCCDD'u32
-    let d = @[4'u8, 5'u8, 6'u8]
+    let d = DynBytes(@[4'u8, 5'u8, 6'u8])
     check Abi.encode( (a, b, c, d) ) ==
       Abi.encode(a) &
       Abi.encode(4 * 32'u8) &
@@ -142,9 +152,9 @@ suite "ABI encoding":
 
   test "encodes nested tuples":
     let a = true
-    let b = @[1'u8, 2'u8, 3'u8]
+    let b = DynBytes(@[1'u8, 2'u8, 3'u8])
     let c = 0xAABBCCDD'u32
-    let d = @[4'u8, 5'u8, 6'u8]
+    let d = DynBytes(@[4'u8, 5'u8, 6'u8])
     check Abi.encode( (a, b, (c, d)) ) ==
       Abi.encode(a) &
       Abi.encode(3 * 32'u8) & # offset of b in outer tuple
@@ -162,13 +172,64 @@ suite "ABI encoding":
       31.zeroes & 64'u8 &                           # offset to d ((static + offset) * 32 bytes)
       31.zeroes & 3'u8 & d & 29.zeroes              # d (length + data)
 
+  test "encodes tuple with static array and dynamic":
+    let a = 1'u8
+    let b = [2'u16, 3'u16]
+    let c = DynBytes(@[4'u8])
+    check Abi.encode( (a, b, c) ) ==
+      Abi.encode(a) &
+      Abi.encode(b) &
+      Abi.encode(4 * 32'u8) & # offset of c after inline b
+      Abi.encode(c)
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                # a
+      31.zeroes & 2'u8 &                # b[0]
+      31.zeroes & 3'u8 &                # b[1]
+      31.zeroes & 128'u8 &              # offset to c (4 * 32 bytes)
+      31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
+
+  test "encodes tuple with nested static tuple and dynamic":
+    let a = 1'u8
+    let b = (2'u8, [3'u16, 4'u16])
+    let c = DynBytes(@[5'u8])
+    check Abi.encode( (a, b, c) ) ==
+      Abi.encode(a) &
+      Abi.encode(b) &
+      Abi.encode(5 * 32'u8) & # offset of c after inline b
+      Abi.encode(c)
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                # a
+      31.zeroes & 2'u8 &                # b[0]
+      31.zeroes & 3'u8 &                # b[1][0]
+      31.zeroes & 4'u8 &                # b[1][1]
+      31.zeroes & 160'u8 &              # offset to c (5 * 32 bytes)
+      31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
+
+  test "encodes tuple with nested static array and dynamic":
+    let a = 1'u8
+    let b = [[2'u16, 3'u16], [4'u16, 5'u16]]
+    let c = DynBytes(@[6'u8])
+    check Abi.encode( (a, b, c) ) ==
+      Abi.encode(a) &
+      Abi.encode(b) &
+      Abi.encode(6 * 32'u8) & # offset of c after inline b
+      Abi.encode(c)
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                # a
+      31.zeroes & 2'u8 &                # b[0][0]
+      31.zeroes & 3'u8 &                # b[0][1]
+      31.zeroes & 4'u8 &                # b[1][0]
+      31.zeroes & 5'u8 &                # b[1][1]
+      31.zeroes & 192'u8 &              # offset to c (6 * 32 bytes)
+      31.zeroes & 1'u8 & c & 31.zeroes  # c (length + data)
+
   test "encodes tuple with only dynamic fields":
-    let t = (@[1'u8, 2'u8], @[3'u8, 4'u8])
+    let t = (DynBytes(@[1'u8, 2'u8]), DynBytes(@[3'u8, 4'u8]))
     check Abi.encode(t) ==
       Abi.encode(2 * 32'u64) &
       Abi.encode(4 * 32'u64) &
-      Abi.encode(@[1'u8, 2'u8]) &
-      Abi.encode(@[3'u8, 4'u8])
+      Abi.encode(DynBytes(@[1'u8, 2'u8])) &
+      Abi.encode(DynBytes(@[3'u8, 4'u8]))
     check Abi.encode(t) ==
       31.zeroes & 64'u8 &                            # offset to first
       31.zeroes & 128'u8 &                           # offset to second (first offset + length encoding + data length)
@@ -176,7 +237,7 @@ suite "ABI encoding":
       31.zeroes & 2'u8 & @[3'u8, 4'u8] & 30.zeroes   # second element (length + data)
 
   test "encodes tuple with empty dynamic fields":
-    var empty: seq[byte] = @[]
+    var empty: DynBytes
     let t = (empty, empty)
     check Abi.encode(t) ==
       Abi.encode(2 * 32'u64) &
@@ -190,7 +251,7 @@ suite "ABI encoding":
       32.zeroes            # empty sequence
 
   test "encodes tuple with static and empty dynamic":
-    var empty: seq[byte] = @[]
+    var empty: DynBytes
     let t = (42'u8, empty)
     check Abi.encode(t) ==
       Abi.encode(42'u8) &
@@ -201,18 +262,62 @@ suite "ABI encoding":
       31.zeroes & 64'u8 & # offset to empty (static + offset)
       32.zeroes           # empty sequence
 
+  test "encodes objects inside tuples":
+    type
+      StaticObject = object
+        a: uint8
+        skipped {.dontSerialize.}: DynBytes
+      DynamicObject = object
+        a: (uint8, DynBytes)
+    let value = (
+      StaticObject(a: 1, skipped: DynBytes(@[9'u8])),
+      DynamicObject(a: (2'u8, DynBytes(@[3'u8]))))
+    check Abi.encode(value) ==
+      31.zeroes & 1'u8 &  # value[0].a
+      31.zeroes & 64'u8 & # offset to value[1] (2 * 32 bytes)
+      31.zeroes & 32'u8 & # offset to value[1].a
+      31.zeroes & 2'u8 &  # value[1].a[0]
+      31.zeroes & 64'u8 & # offset to value[1].a[1] (2 * 32 bytes)
+      31.zeroes & 1'u8 &  # value[1].a[1] length
+      3'u8 & 31.zeroes    # value[1].a[1] data
+
   test "encodes arrays":
-    let a, b = randomBytes[32]()
+    let a, b = FixedBytes[32](randomBytes[32]())
     check Abi.encode([a, b]) ==
       Abi.encode((a, b)) # Encode as tuple because fixed arrays are static.
+    check encode([a, b]) == @(a.data) & @(b.data)
 
   test "encodes openArray":
     let a = [1'u8, 2'u8, 3'u8, 4'u8, 5'u8]
-    check encode(a[1..3]) ==
+    check encode(DynBytes(a[1..3])) ==
       Abi.encode(3'u64) & @[2'u8, 3'u8, 4'u8] & 29.zeroes # [2, 3, 4, ..., 0, 0]
 
+    check encode(a[1..3]) ==
+      Abi.encode(3'u64) &
+      31.zeroes & 2'u8 &
+      31.zeroes & 3'u8 &
+      31.zeroes & 4'u8
+
+  test "encodes dynamic tuples with the deprecated API":
+    let a = 1.u256
+    let b = (DynBytes(@[2'u8]),)
+    check encode( (a, b) ) ==
+      31.zeroes & 1'u8 &                    # a
+      31.zeroes & 64'u8 &                   # offset to b (2 * 32 bytes)
+      31.zeroes & 32'u8 &                   # offset to b[0]
+      31.zeroes & 1'u8 & 2'u8 & 31.zeroes   # b[0] (length + data)
+    let c = @[(DynBytes(@[3'u8]),), (DynBytes(@[4'u8]),)]
+    check encode(c) ==
+      31.zeroes & 2'u8 &                    # c length
+      31.zeroes & 64'u8 &                   # offset to c[0] (2 * 32 bytes)
+      31.zeroes & 160'u8 &                  # offset to c[1] (5 * 32 bytes)
+      31.zeroes & 32'u8 &                   # offset to c[0][0]
+      31.zeroes & 1'u8 & 3'u8 & 31.zeroes & # c[0][0] (length + data)
+      31.zeroes & 32'u8 &                   # offset to c[1][0]
+      31.zeroes & 1'u8 & 4'u8 & 31.zeroes   # c[1][0] (length + data)
+
   test "encodes sequences":
-    let a, b = @[randomBytes[32]()]
+    let a, b = @[FixedBytes[32](randomBytes[32]())]
     #
     check Abi.encode(@[a, b]) ==
       Abi.encode(2'u64) &   # sequence length
@@ -225,19 +330,35 @@ suite "ABI encoding":
       Abi.encode(s)
 
   test "encodes nested sequence":
-    let nestedSeq = @[ @[1'u8, 2'u8], @[3'u8, 4'u8, 5'u8] ]
+    let nestedSeq = @[
+      DynBytes(@[1'u8, 2'u8]),
+      DynBytes(@[3'u8, 4'u8, 5'u8])]
     check Abi.encode(nestedSeq) ==
       Abi.encode(2'u64) &
       Abi.encode(2 * 32'u64) &
       Abi.encode(4 * 32'u64) &
-      Abi.encode(@[1'u8, 2'u8]) &
-      Abi.encode(@[3'u8, 4'u8, 5'u8])
+      Abi.encode(DynBytes(@[1'u8, 2'u8])) &
+      Abi.encode(DynBytes(@[3'u8, 4'u8, 5'u8]))
     check Abi.encode(nestedSeq) ==
       31.zeroes & 2'u8 &                                 # sequence length
       31.zeroes & 64'u8 &                                # offset to first item (2 offsets)
       31.zeroes & 128'u8 &                               # offset to second item (first offset + length + data length)
       31.zeroes & 2'u8 & @[1'u8, 2'u8] & 30.zeroes &     # first item (length + data)
       31.zeroes & 3'u8 & @[3'u8, 4'u8, 5'u8] & 29.zeroes # second item (length + data)
+
+  test "encodes sequence of static arrays":
+    let a = @[[1'u16, 2'u16], [3'u16, 4'u16]]
+    check Abi.encode(a) ==
+      Abi.encode(2'u64) &
+      Abi.encode(a[0]) &
+      Abi.encode(a[1])
+    check Abi.encode( (a,) ) ==
+      31.zeroes & 32'u8 & # offset to a
+      31.zeroes & 2'u8 &  # a length
+      31.zeroes & 1'u8 &  # a[0][0]
+      31.zeroes & 2'u8 &  # a[0][1]
+      31.zeroes & 3'u8 &  # a[1][0]
+      31.zeroes & 4'u8    # a[1][1]
 
   test "encodes seq of empty seqs":
     let empty: seq[int] =  @[]
@@ -273,18 +394,18 @@ suite "ABI encoding":
         bytes33.data & 31.zeroes
 
   test "encodes array of static elements as static element":
-    let a = [[42'u8], [43'u8]]
+    let a = [FixedBytes[1]([42'u8]), FixedBytes[1]([43'u8])]
     check Abi.encode( (a,) ) ==
       Abi.encode(a) # The tuple encoding does not add offset for static elements (fixed length array).
 
   test "encodes array of dynamic elements as dynamic element":
-    let a = [@[42'u8], @[43'u8]]
+    let a = [DynBytes(@[42'u8]), DynBytes(@[43'u8])]
     check Abi.encode( (a,) ) ==
       Abi.encode(32'u8) & # offset in tuple
       Abi.encode(a)
 
   test "encodes strings as UTF-8 byte sequence":
-    check Abi.encode("hello!☺") == Abi.encode("hello!☺".toBytes)
+    check Abi.encode("hello!☺") == Abi.encode(DynBytes("hello!☺".toBytes))
 
   test "encodes empty strings":
     let encoded = Abi.encode("")
@@ -296,10 +417,29 @@ suite "ABI encoding":
     let value = 0xAABB'u16
     check Abi.encode(SomeDistinctType(value)) == Abi.encode(value)
 
+    type
+      DistinctArray = distinct array[2, uint16]
+      DistinctTuple = distinct (uint8, DynBytes)
+      DistinctBytes = distinct DynBytes
+    let a = [1'u16, 2'u16]
+    let b = (3'u8, DynBytes(@[4'u8]))
+    let c = DynBytes(@[5'u8])
+    let distinctTuple = (DistinctArray(a), DistinctTuple(b), DistinctBytes(c))
+    check Abi.encode(distinctTuple) == Abi.encode( (a, b, c) )
+    check Abi.encode( (a, b, c) ) ==
+      31.zeroes & 1'u8 &                    # a[0]
+      31.zeroes & 2'u8 &                    # a[1]
+      31.zeroes & 128'u8 &                  # offset to b (4 * 32 bytes)
+      30.zeroes & 1'u8 & 0'u8 &             # offset to c (8 * 32 bytes)
+      31.zeroes & 3'u8 &                    # b[0]
+      31.zeroes & 64'u8 &                   # offset to b[1] (2 * 32 bytes)
+      31.zeroes & 1'u8 & b[1] & 31.zeroes & # b[1] (length + data)
+      31.zeroes & 1'u8 & c & 31.zeroes      # c (length + data)
+
   test "encodes zero values":
     check Abi.encode(UInt256.zero) == 32.zeroes
     check Abi.encode(UInt256.zero) == 32.zeroes
-    check Abi.encode(@[0'u8, 0'u8]) ==
+    check Abi.encode(DynBytes(@[0'u8, 0'u8])) ==
       Abi.encode(2'u64) & @[0'u8, 0'u8] & 30.zeroes
 
   test "encodes large arrays":
