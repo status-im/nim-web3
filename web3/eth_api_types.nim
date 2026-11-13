@@ -51,9 +51,9 @@ type
     `from`*: Opt[Address]    # (optional) The address the transaction is sent from.
     to*: Opt[Address]        # The address the transaction is directed to.
     gas*: Opt[Quantity]      # (optional) Integer of the gas provided for the transaction execution. eth_call consumes zero gas, but this parameter may be needed by some executions.
-    gasPrice*: Opt[Quantity] # (optional) Integer of the gasPrice used for each paid gas.
-    maxFeePerGas*: Opt[Quantity]         # (optional) MaxFeePerGas is the maximum fee per gas offered, in wei.
-    maxPriorityFeePerGas*: Opt[Quantity] # (optional) MaxPriorityFeePerGas is the maximum miner tip per gas offered, in wei.
+    gasPrice*: Opt[UInt256] # (optional) Integer of the gasPrice used for each paid gas.
+    maxFeePerGas*: Opt[UInt256]         # (optional) MaxFeePerGas is the maximum fee per gas offered, in wei.
+    maxPriorityFeePerGas*: Opt[UInt256] # (optional) MaxPriorityFeePerGas is the maximum miner tip per gas offered, in wei.
     value*: Opt[UInt256]     # (optional) Integer of the value sent with this transaction.
     nonce*: Opt[Quantity]    # (optional) integer of a nonce. This allows to overwrite your own pending transactions that use the same nonce
 
@@ -169,7 +169,7 @@ type
     `from`*: Address                              # address of the sender.
     to*: Opt[Address]                             # address of the receiver. null when its a contract creation transaction.
     value*: UInt256                               # value transferred in Wei.
-    gasPrice*: Quantity                           # gas price provided by the sender in Wei.
+    gasPrice*: UInt256                            # gas price provided by the sender in Wei.
     gas*: Quantity                                # gas provided by the sender.
     input*: seq[byte]                             # the data send along with the transaction.
     v*: Quantity                                  # ECDSA recovery id
@@ -179,8 +179,8 @@ type
     `type`*: Opt[Quantity]                        # EIP-2718, with 0x0 for Legacy
     chainId*: Opt[UInt256]                        # EIP-155
     accessList*: Opt[seq[AccessPair]]             # EIP-2930
-    maxFeePerGas*: Opt[Quantity]                  # EIP-1559
-    maxPriorityFeePerGas*: Opt[Quantity]          # EIP-1559
+    maxFeePerGas*: Opt[UInt256]                   # EIP-1559
+    maxPriorityFeePerGas*: Opt[UInt256]           # EIP-1559
     maxFeePerBlobGas*: Opt[UInt256]               # EIP-4844
     blobVersionedHashes*: Opt[seq[VersionedHash]] # EIP-4844
     authorizationList*: Opt[seq[Authorization]]   # EIP-7702

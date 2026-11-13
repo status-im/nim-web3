@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2019-2025 Status Research & Development GmbH
+# Copyright (c) 2019-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -53,7 +53,7 @@ type
     defaultAccount*: Address
     value*: UInt256
     gas*: uint64
-    gasPrice*: int
+    gasPrice*: UInt256
     chainId*: Opt[ChainId]
     blockNumber*: Quantity
 
@@ -390,11 +390,11 @@ proc sendData(web3: Web3,
               data: seq[byte],
               value: UInt256,
               gas: uint64,
-              gasPrice: int,
+              gasPrice: UInt256,
               chainId = Opt.none(ChainId)): Future[Hash32] {.async: (raises: [CancelledError, Web3Error]).} =
   let
-    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: Opt.some(gasPrice.Quantity)
-               else: Opt.none(Quantity)
+    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: Opt.some(gasPrice)
+               else: Opt.none(UInt256)
     nonce = if web3.privateKey.isSome(): Opt.some(await web3.nextNonce())
             else: Opt.none(Quantity)
 
@@ -414,7 +414,7 @@ proc sendData(web3: Web3,
 proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            value = 0.u256,
            gas = 3000000'u64,
-           gasPrice = 0): Future[Hash32] =
+           gasPrice = 0.u256): Future[Hash32] =
   sendData(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, gasPrice)
 
@@ -422,9 +422,22 @@ proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
            chainId: ChainId,
            value = 0.u256,
            gas = 3000000'u64,
-           gasPrice = 0): Future[Hash32] =
+           gasPrice = 0.u256): Future[Hash32] =
   sendData(c.sender.web3, c.sender.contractAddress,
     c.sender.web3.defaultAccount, c.data, value, gas, gasPrice, Opt.some(chainId))
+
+proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
+           chainId: ChainId,
+           value = 0.u256,
+           gas = 3000000'u64,
+           gasPrice = 0): Future[Hash32] {.deprecated: "please use 'send' with UInt256 gasPrice".} =
+  send(chainId, value, gas, gasPrice.u256)
+
+proc send*[T](c: ContractInvocation[T, Web3SenderImpl],
+           value = 0.u256,
+           gas = 3000000'u64,
+           gasPrice = 0): Future[Hash32] {.deprecated: "please use 'send' with UInt256 gasPrice".} =
+  send(value, gas, gasPrice.u256)
 
 proc callAux(
     web3: Web3,
@@ -566,7 +579,7 @@ proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Addres
   tr.data = Opt.some(data)
   tr.gas = Opt.some Quantity(30000000)
   if gasPrice != 0:
-    tr.gasPrice = Opt.some(gasPrice.Quantity)
+    tr.gasPrice = Opt.some(gasPrice.u256)
 
   let h = await web3.send(tr)
   let r = await web3.getMinedTransactionReceipt(h)

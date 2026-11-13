@@ -1,5 +1,5 @@
 # nim-web3
-# Copyright (c) 2018-2024 Status Research & Development GmbH
+# Copyright (c) 2018-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -75,7 +75,7 @@ suite "Logs":
         let notifFut = newFuture[void]()
         var notificationsReceived = 0
 
-        let options = FilterOptions(fromBlock: Opt.some(blockId(0.BlockNumber)))
+        let options = FilterOptions(fromBlock: Opt.some(blockId(0'u64)))
         let s = await ns.subscribe(MyEvent, options) do (
             sender: Address, value: UInt256)
             {.raises: [], gcsafe.}:

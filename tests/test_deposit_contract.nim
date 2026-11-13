@@ -28,7 +28,7 @@ suite "Deposit contract":
     proc test() {.async.} =
       let web3 = await newWeb3("ws://127.0.0.1:8545/")
       let accounts = await web3.provider.eth_accounts()
-      let gasPrice = int(await web3.provider.eth_gasPrice())
+      let gasPrice = await web3.provider.eth_gasPrice()
       web3.defaultAccount = accounts[0]
 
       let receipt = await web3.deployContract(DepositContractCode, gasPrice=gasPrice)
@@ -44,7 +44,7 @@ suite "Deposit contract":
 
       var fut = newFuture[void]()
 
-      let options = FilterOptions(fromBlock: Opt.some(blockId(0.BlockNumber)))
+      let options = FilterOptions(fromBlock: Opt.some(blockId(0'u64)))
       let s = await ns.subscribe(DepositEvent, options) do (
           pubkey: DynamicBytes[0, 48], withdrawalCredentials: DynamicBytes[0, 32], amount: DynamicBytes[0, 8], signature: DynamicBytes[0, 96], merkleTreeIndex: DynamicBytes[0, 8])
           {.raises: [], gcsafe.}:

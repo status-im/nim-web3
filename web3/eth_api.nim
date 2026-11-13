@@ -30,7 +30,7 @@ createRpcSigsFromNim(RpcClient, EthJson):
   proc eth_coinbase(): Address
   proc eth_mining(): bool
   proc eth_hashrate(): Quantity
-  proc eth_gasPrice(): Quantity
+  proc eth_gasPrice(): UInt256
   proc eth_blobBaseFee(): UInt256
   proc eth_accounts(): seq[Address]
   proc eth_blockNumber(): Quantity

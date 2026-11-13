@@ -362,8 +362,8 @@ suite "JSON-RPC Quantity":
       check not wl.contains("\"" & key & "\"")
     let pending = TransactionObject(
       `type`: Opt.some(2.Quantity), chainId: Opt.some(1.u256), yParity: Opt.some(1.Quantity),
-      accessList: Opt.some(newSeq[AccessPair]()), maxFeePerGas: Opt.some(2.Quantity),
-      maxPriorityFeePerGas: Opt.some(1.Quantity))
+      accessList: Opt.some(newSeq[AccessPair]()), maxFeePerGas: Opt.some(2.u256),
+      maxPriorityFeePerGas: Opt.some(1.u256))
     let wp = EthJson.encode(pending)
     for key in ["blockHash", "blockNumber", "blockTimestamp", "transactionIndex"]:
       check wp.contains("\"" & key & "\":null")
