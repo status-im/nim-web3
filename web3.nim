@@ -393,8 +393,8 @@ proc sendData(web3: Web3,
               gasPrice: int,
               chainId = Opt.none(ChainId)): Future[Hash32] {.async: (raises: [CancelledError, Web3Error]).} =
   let
-    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: Opt.some(gasPrice.Quantity)
-               else: Opt.none(Quantity)
+    gasPrice = if web3.privateKey.isSome() or gasPrice != 0: Opt.some(gasPrice.u256)
+               else: Opt.none(UInt256)
     nonce = if web3.privateKey.isSome(): Opt.some(await web3.nextNonce())
             else: Opt.none(Quantity)
 
@@ -566,7 +566,7 @@ proc deployContractAux(web3: Web3, data: seq[byte], gasPrice = 0): Future[Addres
   tr.data = Opt.some(data)
   tr.gas = Opt.some Quantity(30000000)
   if gasPrice != 0:
-    tr.gasPrice = Opt.some(gasPrice.Quantity)
+    tr.gasPrice = Opt.some(gasPrice.u256)
 
   let h = await web3.send(tr)
   let r = await web3.getMinedTransactionReceipt(h)
