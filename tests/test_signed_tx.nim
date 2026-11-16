@@ -55,7 +55,7 @@ suite "Signed transactions":
     tx.value = Opt.some(1000000000000000000.u256)
     tx.to = Opt.some(address"0x3535353535353535353535353535353535353535")
     tx.gas = Opt.some(Quantity(21000'u64))
-    tx.gasPrice = Opt.some(Quantity(20000000000'i64))
+    tx.gasPrice = Opt.some(20000000000.u256)
 
     let txBytes = encodeTransaction(tx, privateKey, 1.u256)
     let txHex = "0x" & txBytes.toHex
@@ -72,7 +72,7 @@ suite "Signed transactions":
     tx.value = Opt.some(1000000000000000000.u256)
     tx.to = Opt.some(address"0x3535353535353535353535353535353535353535")
     tx.gas = Opt.some(Quantity(21000'u64))
-    tx.gasPrice = Opt.some(Quantity(20000000000'i64))
+    tx.gasPrice = Opt.some(20000000000.u256)
     tx.chainId = Opt.some(1.u256)
 
     let txBytes = encodeTransaction(tx, privateKey)
@@ -91,7 +91,7 @@ suite "Signed transactions":
     tx.value = Opt.some(51284.u256)
     tx.to = Opt.some(address"0x6Eb893e3466931517a04a17D153a6330c3f2f1dD")
     tx.gas = Opt.some(Quantity(157'u64))
-    tx.gasPrice = Opt.some(Quantity(9086'u64))
+    tx.gasPrice = Opt.some(9086.u256)
     tx.chainId = Opt.some(2214903583.u256)
     tx.data = Opt.some(hexToSeqByte("0x889e365e59664fb881554ba1175519b5195b1d20390beb806d8f2cda7893e6f79848195dba4c905db6d7257ffb5eefea35f18ae33c"))
     tx.accessList = Opt.some(newSeq[AccessPair]())
@@ -112,8 +112,8 @@ suite "Signed transactions":
     tx.value = Opt.some(51284.u256)
     tx.to = Opt.some(address"0x6Eb893e3466931517a04a17D153a6330c3f2f1dD")
     tx.gas = Opt.some(Quantity(157'u64))
-    tx.maxFeePerGas = Opt.some(Quantity(879596102'u64))
-    tx.maxPriorityFeePerGas = Opt.some(Quantity(2915939'u64))
+    tx.maxFeePerGas = Opt.some(879596102.u256)
+    tx.maxPriorityFeePerGas = Opt.some(2915939.u256)
     tx.chainId = Opt.some(2214903583.u256)
     tx.data = Opt.some(hexToSeqByte("0x889e365e59664fb881554ba1175519b5195b1d20390beb806d8f2cda7893e6f79848195dba4c905db6d7257ffb5eefea35f18ae33c"))
     tx.accessList = Opt.some(newSeq[AccessPair]())
@@ -138,7 +138,7 @@ suite "Signed transactions":
       tx.`from` = Opt.some(accounts[0])
       tx.value = Opt.some(ethToWei(10.u256))
       tx.to = Opt.some(acc)
-      tx.gasPrice = Opt.some(gasPrice)
+      tx.gasPrice = Opt.some(gasPrice.uint64.u256)
 
       # Send 10 eth to acc
       discard await web3.send(tx)

@@ -14,7 +14,7 @@ import
 func encodeTransactionLegacy(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxLegacy)
   tr.gasLimit = s.gas.get(0.Quantity).GasInt
-  tr.gasPrice = s.gasPrice.get(0.Quantity).GasInt
+  tr.gasPrice = s.gasPrice.get(0.u256)
   tr.to = s.to
 
   if s.value.isSome:
@@ -32,7 +32,7 @@ func encodeTransactionLegacy(s: TransactionArgs, pk: PrivateKey): seq[byte] =
 func encodeTransactionEip2930(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxEip2930)
   tr.gasLimit = s.gas.get(0.Quantity).GasInt
-  tr.gasPrice = s.gasPrice.get(0.Quantity).GasInt
+  tr.gasPrice = s.gasPrice.get(0.u256)
   tr.to = s.to
   if s.value.isSome:
     tr.value = s.value.value
@@ -46,8 +46,8 @@ func encodeTransactionEip2930(s: TransactionArgs, pk: PrivateKey): seq[byte] =
 func encodeTransactionEip1559(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxEip1559)
   tr.gasLimit = s.gas.get(0.Quantity).GasInt
-  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get(0.Quantity).GasInt
-  tr.maxFeePerGas = s.maxFeePerGas.get(0.Quantity).GasInt
+  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get(0.u256)
+  tr.maxFeePerGas = s.maxFeePerGas.get(0.u256)
   tr.to = s.to
   if s.value.isSome:
     tr.value = s.value.value
@@ -62,8 +62,8 @@ func encodeTransactionEip1559(s: TransactionArgs, pk: PrivateKey): seq[byte] =
 func encodeTransactionEip4844(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxEip4844)
   tr.gasLimit = s.gas.get(0.Quantity).GasInt
-  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get(0.Quantity).GasInt
-  tr.maxFeePerGas = s.maxFeePerGas.get(0.Quantity).GasInt
+  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get(0.u256)
+  tr.maxFeePerGas = s.maxFeePerGas.get(0.u256)
   tr.to = s.to
   if s.value.isSome:
     tr.value = s.value.value
@@ -80,8 +80,8 @@ func encodeTransactionEip4844(s: TransactionArgs, pk: PrivateKey): seq[byte] =
 func encodeTransactionEip7702(s: TransactionArgs, pk: PrivateKey): seq[byte] =
   var tr = Transaction(txType: TxEip7702)
   tr.gasLimit = s.gas.get(0.Quantity).GasInt
-  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get(0.Quantity).GasInt
-  tr.maxFeePerGas = s.maxFeePerGas.get(0.Quantity).GasInt
+  tr.maxPriorityFeePerGas = s.maxPriorityFeePerGas.get(0.u256)
+  tr.maxFeePerGas = s.maxFeePerGas.get(0.u256)
   tr.to = s.to
   if s.value.isSome:
     tr.value = s.value.value
@@ -131,7 +131,7 @@ func encodeTransaction*(s: TransactionArgs, pk: PrivateKey): seq[byte] =
 func encodeTransaction*(s: TransactionArgs, pk: PrivateKey, chainId: ChainId): seq[byte] {.deprecated: "Provide chainId in TransactionArgs".} =
   var tr = Transaction(txType: TxLegacy, chainId: chainId)
   tr.gasLimit = s.gas.get.GasInt
-  tr.gasPrice = s.gasPrice.get.GasInt
+  tr.gasPrice = s.gasPrice.get
   tr.to = s.to
 
   if s.value.isSome:
